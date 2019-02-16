@@ -58,6 +58,7 @@ class NativeAbstraction(typing.Generic[T_box_cov]):
     can_call: typing.Callable[[T_box], bool]
 
 
+# Implement variadic...
 @dataclasses.dataclass
 class Abstraction(Box[typing.Any], typing.Generic[T_box_contra, T_box_cov]):
     """
@@ -86,6 +87,7 @@ class Abstraction(Box[typing.Any], typing.Generic[T_box_contra, T_box_cov]):
         body = fn(arg)
         return cls.from_variable(arg, body)
 
+    # TODO: Make default
     @classmethod
     def create_nary(
         cls, fn: typing.Callable[..., T_box], vnames: typing.List[str], *arg_types: Box

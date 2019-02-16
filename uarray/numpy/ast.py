@@ -70,14 +70,20 @@ def create_ast_abstraction(
     )
 
 
+@operation_with_default(ctx)
+def _as_ast(fn: Box, *args: Box) -> Box:
+    for a in args:
+        fn = typing.cast(Abstraction, fn)(to_ast(a))
+    return fn
+
+
 def as_ast(fn: typing.Callable[..., AST], rettype: T_box, *args: Box) -> T_box:
     """
-    Takes in a function mapping arguments of type AST to an AST 
+    Takes in a function mapping arguments of type AST to an AST.
     """
-    res: typing.Any = create_ast_abstraction(fn, rettype, len(args))
-    for a in args:
-        res = res(to_ast(a))
-    return typing.cast(T_box, res)
+    return typing.cast(
+        T_box, _as_ast(create_ast_abstraction(fn, rettype, len(args)), *args)
+    )
 
 
 @register(ctx, to_ast)
@@ -87,24 +93,24 @@ def to_ast_numbers(b: T_box) -> T_box:
     return b.replace(AST(ast.Num(b.value)))
 
 
-_nat_bin_ops = {
-    Natural.__add__: ast.Add(),
-    Natural.__mul__: ast.Mult(),
-    Natural.__sub__: ast.Sub(),
-    Natural.__floordiv__: ast.FloorDiv(),
-    Natural.__mod__: ast.Mod(),
+OPERATIONS_TO_AST = {
+    Natural.__add__: lambda l, r: ast.BinOp(l, ast.Add(), r),
+    Natural.__mul__: lambda l, r: ast.BinOp(l, ast.Mult(), r),
+    Natural.__sub__: lambda l, r: ast.BinOp(l, ast.Sub(), r),
+    Natural.__floordiv__: lambda l, r: ast.BinOp(l, ast.FloorDiv(), r),
+    Natural.__mod__: lambda l, r: ast.BinOp(l, ast.Mod(), r),
 }
 
 
 @register(ctx, to_ast)
-def to_ast_nat_bin_ops(b: T_box) -> T_box:
-    if not isinstance(b.value, Operation) or b.value.name not in _nat_bin_ops:
+def to_ast_operations(b: T_box) -> T_box:
+    if not isinstance(b.value, Operation) or b.value.name not in OPERATIONS_TO_AST:
         return NotImplemented
 
-    def inner(l_ast: AST, r_ast: AST) -> AST:
-        return AST(
-            ast.BinOp(l_ast.get, _nat_bin_ops[b.value.name], r_ast.get)
-        ).includes(l_ast, r_ast)
+    fn = OPERATIONS_TO_AST[b.value.name]
+
+    def inner(*args: AST, fn=fn) -> AST:
+        return AST(fn(*(a.get for a in args))).includes(*args)
 
     return as_ast(inner, b, *b.value.args)
 
