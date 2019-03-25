@@ -3,10 +3,13 @@ requires = ["flit"]
 build-backend = "flit.buildapi"
 
 [tool.flit.metadata]
-module = "uvisualize"
+module = "metadsl"
 author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
-home-page = "https://github.com/Quansight-Labs/uarray/tree/master/uvisualize"
+home-page = "https://github.com/Quansight-Labs/metadsl"
+requires = [
+    "typing_extensions"
+]
 requires-python = ">=3.7"
 classifiers = [
     "Intended Audience :: Developers",
@@ -15,21 +18,13 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
-requires = [
-    "umoa",
-    "udispatch",
-    "uarray",
-    "unumpy",
-    "graphviz"
-]
+
 [tool.flit.metadata.requires-extra]
 test = [
     "pytest",
     "pytest-cov",
-    "pytest-mypy",
+    "pytest-mypy"
 ]
 dev = [
     "mypy"
 ]
-[tool.flit.entrypoints.pytest11]
-uvisualize = "uvisualize.plugin"
