@@ -26,5 +26,6 @@ test = [
     "pytest-mypy"
 ]
 dev = [
-    "mypy"
+    "mypy",
+    "jupyterlab"
 ]
