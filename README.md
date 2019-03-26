@@ -16,3 +16,14 @@ conda activate metadsl
 pip install flit
 flit install --symlink
 ```
+
+
+### Docs
+
+```bash
+cd docs/
+# build
+make html
+# serve
+python -m http.server -d _build/html/
+```

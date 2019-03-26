@@ -27,5 +27,7 @@ test = [
 ]
 dev = [
     "mypy",
-    "jupyterlab"
+    "jupyterlab",
+    "sphinx",
+    "sphinx-autodoc-typehints"
 ]
