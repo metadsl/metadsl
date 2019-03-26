@@ -23,11 +23,13 @@ classifiers = [
 test = [
     "pytest",
     "pytest-cov",
-    "pytest-mypy"
+    "pytest-mypy",
+    "mypy"
 ]
-dev = [
-    "mypy",
-    "jupyterlab",
+doc = [
     "sphinx",
     "sphinx-autodoc-typehints"
+]
+dev = [
+    "jupyterlab"
 ]
