@@ -1,5 +1,8 @@
 # `metadsl`
 
+[![Documentation Status](https://readthedocs.org/projects/metadsl/badge/?version=latest)](https://metadsl.readthedocs.io/en/latest/?badge=latest)
+
+
 A framework for creating domain specific language libraries in Python.
 
 The end goal is for libraries like NumPy, Dask, Numba, and AutoGraph to be able to share
