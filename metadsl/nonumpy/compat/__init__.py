@@ -64,6 +64,78 @@ class NDArray(Instance):
     def shape(self) -> py_compat.TupleOfIntegers:
         return py_compat.TupleOfIntegers.from_pure(self.pure.shape)
 
+    def __add__(self, other) -> "NDArray":
+        return self.from_pure(self.pure + self.from_value(other).pure)
+
+    def __mul__(self, other) -> "NDArray":
+        return self.from_pure(self.pure * self.from_value(other).pure)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> "NDArray":
+        return self.from_pure(
+            np_pure.NDArray.__array_ufunc__(
+                UFunc.from_value(ufunc).pure,
+                UFuncMethod.from_value(method).pure,
+                UFuncKwargs.from_value(kwargs).pure,
+                *(NDArray.from_value(input).pure for input in inputs)
+            )
+        )
+
+
+class UFunc(Instance):
+    @classmethod
+    def from_value(cls, value: typing.Any) -> "UFunc":
+        if isinstance(value, UFunc):
+            return value
+        if isinstance(value, np_pure.UFunc):
+            return cls.from_pure(value)
+        return cls(value)
+
+    @classmethod
+    def from_pure(cls, p: np_pure.UFunc) -> "UFunc":
+        return cls(p.__value__)
+
+    @property
+    def pure(self) -> np_pure.UFunc:
+        return np_pure.UFunc(self.__value__)
+
+
+class UFuncKwargs(Instance):
+    @classmethod
+    def from_value(cls, value: typing.Any) -> "UFuncKwargs":
+        if isinstance(value, UFuncKwargs):
+            return value
+        if isinstance(value, np_pure.UFuncKwargs):
+            return cls.from_pure(value)
+        if isinstance(value, dict):
+            return cls(tuple(value.items()))
+        raise TypeError
+
+    @classmethod
+    def from_pure(cls, p: np_pure.UFuncKwargs) -> "UFuncKwargs":
+        return cls(p.__value__)
+
+    @property
+    def pure(self) -> np_pure.UFuncKwargs:
+        return np_pure.UFuncKwargs(self.__value__)
+
+
+class UFuncMethod(Instance):
+    @classmethod
+    def from_value(cls, value: typing.Any) -> "UFuncMethod":
+        if isinstance(value, UFuncMethod):
+            return value
+        if isinstance(value, np_pure.UFuncMethod):
+            return cls.from_pure(value)
+        return cls(value)
+
+    @classmethod
+    def from_pure(cls, p: np_pure.UFuncMethod) -> "UFuncMethod":
+        return cls(p.__value__)
+
+    @property
+    def pure(self) -> np_pure.UFuncMethod:
+        return np_pure.UFuncMethod(self.__value__)
+
 
 def array(object, dtype=None, copy=True, order=None, subok=None, ndmin=None) -> NDArray:
     return NDArray.from_pure(
@@ -112,9 +184,11 @@ def arange(*args, **kwargs) -> NDArray:
         assert not kwargs.keys()
     else:
         raise RuntimeError("Cannot pass more than 4 arguments to `arange`")
-    return np_pure.arange(  # type: ignore
-        py_compat.Optional.from_value(instance_type(py_pure.Number), start).pure,
-        py_compat.Number.from_value(stop).pure,
-        py_compat.Optional.from_value(instance_type(py_pure.Number), step).pure,
-        py_compat.Optional.from_value(instance_type(np_pure.DType), dtype).pure,
+    return NDArray.from_pure(
+        np_pure.arange(  # type: ignore
+            py_compat.Optional.from_value(instance_type(py_pure.Number), start).pure,
+            py_compat.Number.from_value(stop).pure,
+            py_compat.Optional.from_value(instance_type(py_pure.Number), step).pure,
+            py_compat.Optional.from_value(instance_type(np_pure.DType), dtype).pure,
+        )
     )
