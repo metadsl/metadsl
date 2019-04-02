@@ -16,3 +16,7 @@ docs/_build
 .idea/
 pytype_output
 htmlcov
+.ipython
+.jupyter
+.cache
+.local

@@ -31,10 +31,13 @@ import functools
 import inspect
 import functools
 
-__all__ = ["Expression", "Call", "Instance"]
+__all__ = ["Expression", "Call", "Instance", "call", "InstanceType", "instance_type"]
+
 
 Arg = typing.TypeVar("Arg")
 NewArg = typing.TypeVar("NewArg")
+
+T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -57,25 +60,66 @@ class Call(typing.Generic[Arg]):
     def map_args(self, fn: typing.Callable[[Arg], NewArg]) -> "Call[NewArg]":
         return dataclasses.replace(self, args=tuple(map(fn, self.args)))  # type: ignore
 
+    @staticmethod
+    def decorator(
+        instance_type_fn: "typing.Callable[..., InstanceType]"
+    ) -> typing.Callable[[T_callable], T_callable]:
+        """
+        Wraps a function that takes and return instances to take create `Call` when it is called.
+
+        For example, this:
+
+            @Call.decorator(lambda first, second: first)
+            def Or(left: T, right: T) -> T:
+                ...
+
+        Is equivalent too:
+
+            def Or(left: T, right: T) -> T:
+                instance_type_fn = lambda first, second: first
+                return instance_type_fn(left, right).__type__(
+                    Call(Or, (left, right))
+                )
+
+        Which is equivalent too:
+
+            def Or(left: T, right: T) -> T:
+                return left.__type__(
+                    Call(Or, (left, right))
+                )
+        """
+
+        def inner(fn: T_callable, instance_type_fn=instance_type_fn) -> T_callable:
+            @functools.wraps(fn)
+            def inner_inner(
+                *args: Instance, fn=fn, instance_type_fn=instance_type_fn
+            ) -> Instance:
+                instance_type = instance_type_fn(*(arg.__type__ for arg in args))
+                return instance_type(Call(fn, tuple(args)))
+
+            return typing.cast(T_callable, inner_inner)
+
+        return inner
+
+
+call = Call.decorator
+
 
 Instance_ = typing.TypeVar("Instance_", bound="Instance")
-Value = typing.TypeVar("Value")
 
 
 @dataclasses.dataclass(frozen=True)
-class Instance(typing.Generic[Value]):
-    __value__: Value
+class Instance:
+    __value__: typing.Any
 
     @property
-    def __type__(self: Instance_) -> "typing.Callable[[Value], Instance_]":
+    def __type__(self: Instance_) -> "InstanceType[Instance_]":
         fields = tuple(
             getattr(self, field.name)
             for field in dataclasses.fields(self)
             if field.name != "__value__"
         )
         parent = type(self)
-        if not fields:
-            return parent
         return InstanceType(
             parent,
             tuple(
@@ -89,14 +133,20 @@ class Instance(typing.Generic[Value]):
 @dataclasses.dataclass(frozen=True)
 class InstanceType(typing.Generic[Instance_]):
     type: typing.Type[Instance_]
-    arguments: typing.Tuple
+    args: typing.Tuple
 
     def __call__(self, value: object) -> Instance_:
-        # We have to ignroe typing here, because we cannot tell MyPy
+        # We have to ignore typing here, because we cannot tell MyPy
         # that the specific subtype of `Instance` we are instantiating
         # take the the arguments we have stored.
-        return self.type(value, *self.arguments)  # type: ignore
+        return self.type(value, *self.args)  # type: ignore
 
+    @classmethod
+    def create(cls, type: typing.Type[Instance_], *args) -> "InstanceType[Instance_]":
+        return cls(type, tuple(args))
+
+
+instance_type = InstanceType.create
 
 ResValue = typing.TypeVar("ResValue")
 ResExpression = typing.TypeVar("ResExpression")

@@ -13,8 +13,17 @@ an intermediate form that expresses the operations to perform, before performing
 
 ## Development
 
+Either use repo2docker:
+
 ```bash
-conda create -n metadsl python
+repo2docker -E .
+```
+
+
+Or get started with conda:
+
+```bash
+conda create -n metadsl jupyterlab
 conda activate metadsl
 pip install flit
 flit install --symlink
