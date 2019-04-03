@@ -32,13 +32,37 @@ class NDArray(Instance):
     def __mul__(self, other: "NDArray") -> "NDArray":
         ...
 
+    @call(lambda self, other: instance_type(NDArray))
+    def __gt__(self, other: "NDArray") -> "NDArray":  # type: ignore
+        ...
+
+    @call(lambda self, other: instance_type(NDArray))
+    def __ge__(self, other: "NDArray") -> "NDArray":  # type: ignore
+        ...
+
+    @call(lambda self, other: instance_type(NDArray))
+    def __lt__(self, other: "NDArray") -> "NDArray":
+        ...
+
+    @call(lambda self, other: instance_type(NDArray))
+    def __le__(self, other: "NDArray") -> "NDArray":
+        ...
+
     @staticmethod
     @call(lambda *args: instance_type(NDArray))
     def __array_ufunc__(
-        ufunc: "UFunc", method: "UFuncMethod", kwargs: "UFuncKwargs", *inputs: "NDArray",
+        ufunc: "UFunc", method: "UFuncMethod", kwargs: "UFuncKwargs", *inputs: "NDArray"
     ) -> "NDArray":
         ...
 
+    @staticmethod
+    @call(lambda *args: instance_type(NDArray))
+    def __array_function__(self, func: NumPyFunction, args: , kwargs: Instance):
+        pass
+
+
+class NumPyFunction(Instance):
+    pass
 
 class DType(Instance):
     pass

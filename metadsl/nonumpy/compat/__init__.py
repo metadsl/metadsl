@@ -70,6 +70,18 @@ class NDArray(Instance):
     def __mul__(self, other) -> "NDArray":
         return self.from_pure(self.pure * self.from_value(other).pure)
 
+    def __gt__(self, other) -> "NDArray":
+        return self.from_pure(self.pure > self.from_value(other).pure)
+
+    def __ge__(self, other) -> "NDArray":
+        return self.from_pure(self.pure >= self.from_value(other).pure)
+
+    def __lt__(self, other) -> "NDArray":
+        return self.from_pure(self.pure < self.from_value(other).pure)
+
+    def __le__(self, other) -> "NDArray":
+        return self.from_pure(self.pure <= self.from_value(other).pure)
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs) -> "NDArray":
         return self.from_pure(
             np_pure.NDArray.__array_ufunc__(
@@ -80,6 +92,7 @@ class NDArray(Instance):
             )
         )
 
+    def __array_function__(self, func, types, args, kwargs)
 
 class UFunc(Instance):
     @classmethod
