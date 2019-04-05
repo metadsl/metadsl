@@ -5,7 +5,7 @@ import dataclasses
 __all__ = [
     "Boolean",
     "Integer",
-    "TupleOfIntegers",
+    "Tuple",
     "Number",
     "Optional",
     "Abstraction",
@@ -24,14 +24,24 @@ class Integer(Instance):
     pass
 
 
-class TupleOfIntegers(Instance):
-    @call(lambda self, index: instance_type(Integer))
-    def __getitem__(self, index: Integer) -> Integer:
+@dataclasses.dataclass(frozen=True)
+class Tuple(Instance, typing.Generic[T]):
+    """
+    Mirrors the Python Tuple API, of a homogenous type.
+    """
+
+    item_type: InstanceType[T]
+
+    @call(lambda self, index: self.args[0])
+    def __getitem__(self, index: Integer) -> T:
         ...
 
-    @call(lambda *values: instance_type(TupleOfIntegers))
     @staticmethod
-    def create(*values: Integer) -> "TupleOfIntegers":
+    def from_items(item_type: InstanceType[T], *items: T) -> "Tuple[T]":
+        return call(lambda *items: item_type)(Tuple.from_items_call)(*items)
+
+    @staticmethod
+    def from_items_call(*items: T) -> "Tuple[T]":
         ...
 
 
@@ -43,6 +53,7 @@ class Number(Instance):
     pass
 
 
+@dataclasses.dataclass(frozen=True)
 class Abstraction(Instance, typing.Generic[T, U]):
     return_type: InstanceType[U]
 
@@ -71,9 +82,3 @@ class Optional(Instance, typing.Generic[T]):
     @classmethod
     def create_none_call(cls):
         ...
-
-
-# class Boolean(Instance):
-#     @call(lambda self, true, false: true)
-#     def if_(self, true: T, false: Abstraction[T, U]) -> U:
-#         ...

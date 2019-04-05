@@ -45,6 +45,9 @@ class Call(typing.Generic[Arg]):
     function: typing.Callable
     args: typing.Tuple[Arg, ...]
 
+    def __str__(self):
+        return f"{self.function.__name__}({', '.join(str(a) for a in self.args)})"
+
     def arg_labels(self) -> typing.Iterable[str]:
         """
         Returns a list of strings for the labels of the arguments, by inspecting the function signature.
@@ -119,15 +122,10 @@ class Instance:
             for field in dataclasses.fields(self)
             if field.name != "__value__"
         )
-        parent = type(self)
-        return InstanceType(
-            parent,
-            tuple(
-                getattr(self, field.name)
-                for field in dataclasses.fields(self)
-                if field.name != "__value__"
-            ),
-        )
+        return InstanceType(type(self), fields)
+
+    def __str__(self):
+        return f"{self.__type__}({self.__value__})"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -144,6 +142,12 @@ class InstanceType(typing.Generic[Instance_]):
     @classmethod
     def create(cls, type: typing.Type[Instance_], *args) -> "InstanceType[Instance_]":
         return cls(type, tuple(args))
+
+    def __str__(self):
+        name = self.type.__name__
+        if not self.args:
+            return name
+        return f"{self.type.__name__}[{', '.join(str(arg) for arg in self.args)}]"
 
 
 instance_type = InstanceType.create

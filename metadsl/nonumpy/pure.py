@@ -20,8 +20,8 @@ U = typing.TypeVar("U", bound=Instance)
 
 class NDArray(Instance):
     @property  # type: ignore
-    @call(lambda self: instance_type(TupleOfIntegers))
-    def shape(self) -> TupleOfIntegers:
+    @call(lambda self: instance_type(Tuple, Integer))
+    def shape(self) -> Tuple[Integer]:
         ...
 
     @call(lambda self, other: instance_type(NDArray))
@@ -57,7 +57,7 @@ class NDArray(Instance):
 
     @staticmethod
     @call(lambda *args: instance_type(NDArray))
-    def __array_function__(self, func: NumPyFunction, args: , kwargs: Instance):
+    def __array_function__(func: "NumPyFunction", args: Tuple[Instance], kwargs: Instance) -> "NDArray":
         pass
 
 

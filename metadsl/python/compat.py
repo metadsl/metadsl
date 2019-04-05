@@ -1,29 +1,47 @@
 from metadsl.expressions import *
 import typing
-import numbers
 import dataclasses
 
 import metadsl.python.pure as py_pure
 
-__all__ = ["Integer", "TupleOfIntegers", "Number", "Optional", "Boolean"]
+__all__ = ["Integer", "Tuple", "Number", "Optional", "Boolean", "create_instance"]
 
 T = typing.TypeVar("T", bound=Instance)
 
+
+def create_instance(instance_type: InstanceType[T], value: object) -> T:
+    """
+    Takes an instance type and a Python value and creates an instance of that type.
+    """
+    # TODO: Make this dispatch extensible
+
+    # Instances should be passed through, changing the type
+    if isinstance(value, Instance):
+        return instance_type(value.__value__)  # type: ignore
+
+    # Tuples
+    if instance_type.type == py_pure.Tuple and isinstance(value, tuple):
+        item_type, = instance_type.args
+        items = [create_instance(item_type, item) for item in value]
+        return py_pure.Tuple.from_items(item_type, *items)  # type: ignore
+
+    # Optional
+    if instance_type.type == py_pure.Optional:
+        inner_type, = instance_type.args
+        if value is None:
+            return py_pure.Optional.create_none(inner_type)  # type: ignore
+        return py_pure.Optional.create_some(  # type: ignore
+            create_instance(inner_type, value)
+        )
+    if isinstance(value, dict):
+        value = tuple(value.items())
+
+    return instance_type(value)
 
 class Boolean(Instance):
     """
     bool
     """
-
-    @classmethod
-    def from_value(cls, value: typing.Any) -> "Boolean":
-        if isinstance(value, Boolean):
-            return value
-        if isinstance(value, py_pure.Boolean):
-            return cls.from_pure(value)
-        if isinstance(value, bool):
-            return cls(value)
-        raise TypeError(value)
 
     @classmethod
     def from_pure(cls, p: py_pure.Boolean) -> "Boolean":
@@ -40,16 +58,6 @@ class Integer(Instance):
     """
 
     @classmethod
-    def from_value(cls, value: typing.Any) -> "Integer":
-        if isinstance(value, Integer):
-            return value
-        if isinstance(value, py_pure.Integer):
-            return cls.from_pure(value)
-        if isinstance(value, int):
-            return cls(value)
-        raise TypeError(value)
-
-    @classmethod
     def from_pure(cls, p: py_pure.Integer) -> "Integer":
         return cls(p.__value__)
 
@@ -64,16 +72,6 @@ class Number(Instance):
     """
 
     @classmethod
-    def from_value(cls, value: typing.Any) -> "Number":
-        if isinstance(value, Number):
-            return value
-        if isinstance(value, py_pure.Number):
-            return cls.from_pure(value)
-        if isinstance(value, numbers.Number):
-            return cls(value)
-        raise TypeError(value)
-
-    @classmethod
     def from_pure(cls, p: py_pure.Number) -> "Number":
         return cls(p.__value__)
 
@@ -82,39 +80,20 @@ class Number(Instance):
         return py_pure.Number(self.__value__)
 
 
-class TupleOfIntegers(Instance):
-    """
-    typing.Tuple[int]
-    """
+@dataclasses.dataclass(frozen=True)
+class Tuple(Instance, typing.Generic[T]):
+    item_type: InstanceType[T]
 
     @classmethod
-    def from_pure(cls, p: py_pure.TupleOfIntegers) -> "TupleOfIntegers":
-        return cls(p.__value__)
+    def from_pure(cls, p: py_pure.Tuple[typing.Any], item_type: InstanceType[T]) -> "Tuple[T]":
+        return cls(p.__value__, item_type)
 
     @property
-    def pure(self) -> py_pure.TupleOfIntegers:
-        return py_pure.TupleOfIntegers(self.__value__)
+    def pure(self) -> py_pure.Tuple[T]:
+        return py_pure.Tuple(self.__value__, self.item_type)
 
-    def __getitem__(self, index: typing.Any) -> Integer:
-        return Integer.from_pure(self.pure[Integer.from_value(index).pure])
-
-    @classmethod
-    def create(cls, *values: typing.Any) -> "TupleOfIntegers":
-        return cls.from_pure(
-            py_pure.TupleOfIntegers.create(
-                *(Integer.from_value(value).pure for value in values)
-            )
-        )
-
-    @classmethod
-    def from_value(cls, value: typing.Any) -> "TupleOfIntegers":
-        if isinstance(value, TupleOfIntegers):
-            return value
-        if isinstance(value, py_pure.TupleOfIntegers):
-            return cls.from_pure(value)
-        if isinstance(value, tuple):
-            return cls(value)
-        raise TypeError(value)
+    def __getitem__(self, index: typing.Any) -> T:
+        return self.pure[create_instance(instance_type(Integer), index).pure]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -128,12 +107,3 @@ class Optional(Instance, typing.Generic[T]):
     @property
     def pure(self) -> py_pure.Optional[T]:
         return py_pure.Optional(self.__value__, self.inner_type)
-
-    @classmethod
-    def from_value(
-        cls, inner_type: InstanceType[T], value: typing.Any
-    ) -> "Optional[T]":
-        if value is None:
-            return Optional(Call(py_pure.Optional.create_none_call, ()), inner_type)
-        # TODO: Add casting from existing types
-        return cls.from_pure(py_pure.Optional.create_some(inner_type(value)))
