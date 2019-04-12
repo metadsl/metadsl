@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = 
+    metadsl
+[report]
+omit =
+    *_test.py
+    **/test_*.py
+    nonumpy/*
+    metadsl/python/**
+    metadsl/nonumpy/**
