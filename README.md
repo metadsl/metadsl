@@ -45,6 +45,15 @@ pip install flit
 flit install --symlink
 ```
 
+### Tests
+
+This runs mypy and tests, and reports coverage.
+```bash
+pytest
+# open coverage file
+open htmlcov/index.html
+```
+
 
 ### Docs
 
