@@ -30,6 +30,7 @@ import typing
 import functools
 import inspect
 import functools
+from .functools import memoize
 
 __all__ = ["Expression", "Call", "Instance", "call", "InstanceType", "instance_type"]
 
@@ -206,10 +207,20 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
         All value nodes are transformed to the one type and all expression
         nodes to another type.
 
-        You provide two functions to transform the values, which are used depending
+        You provide three functions to transform the values, which are used depending
         on whether the value is a call or not.
 
-        Each node is transformed once, and only once, based on it's hash value
+        All values are transformed to type `ResValue ` and expression to `ResExpression`.
+
+        The leaves are transformed first, through `other_value_fn`, which takes in a 
+        Python object that is not a call and returns a `ResValue`. Then, this is passed
+        to `expr_fn` which has the same type as the original expression with the value replaced
+        with `ResValue`.
+
+        Any values that are calls all have their arguments transformed like this, then
+        they are passed to `call_value_fn` which has it's args now as `ResExpression`.
+
+        Each node is transformed once, and only once, based on it's id.
 
         The order in which nodes are transformed cannot be relied on.
         """
@@ -218,7 +229,7 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
         # parents are only transformed once.
         # We could define these functions globally, instead of redining them on each call,
         # but this makes sure all the caches are removed after each call.
-        @functools.lru_cache(maxsize=None, typed=True)
+        @memoize
         def fold_value(
             value: object, call_value_fn=call_value_fn, other_value_fn=other_value_fn
         ) -> ResValue:
@@ -226,7 +237,7 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
                 return call_value_fn(value.map_args(fold_expression))
             return other_value_fn(value)
 
-        @functools.lru_cache(maxsize=None, typed=True)
+        @memoize
         def fold_expression(
             expr: Expression[Instance, object], expr_fn=expr_fn
         ) -> ResExpression:
@@ -249,8 +260,41 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
             expr_fn=expr_fn, call_value_fn=lambda c: c, other_value_fn=lambda v: v
         )
 
+    def custom_hash(self) -> int:
+        """
+        Returns a hash of the expression, except if it has a non hashable value, it uses the id
+        of the value instead of it's hash.
+        """
+
+        def expr_fn(expr: Expression[typing.Any, int]) -> int:
+            t = expr.type  # type: ignore
+            return hash((t, expr.value))
+
+        def call_value_fn(c: Call[int]) -> int:
+            return hash((c.function,) + c.args)
+
+        def other_value_fn(o: object) -> int:
+            try:
+                return hash(o)
+            except TypeError:
+                return hash(id(o))
+
+        return self.fold(expr_fn, call_value_fn, other_value_fn)
+
     def compact(self) -> "Expression":
         """
         Combines all duplicate expression from the graph, based on the hash.
         """
-        return self.fold_expression(lambda expr: expr)
+        already_seen: typing.Dict[int, Expression] = {}
+
+        def cached_identity(expr: Expression) -> Expression:
+            """
+            Identity function over expressions, that is memoized by the hash/id
+            """
+            h = expr.custom_hash()
+            if h in already_seen:
+                return already_seen[h]
+            already_seen[h] = expr
+            return expr
+
+        return self.fold_expression(cached_identity)
