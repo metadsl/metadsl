@@ -26,7 +26,9 @@ TEST_INSTANCES: typing.Iterable[Instance] = [
     fn(InstanceSubclass(1), InstanceSubclass(2)),
     InstanceWithArg(10, instance_type(Instance)),
     InstanceWithArg(10, instance_type(InstanceWithArg, instance_type(Instance))),
+    Instance([1, 2, 3]),  # mutable value that doesn't have hash
 ]
+
 
 
 @pytest.mark.parametrize("instance", TEST_INSTANCES)
@@ -38,13 +40,13 @@ def test_instance_to_expression(instance) -> None:
     assert Expression.from_instance(instance).instance == instance
 
 
-TEST_VALUES = [10]
+TEST_VALUES = [10, []]
 
 
 @pytest.mark.parametrize("value", TEST_VALUES)
 def test_compact(value) -> None:
     """
-    If you call compact on an instance, leaves that have the same hash should be
+    If you call compact on an instance, leaves that have the same hash, should be
     replaced with one instance.
     """
     left = Instance(value)
