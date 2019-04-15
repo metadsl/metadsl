@@ -1,5 +1,10 @@
 # Roadmap
 
+This is a preliminary roadmap to drive the direction of development here. 
+
+We would appreciate any input from the community on what would be useful for them, that could serve
+to inform this roadmap.
+
 1. Add examples in docs for low level usage
   1. Create  API for doing arithmetic (adding/multipling numbers)
     1. Show how to write translater that does partial evaluation
