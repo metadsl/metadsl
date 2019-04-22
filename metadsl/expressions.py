@@ -1,28 +1,18 @@
 """
-An expression is a directed acyclic graph that represents some computation.
+This file defines a way to represent expression graphs, where the nodes
+are other functions calls, if they have children, or other Python values,
+if they are leaves.
 
-Each node in the graph has both a type and a value.
+It actually defines two different representations, "Expressions" and "Instances".
 
-The type maps each value to some other Python value that has a user facing API
-that exposes the right types.
+Expressions are basically named tuple / S-expressions, whereas instances are subclasses
+of Instance that provide a Python API.
+Users will interact with Instances, whereas internally we convert to expression to traverse
+the graph more easily.
 
-If the value is a function call, then it has children expressions which are the arguments to that function.
-Otherwise, it is any other Python value and is a leaf node.
-
-Expression = (Type, Value)
-Value = Call or other Python value
-Call = (function, Expression*)
-
----
-
-Defining an expression graph is seperate from deciding the meaning of that graph. You would
-define this meaning by writing functions over some set of graphs that have the intended semantics you want.
-
-The `Expressions.fold` function can be helpful here, because it gives you a way to traverse this graph.
-
----
-
-An instance is how you can take a particular expression and create a usable end user experience around it.
+The graph is immutable, so to change it, we have to traverse it and create a new version.
+This can be done with the `Expression.fold` method, which does a bottom up traversal.
+To do a top do down traversal, you can just iterate through the Expression and Call values.
 """
 
 import dataclasses
@@ -36,7 +26,6 @@ __all__ = ["Expression", "Call", "Instance", "call", "InstanceType", "instance_t
 
 
 Arg = typing.TypeVar("Arg")
-NewArg = typing.TypeVar("NewArg")
 
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
@@ -46,7 +35,7 @@ class Call(typing.Generic[Arg]):
     function: typing.Callable
     args: typing.Tuple[Arg, ...]
 
-    def __str__(self):
+    def __repr__(self):
         return f"{self.function.__name__}({', '.join(str(a) for a in self.args)})"
 
     def arg_labels(self) -> typing.Iterable[str]:
@@ -61,8 +50,18 @@ class Call(typing.Generic[Arg]):
             for i, _ in enumerate(args):
                 yield f"{arg_name}:{i}"
 
-    def map_args(self, fn: typing.Callable[[Arg], NewArg]) -> "Call[NewArg]":
-        return dataclasses.replace(self, args=tuple(map(fn, self.args)))  # type: ignore
+    def map_args(self, fn: typing.Callable[[Arg], typing.Any]) -> "Call":
+        return self.replace_args(*(fn(arg) for arg in self.args))
+
+    def map_args_of(
+        self, arg_type: typing.Type[Arg], fn: typing.Callable[[Arg], typing.Any]
+    ) -> "Call":
+        return self.replace_args(
+            *(fn(arg) if isinstance(arg, arg_type) else arg for arg in self.args)
+        )
+
+    def replace_args(self, *args: typing.Any) -> "Call":
+        return dataclasses.replace(self, args=args)  # type: ignore
 
     @staticmethod
     def decorator(
@@ -73,15 +72,15 @@ class Call(typing.Generic[Arg]):
 
         For example, this:
 
-            @Call.decorator(lambda first, second: first)
+            @Call.decorator(lambda left, right: first.__type__)
             def Or(left: T, right: T) -> T:
                 ...
 
         Is equivalent too:
 
             def Or(left: T, right: T) -> T:
-                instance_type_fn = lambda first, second: first
-                return instance_type_fn(left, right).__type__(
+                instance_type_fn = lambda left, right: left.__type
+                return instance_type_fn(left, right)(
                     Call(Or, (left, right))
                 )
 
@@ -96,10 +95,9 @@ class Call(typing.Generic[Arg]):
         def inner(fn: T_callable, instance_type_fn=instance_type_fn) -> T_callable:
             @functools.wraps(fn)
             def inner_inner(
-                *args: Instance, fn=fn, instance_type_fn=instance_type_fn
+                *args: Instance, instance_type_fn=instance_type_fn
             ) -> Instance:
-                instance_type = instance_type_fn(*(arg.__type__ for arg in args))
-                return instance_type(Call(fn, tuple(args)))
+                return instance_type_fn(*args)(Call(inner_inner, args))
 
             return typing.cast(T_callable, inner_inner)
 
@@ -114,6 +112,12 @@ Instance_ = typing.TypeVar("Instance_", bound="Instance")
 
 @dataclasses.dataclass(frozen=True)
 class Instance:
+    """
+    An instance is used to create a Python objects with methods around a certain instance type.
+
+    It is useful for users.
+    """
+
     __value__: typing.Any
 
     @property
@@ -125,8 +129,8 @@ class Instance:
         )
         return InstanceType(type(self), fields)
 
-    def __str__(self):
-        return f"{self.__type__}({self.__value__})"
+    def __repr__(self):
+        return f"{repr(self.__type__)}({repr(self.__value__)})"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -144,11 +148,11 @@ class InstanceType(typing.Generic[Instance_]):
     def create(cls, type: typing.Type[Instance_], *args) -> "InstanceType[Instance_]":
         return cls(type, tuple(args))
 
-    def __str__(self):
+    def __repr__(self):
         name = self.type.__name__
         if not self.args:
             return name
-        return f"{self.type.__name__}[{', '.join(str(arg) for arg in self.args)}]"
+        return f"{name}[{', '.join(repr(arg) for arg in self.args)}]"
 
 
 instance_type = InstanceType.create
@@ -164,6 +168,18 @@ NewValue = typing.TypeVar("NewValue")
 
 @dataclasses.dataclass(frozen=True)
 class Expression(typing.Generic[InstanceCov, ValueCov]):
+    """
+    An expression is a directed acyclic graph that represents some computation.
+
+    It has a type and a value. You can "instantiate" this expression
+    by calling it's type with its value, which gives you an Instance.
+
+    You can also go from an instance to an Expression, by using `from_instance`.
+
+    Expression = (InstanceType, Call or other Python value)
+    Call = (function, [Expression or other Python value]*)
+    """
+
     type: typing.Callable[[ValueCov], InstanceCov]
     value: ValueCov
 
@@ -185,14 +201,11 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
         """
         Recursively transforms an instance into a graph of expressions.
         """
-        if not isinstance(instance.__value__, Call):
-            return cls._from_instance(instance)
-        value = instance.__value__
-        new_value = value.map_args(cls.from_instance)
-        return cls._from_instance(dataclasses.replace(instance, __value__=new_value))
-
-    @classmethod
-    def _from_instance(cls, instance: Instance_) -> "Expression[Instance_, typing.Any]":
+        if isinstance(instance.__value__, Call):
+            return cls(
+                instance.__type__,
+                instance.__value__.map_args_of(Instance, cls.from_instance),
+            )
         return cls(instance.__type__, instance.__value__)
 
     def fold(
@@ -200,6 +213,7 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
         expr_fn: "typing.Callable[[Expression[Instance, ResValue]], ResExpression]",
         call_value_fn: "typing.Callable[[Call[ResExpression]], ResValue]",
         other_value_fn: typing.Callable[[object], ResValue],
+        other_arg_fn: typing.Callable[[object], ResExpression],
     ) -> ResExpression:
         """
         Traverses this expression graph and transforms each node.
@@ -234,16 +248,18 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
             value: object, call_value_fn=call_value_fn, other_value_fn=other_value_fn
         ) -> ResValue:
             if isinstance(value, Call):
-                return call_value_fn(value.map_args(fold_expression))
+                return call_value_fn(value.map_args(fold_arg))
             return other_value_fn(value)
 
         @memoize
-        def fold_expression(
-            expr: Expression[Instance, object], expr_fn=expr_fn
+        def fold_arg(
+            expr: object, expr_fn=expr_fn, other_arg_fn=other_arg_fn
         ) -> ResExpression:
-            return expr_fn(expr.replace_value(fold_value(expr.value)))
+            if isinstance(expr, Expression):
+                return expr_fn(expr.replace_value(fold_value(expr.value)))
+            return other_arg_fn(expr)
 
-        return fold_expression(self)
+        return fold_arg(self)
 
     def fold_expression(
         self, expr_fn: typing.Callable[["Expression"], ResExpression]
@@ -256,9 +272,7 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
 
         Each expression is transformed only once.
         """
-        return self.fold(
-            expr_fn=expr_fn, call_value_fn=lambda c: c, other_value_fn=lambda v: v
-        )
+        return typing.cast(ResExpression, self.fold(expr_fn, lambda c: c, lambda v: v, lambda a: a))
 
     def custom_hash(self) -> int:
         """
@@ -279,7 +293,7 @@ class Expression(typing.Generic[InstanceCov, ValueCov]):
             except TypeError:
                 return hash(id(o))
 
-        return self.fold(expr_fn, call_value_fn, other_value_fn)
+        return self.fold(expr_fn, call_value_fn, other_value_fn, other_value_fn)
 
     def compact(self) -> "Expression":
         """

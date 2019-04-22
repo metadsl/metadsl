@@ -1,18 +1,8 @@
-Welcome to metadsl's documentation!
-===================================
-
-.. automodule:: metadsl.expressions
+metadsl
+=======
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 3
 
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   Tutorial
+   api/index

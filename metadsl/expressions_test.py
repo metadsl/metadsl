@@ -6,8 +6,13 @@ import pytest
 T = typing.TypeVar("T", bound=Instance)
 
 
-@call(lambda a, b: a)
+@call(lambda a, b: a.__type__)
 def fn(a: T, b: T) -> T:
+    ...
+
+
+@call(lambda a: instance_type(Instance))
+def value_fn(a: int) -> Instance:
     ...
 
 
@@ -27,8 +32,8 @@ TEST_INSTANCES: typing.Iterable[Instance] = [
     InstanceWithArg(10, instance_type(Instance)),
     InstanceWithArg(10, instance_type(InstanceWithArg, instance_type(Instance))),
     Instance([1, 2, 3]),  # mutable value that doesn't have hash
+    value_fn(1),  # function with non instance arg
 ]
-
 
 
 @pytest.mark.parametrize("instance", TEST_INSTANCES)

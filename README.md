@@ -145,9 +145,5 @@ open htmlcov/index.html
 ### Docs
 
 ```bash
-cd docs/
-# build
-make html
-# serve
-python -m http.server -d _build/html/
+sphinx-autobuild docs docs/_build/html/
 ```
