@@ -1,3 +1,9 @@
+"""
+Tools for memoizing functions based on hash or id.
+
+Disabled for now.
+"""
+
 # import typing
 
 # import functools
