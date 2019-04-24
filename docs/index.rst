@@ -8,4 +8,6 @@ metadsl
    Simple Arrays
    Simple Integer Algebra
    Lambda Calculus
+   Why
+   NumPy
    api/index
