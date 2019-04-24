@@ -4,5 +4,8 @@ metadsl
 .. toctree::
    :maxdepth: 3
 
-   Tutorial
+   Introduction
+   Simple Arrays
+   Simple Integer Algebra
+   Lambda Calculus
    api/index
