@@ -47,7 +47,7 @@ def call(
 class Instance:
     # This should have a ReturnType of self, but we can't type this properly
     # because we don't have access to the self type a property
-    __call__: Call
+    _call: Call
 
 
 #     @property
@@ -65,7 +65,7 @@ class Instance:
 
 # @dataclasses.dataclass
 # class InstanceType(typing.Generic[Instance_]):
-#     type: typing.Type[Instance_]
+#     _type_: typing.Type[Instance_]
 #     args: typing.Tuple
 
 #     def __call__(self, value: object) -> Instance_:

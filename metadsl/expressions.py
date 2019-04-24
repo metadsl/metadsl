@@ -70,7 +70,7 @@ ExpressionType = typing.Union[T, RecursiveCall[typing.Any, T]]
 
 def to_expression(val: ValueType[T]) -> ExpressionType[T]:
     if isinstance(val, Instance):
-        return to_expression(val.__call__)
+        return to_expression(val._call)
     if isinstance(val, Call):
         return RecursiveCall(
             val.function, tuple(to_expression(arg) for arg in val.args)

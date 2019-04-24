@@ -6,6 +6,4 @@ source =
 omit =
     *_test.py
     **/test_*.py
-    nonumpy/*
-    metadsl/python/**
-    metadsl/nonumpy/**
+    metadsl/*/**

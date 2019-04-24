@@ -33,7 +33,7 @@ class InstanceWithArg(Instance):
     inner: typing.Callable[[typing.Any], Instance]
 
 
-@call(lambda a, t: (lambda x: InstanceSubclass(x, t)))
+@call(lambda a, t: (lambda x: InstanceWithArg(x, t)))
 def instance_arg_fn(
     a: int, t: typing.Callable[[typing.Any], Instance]
 ) -> InstanceWithArg:
