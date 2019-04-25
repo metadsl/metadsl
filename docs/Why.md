@@ -30,10 +30,17 @@ By creating a common framework around this, we can share optimizations around co
 
 
 
-## Specific examples
+## Specific need
 
-We came to this problem by trying to take the ideas in Mullin's Mathematics of Arrays and make them useful for those in Python. 
+We came to this problem by trying to take the ideas in Lenore Mullin's Mathematics of Arrays and make them useful for those in Python.
 
-TODO: Add text here about why MoA is important in scientific computing
+It isn't hard to implement these concepts in pure Python, but the issue is then then only execute within the CPython runtime and
+are rather slow. Numeric computing in Python does not execute in Python, it calls out to other libraries which perform
+the low level routines. With Mathematics of Arrays, we generate descriptions of these low level routines dynamically,
+based on the mathematical properties of the combined operations.
+
+Much like numba, we needed a way to expres the ideas at a high level in Python, but then have the ability to execute them in
+a different environment. So we need to move up one abstraction layer, and create code that represents what we want to execute
+instead of executing it directly. Metadsl is meant to be the space to write this kind of representation.
 
 

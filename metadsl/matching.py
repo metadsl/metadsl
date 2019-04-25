@@ -19,11 +19,13 @@ from .expressions import *
 
 from .rules import Rule
 
-__all__ = ["match_rule", "pure_match_rule", "MatchFunctionType", "ArgType", "ArgTypes"]
+__all__ = ["RuleApplier", "rule", "pure_rule"]
 
 T = typing.TypeVar("T")
 
+# Mapping from wildcards to the matching pattern and replacement
 PureFunctionType = typing.Callable[..., typing.Tuple[T, T]]
+# Mapping from wildcards to the matching pattern and replacement thunk
 MatchFunctionType = typing.Callable[
     ..., typing.Tuple[T, typing.Callable[[], typing.Optional[T]]]
 ]
@@ -31,21 +33,48 @@ ArgType = typing.Optional[typing.Callable[["Wildcard"], Instance]]
 ArgTypes = typing.Tuple[ArgType, ...]
 
 
-def pure_match_rule(arg_types: ArgTypes, pure_match_function: PureFunctionType) -> Rule:
-    return InferredPureMatchRule(arg_types, pure_match_function)
-
-
-def match_rule(arg_types: ArgTypes, match_function: MatchFunctionType) -> Rule:
+@dataclasses.dataclass
+class RuleApplier:
     """
-    Creates a replacement rule given a function that maps from wildcard inputs
-    to two things, a template expression tree and a replacement thunk.
-
-    If the template matches an expression, it will be replaced with the result of the thunk, replacing
-    the input args with the nodes at their locations in the template.
-
-    You can also return None from the rule to signal that it won't match.
+    Applies a rule to an instance, unwrapping it and returning the replaced
+    value if it has changed or itself it the rule is not applicable.
     """
-    return InferredMatchRule(arg_types, match_function)
+
+    rule: Rule
+
+    def __call__(self, instance: ValueType) -> ValueType:
+        expr = to_expression(instance)
+        replaced_expr = self.rule(expr)  # type: ignore
+        if replaced_expr is None:
+            return instance  # type: ignore
+        return from_expression(replaced_expr)
+
+
+def pure_rule(*arg_types: ArgType) -> typing.Callable[[MatchFunctionType], Rule]:
+    """
+    Creates a new rule given a callable that accepts wildcards and returns
+    the match value and the replacement value.
+
+    Use this over the `rule` whenever the template can map to the result, without
+    any functions applied, i.e. when the leaf nodes are just moved around and not changed.
+    """
+
+    def inner(function: PureFunctionType, arg_types=arg_types) -> Rule:
+        return InferredPureMatchRule(arg_types, function)
+
+    return inner
+
+
+def rule(*arg_types: ArgType) -> typing.Callable[[MatchFunctionType], Rule]:
+    """
+    Creates a new rule given a callable that accepts wildcards and returns
+    the match value and a thunk of the replacement value.
+    """
+
+    def inner(function: MatchFunctionType, arg_types=arg_types) -> Rule:
+        return InferredMatchRule(arg_types, function)
+
+    return inner
 
 
 @dataclasses.dataclass(eq=False)
@@ -70,6 +99,16 @@ class Wildcard:
 
 @dataclasses.dataclass
 class MatchRule:
+    """
+    Creates a replacement rule given a function that maps from wildcard inputs
+    to two things, a template expression tree and a replacement thunk.
+
+    If the template matches an expression, it will be replaced with the result of the thunk, replacing
+    the input args with the nodes at their locations in the template.
+
+    You can also return None from the rule to signal that it won't match.
+    """
+
     template: ExpressionType
     match: typing.Callable[
         [typing.Dict[Wildcard, object]], typing.Optional[ExpressionType]
@@ -106,6 +145,7 @@ class InferredPureMatchRule:
 
     def __call__(self, expr: ExpressionType) -> typing.Optional[ExpressionType]:
         return self.match_rule(expr)
+
 
 @dataclasses.dataclass
 class InferredMatchRule(typing.Generic[T]):

@@ -12,13 +12,74 @@ import typing
 import dataclasses
 from .expressions import *
 
-__all__ = ["Rule", "rule_sequence", "rule_fold", "rule_repeat"]
+__all__ = ["Rule", "RulesRepeatSequence", "RulesRepeatFold", "RuleSequence", "RuleFold", "RuleRepeat"]
 Rule = typing.Callable[[ExpressionType], typing.Optional[ExpressionType]]
 
 
 @dataclasses.dataclass
+class RulesRepeatSequence:
+    """
+    This takes in a list of rules and repeatedly applies them until no more match.
+    """
+
+    rules: typing.Tuple[Rule, ...]
+    _rule: Rule
+
+    def __init__(self, *rules: Rule):
+        self.rules = rules
+        self._update_rule()
+
+    def _update_rule(self):
+        execute_all = RuleSequence(self.rules)
+        execute_many_times = RuleRepeat(execute_all)
+        self._rule = execute_many_times
+
+    def __call__(self, expr: ExpressionType) -> typing.Optional[ExpressionType]:
+        return self._rule(expr)  # type: ignore
+
+    def append(self, rule: Rule) -> Rule:
+        self.rules += (rule,)
+        self._update_rule()
+        return rule
+
+
+@dataclasses.dataclass
+class RulesRepeatFold:
+    """
+    This takes in a list of rules and repeatedly applies them recursively to the
+    tree, until no more match anywhere.
+    """
+
+    rules: typing.Tuple[Rule, ...]
+    _rule: Rule
+
+    def __init__(self, *rules: Rule):
+        self.rules = rules
+        self._update_rule()
+
+    def _update_rule(self):
+        execute_all = RuleSequence(self.rules)
+        execute_many_times = RuleRepeat(execute_all)
+        execute_fold = RuleFold(execute_many_times)
+        execute_fold_many_times = RuleRepeat(execute_fold)
+        self._rule = execute_fold_many_times
+
+    def __call__(self, expr: ExpressionType) -> typing.Optional[ExpressionType]:
+        return self._rule(expr)  # type: ignore
+
+    def append(self, rule: Rule) -> Rule:
+        self.rules += (rule,)
+        self._update_rule()
+        return rule
+
+
+@dataclasses.dataclass
 class RuleSequence:
-    rules: typing.List[Rule]
+    """
+    Returns a new replacement rule that tries each of the replacement rules in sequence, returning the result of the first that matches.
+    """
+
+    rules: typing.Tuple[Rule, ...]
 
     def __call__(self, expr: ExpressionType) -> typing.Optional[ExpressionType]:
         res = None
@@ -29,18 +90,16 @@ class RuleSequence:
         return res
 
 
-def rule_sequence(*rules) -> Rule:
-    """
-    Returns a new replacement rule that tries each of the replacement rules in sequence, returning the result of the first that matches.
-    """
-    return RuleSequence(list(rules))
-
-
 Intermediate = typing.Tuple[bool, object]
 
 
 @dataclasses.dataclass
 class RuleFold:
+    """
+    Returns a new replacement rule that calls it on every node of the tree, returning a new expression if any of the nodes were updated
+    or None if none of them were.
+    """
+
     rule: Rule
     folder: ExpressionFolder = dataclasses.field(init=False)
 
@@ -77,16 +136,12 @@ class RuleFold:
         return (True, new_call)
 
 
-def rule_fold(rule: Rule) -> Rule:
-    """
-    Returns a new replacement rule that calls it on every node of the tree, returning a new expression if any of the nodes were updated
-    or None if none of them were.
-    """
-    return RuleFold(rule)
-
-
 @dataclasses.dataclass
 class RuleRepeat:
+    """
+    Returns a new replacement rule that repeatedly calls the replacement rule
+    """
+
     rule: Rule
 
     def __call__(self, expr: ExpressionType) -> typing.Optional[ExpressionType]:
@@ -102,10 +157,3 @@ class RuleRepeat:
         raise RuntimeError(
             f"Exceeded maximum number of repitions, rule: {self.rule}, expr: {expr}"  # type: ignore
         )
-
-
-def rule_repeat(rule: Rule) -> Rule:
-    """
-    Returns a new replacement rule that repeatedly calls the replacement rule
-    """
-    return RuleRepeat(rule)
