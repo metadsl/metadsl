@@ -17,8 +17,12 @@ T_PureCallable = typing.TypeVar("T_PureCallable", bound=typing.Callable[..., Pur
 
 @dataclasses.dataclass
 class Replacements:
-    rules: typing.Tuple[Rule, ...] = dataclasses.field(default=tuple())
-    _rule: Rule = dataclasses.field(init=False)
+    rules: typing.Tuple[Rule, ...]
+    _rule: Rule
+
+    def __init__(self, *rules: Rule):
+        self.rules = rules
+        self._update_rule()
 
     def register(
         self, *arg_types: ArgType
@@ -39,9 +43,6 @@ class Replacements:
             return function
 
         return inner
-
-    def __post_init__(self):
-        self._update_rule()
 
     def _update_rule(self):
         execute_all = rule_sequence(*self.rules)
@@ -72,3 +73,6 @@ class ReplacementsSequence:
         for replacement in self.replacements:
             val = replacement(val)
         return val  # type: ignore
+
+    def register(self, replacements: Replacements):
+        self.replacements.append(replacements)
