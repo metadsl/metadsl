@@ -13,7 +13,7 @@ them all at once.
 
 Seperating the user facing API of your DSL its implementation enables
 other library authors to experiment with how it executes while preserving
-user expecatations.
+user expectations.
 
 In this documentation we lay out some examples that `metadsl`,
 provide a roadmap, and lay out the motivation for this library.
