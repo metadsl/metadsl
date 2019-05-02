@@ -24,6 +24,6 @@ provide a roadmap, and lay out the motivation for this library.
    Why
    Simple Arrays
    Lambda Calculus
-   Introduction
+   Concepts
    Roadmap
    api/index
