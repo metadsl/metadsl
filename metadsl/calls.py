@@ -35,7 +35,8 @@ def call(
     def inner(fn: T_Callable, type_fn=type_fn) -> T_Callable:
         # copy name and docstring from original function
         @functools.wraps(fn)
-        def inner_inner(*args, type_fn=type_fn):
+        def inner_inner(*args, type_fn=type_fn, **kwargs):
+            print("calling", fn)
             return type_fn(*args)(Call(inner_inner, args))
 
         return typing.cast(T_Callable, inner_inner)
