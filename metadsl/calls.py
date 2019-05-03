@@ -50,6 +50,9 @@ class Instance:
     # because we don't have access to the self type a property
     _call: Call
 
+    def __str__(self):
+        return str(self._call)
+
 
 #     @property
 #     def __type__(self: Instance_) -> "InstanceType[Instance_]":
