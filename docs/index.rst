@@ -11,11 +11,11 @@ them all at once.
    :language: python
 
 
-Seperating the user facing API of your DSL its implementation enables
+Seperating the user facing API of your DSL from its implementation enables
 other library authors to experiment with how it executes while preserving
 user expectations.
 
-In this documentation we lay out some examples that `metadsl`,
+In this documentation we give some examples of using `metadsl`,
 provide a roadmap, and lay out the motivation for this library.
 
 .. toctree::
