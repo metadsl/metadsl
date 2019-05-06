@@ -47,7 +47,7 @@ class RulesRepeatSequence:
         return rule
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(init=False)
 class RulesRepeatFold:
     """
     This takes in a list of rules and repeatedly applies them recursively to the
