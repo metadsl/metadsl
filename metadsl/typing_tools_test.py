@@ -14,7 +14,13 @@ def _generic_return(arg: T) -> T:
 
 
 class _GenericClass(typing.Generic[T]):
-    ...
+    def method(self) -> T:
+        ...
+
+
+class _NonGenericClass:
+    def method(self) -> int:
+        ...
 
 
 def _generic_class_arg(arg: _GenericClass[T]) -> T:
@@ -23,6 +29,7 @@ def _generic_class_arg(arg: _GenericClass[T]) -> T:
 
 def _generic_class_return(arg: T) -> _GenericClass[T]:
     ...
+
 
 class TestInferReturnType:
     def test_simple(self):
@@ -34,9 +41,20 @@ class TestInferReturnType:
 
     def test_generic_class_arg(self):
         assert infer_return_type(_generic_class_arg, _GenericClass[int]) == int
-        assert infer_return_type(_generic_class_arg, _GenericClass[_GenericClass[bool]]) == _GenericClass[bool]
+        assert (
+            infer_return_type(_generic_class_arg, _GenericClass[_GenericClass[bool]])
+            == _GenericClass[bool]
+        )
 
     def test_generic_class_return(self):
         assert infer_return_type(_generic_class_return, int) == _GenericClass[int]
-        assert infer_return_type(_generic_class_return, _GenericClass[bool]) == _GenericClass[_GenericClass[bool]]
+        assert (
+            infer_return_type(_generic_class_return, _GenericClass[bool])
+            == _GenericClass[_GenericClass[bool]]
+        )
 
+    def test_generic_class_method(self):
+        assert infer_return_type(_GenericClass.method, _GenericClass[bool]) == bool
+
+    def test_non_generic_class_method(self):
+        assert infer_return_type(_NonGenericClass.method, _NonGenericClass) == int

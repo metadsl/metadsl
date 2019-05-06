@@ -54,7 +54,7 @@ def replace_typevars(
 
 
 def get_type_hints(
-    fn: typing.Callable
+    fn: typing.Callable, *arg_types: typing.Type
 ) -> typing.Tuple[typing.Tuple[typing.Optional[typing.Type], ...], typing.Type]:
     """
     Returns back the arg type hints and return type hints for a function.
@@ -64,6 +64,7 @@ def get_type_hints(
     hints = typing.get_type_hints(fn)
     arg_hints: typing.List[typing.Optional[typing.Type]] = []
     for arg_name in inspect.signature(fn).parameters.keys():
+
         arg_hints.append(hints.get(arg_name, None))
     return tuple(arg_hints), hints.get("return", None)
 
@@ -76,6 +77,23 @@ def infer_return_type(
     by looking at the type signature and matching generics.
     """
     arg_hints, return_hint = get_type_hints(fn)
+
+    # If the first arg hint is empty, and it is called 'self'
+    # replace it with the inferred origin type
+    # So if the arg type is List[int] the type hint inferred
+    # for self should be List[T]
+    if (
+        arg_hints
+        and arg_hints[0] is None
+        and list(inspect.signature(fn).parameters.keys())[0] == "self"
+    ):
+        self_arg_type = arg_types[0]
+        new_self_hint = typing_inspect.get_origin(self_arg_type) or self_arg_type
+
+        params = typing_inspect.get_parameters(new_self_hint)
+        if params:
+            new_self_hint = new_self_hint[typing_inspect.get_parameters(new_self_hint)]
+        arg_hints = (new_self_hint,) + arg_hints[1:]
 
     matches: typevar_mapping_typing = safe_merge(
         *(
