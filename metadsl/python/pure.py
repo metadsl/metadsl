@@ -35,6 +35,9 @@ class Tuple(Expression, typing.Generic[T]):
     def from_items_expr(cls: typing.Type[Tuple[T]], *items: T) -> Tuple[T]:
         ...
 
+    @expression
+    def rest(self) -> Tuple[T]:
+        ...
 
 class Number(Expression):
     """
