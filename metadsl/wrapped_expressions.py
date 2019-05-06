@@ -1,5 +1,5 @@
 """
-Convert expressions wrap existing expression types and provide all the same methods,
+You can wrap an exprssion type to provide all the same methods,
 but do type conversion for the arguments.
 """
 
@@ -9,12 +9,13 @@ but do type conversion for the arguments.
 # from .conversion import convert, register_converter
 # import dataclasses
 
+# T = typing.TypeVar("T")
 # T_expression = typing.TypeVar("T_expression", bound=Expression)
 
 
 
 # @dataclasses.dataclass
-# class ConvertExpression(typing.Generic[T_expression]):
+# class WrappedExpression(typing.Generic[T_expression]):
 #     _expression: T_expression
     
 #     def _get_expression_type(self) -> T_expression:
@@ -22,6 +23,10 @@ but do type conversion for the arguments.
 #         Returns the type of the expression it is wrapping.
 #         """
 #         ...
+
+# @register_converter
+# def _convert_wrapped_to_unwrapped(t: typing.Type[T], v: object) -> T:
+#     if isinstance(v, WrappedExpression) and 
 
 # T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 

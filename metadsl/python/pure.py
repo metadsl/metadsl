@@ -1,84 +1,80 @@
-from metadsl.expressions import *
+from __future__ import annotations
+
+
+from metadsl import *
 import typing
-import dataclasses
 
-__all__ = [
-    "Boolean",
-    "Integer",
-    "Tuple",
-    "Number",
-    "Optional",
-    "Abstraction",
-    "Instance",
-]
+__all__ = ["Integer", "Tuple", "Number", "Optional", "Union"]
 
-T = typing.TypeVar("T", bound=Instance)
-U = typing.TypeVar("U", bound=Instance)
+T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
 
-class Boolean(Instance):
-    pass
+class Integer(Expression):
+    @staticmethod
+    @expression
+    def from_int(i: int) -> Integer:
+        ...
 
 
-class Integer(Instance):
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
-class Tuple(Instance, typing.Generic[T]):
+class Tuple(Expression, typing.Generic[T]):
     """
     Mirrors the Python Tuple API, of a homogenous type.
     """
 
-    item_type: InstanceType[T]
-
-    @call(lambda self, index: self.args[0])
+    @expression
     def __getitem__(self, index: Integer) -> T:
         ...
 
     @staticmethod
-    def from_items(item_type: InstanceType[T], *items: T) -> "Tuple[T]":
-        return call(lambda *items: item_type)(Tuple.from_items_call)(*items)
+    def from_items(item_type: typing.Type[T], *items: T) -> Tuple[T]:
+        # Can't use regular call b/c https://github.com/python/typing/issues/629
+        return Tuple[item_type](Tuple.from_items, items)  # type: ignore
 
-    @staticmethod
-    def from_items_call(*items: T) -> "Tuple[T]":
+    @classmethod
+    def from_items_expr(cls: typing.Type[Tuple[T]], *items: T) -> Tuple[T]:
         ...
 
 
-class Number(Instance):
+class Number(Expression):
     """
     Floating point, integer, or complex number.
     """
 
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
-class Abstraction(Instance, typing.Generic[T, U]):
-    return_type: InstanceType[U]
-
-    @call(lambda self, arg: self.return_type)
-    def __call__(self, arg: T) -> U:
+    @staticmethod
+    @expression
+    def from_number(i: int) -> Number:
         ...
 
 
-@dataclasses.dataclass(frozen=True)
-class Optional(Instance, typing.Generic[T]):
-    inner_type: InstanceType[T]
-
-    @call(lambda self, none, some: none)
-    def match(self, none: U, some: Abstraction[T, U]) -> U:
+class Optional(Expression, typing.Generic[T]):
+    @staticmethod
+    @expression
+    def some(value: T) -> Optional[T]:
         ...
 
     @staticmethod
-    @call(lambda value: instance_type(Optional, value))
-    def create_some(value: T) -> "Optional[T]":
+    def none(t: typing.Type[T]) -> Optional[T]:
+        return Optional[t](Optional.non_expr, ())  # type: ignore
+
+    @classmethod
+    def non_expr(cls: typing.Type[Optional[T]]) -> Optional[T]:
+        ...
+
+
+class Union(Expression, typing.Generic[T, U]):
+    @staticmethod
+    def left(left_t: typing.Type[T], right_t: typing.Type[U], left: T) -> Union[T, U]:
+        return Union[left_t, right_t](Union.left_expr, (left,))  # type: ignore
+
+    @staticmethod
+    def right(left_t: typing.Type[T], right_t: typing.Type[U], right: U) -> Union[T, U]:
+        return Union[left_t, right_t](Union.right_expr, (right,))  # type: ignore
+
+    @classmethod
+    def left_expr(cls: typing.Type[Union[T, U]], left: T) -> Union[T, U]:
         ...
 
     @classmethod
-    def create_none(cls, inner_type: InstanceType[T]) -> "Optional[T]":
-        return call(lambda: instance_type(Optional, inner_type))(cls.create_none_call)()
-
-    @classmethod
-    def create_none_call(cls):
+    def right_expr(cls: typing.Type[Union[T, U]], right: U) -> Union[T, U]:
         ...

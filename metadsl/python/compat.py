@@ -1,4 +1,6 @@
-from metadsl.expressions import *
+from __future__ import annotations
+
+from metadsl import *
 import typing
 import dataclasses
 
@@ -6,7 +8,7 @@ import metadsl.python.pure as py_pure
 
 __all__ = ["Integer", "Tuple", "Number", "Optional", "Boolean", "create_instance"]
 
-T = typing.TypeVar("T", bound=Instance)
+T = typing.TypeVar("T")
 
 
 def create_instance(instance_type: InstanceType[T], value: object) -> T:

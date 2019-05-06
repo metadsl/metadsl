@@ -39,7 +39,8 @@ class Expression:
         return f"{self._function.__qualname__}({', '.join(map(str, self._arguments))})"
 
     def __repr__(self):
-        return f"Expression({self._function.__qualname__}, {self._arguments})"
+        t = get_type(self)
+        return f"{getattr(t, '__qualname__', t)}({self._function.__qualname__}, {repr(self._arguments)})"
 
     def __eq__(self, value) -> bool:
         """
@@ -78,8 +79,7 @@ def is_expression_type(t: typing.Type) -> bool:
 
 
 def create_expression(
-    fn: typing.Callable[..., T],
-    args: typing.Tuple,
+    fn: typing.Callable[..., T], args: typing.Tuple
 ) -> typing.Union[T, LiteralExpression[T]]:
     """
     Given a function and some arguments, return the right expression for the return type.
@@ -90,7 +90,7 @@ def create_expression(
     # We need to get acces to the actual function, because even though the wrapped
     # one has the same signature, the globals wont be set properly for
     # typing.inspect_type
-    fn_for_typing = getattr(fn, '__wrapped__', fn)
+    fn_for_typing = getattr(fn, "__wrapped__", fn)
     return_type = infer_return_type(fn_for_typing, *map(get_type, args))
 
     if is_expression_type(return_type):

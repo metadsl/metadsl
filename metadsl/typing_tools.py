@@ -59,13 +59,13 @@ def get_type_hints(
     """
     Returns back the arg type hints and return type hints for a function.
 
-    Arg types are None if they are not supplied. Return type is required.
+    Arg types are None if they are not supplied.
     """
     hints = typing.get_type_hints(fn)
     arg_hints: typing.List[typing.Optional[typing.Type]] = []
     for arg_name in inspect.signature(fn).parameters.keys():
         arg_hints.append(hints.get(arg_name, None))
-    return tuple(arg_hints), hints["return"]
+    return tuple(arg_hints), hints.get("return", None)
 
 
 def infer_return_type(
