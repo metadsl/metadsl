@@ -1,46 +1,123 @@
+from __future__ import annotations
+
 import dataclasses
 import typing
+import typing_inspect
+import functools
 
-# import functools
-# import typing_extensions
-# from .functools import memoize, unsafe_hash
-from .calls import *
+from .typing_tools import *
 
 __all__ = [
-    "RecursiveCall",
-    "to_expression",
-    "from_expression",
-    "ValueType",
-    "ExpressionType",
+    "Expression",
+    "expression",
     "ExpressionFolder",
-    "expression_replacer",
+    "ExpressionReplacer",
+    "LiteralExpression",
+    "fold_identity",
+    "is_expression_type",
 ]
 
-
-ArgType = typing.TypeVar("ArgType")
-ReturnType = typing.TypeVar("ReturnType")
-NewArgType = typing.TypeVar("NewArgType")
+T_expression = typing.TypeVar("T_expression", bound="Expression")
 
 
-@dataclasses.dataclass
-class RecursiveCall(typing.Generic[ArgType, ReturnType]):
-    function: typing.Callable[..., ReturnType]
-    args: typing.Tuple[ArgType, ...]
-    # __unsafe_hash__: int = dataclasses.field(init=False)
+@dataclasses.dataclass(eq=False, unsafe_hash=True)
+class Expression:
+    """
+    Subclass this type and provide relevent methods for your type. Do not add any fields.
+
+    If the `_function` is called with `_arguments` then it should return `self`.
+
+    The arguments should match the proper types specified in the type annotation of the function.
+    The return type of the function should either be the the expression itself or
+    LiteralExpression of the return type.
+    """
+
+    _function: typing.Callable
+    _arguments: typing.Tuple
 
     def __str__(self):
-        return f"{self.function.__name__}({', '.join(map(str, self.args))})"
+        return f"{self._function.__qualname__}({', '.join(map(str, self._arguments))})"
 
     def __repr__(self):
-        return f"RecursiveCall({self.function.__name__}, {self.args})"
+        return f"Expression({self._function.__qualname__}, {self._arguments})"
 
-    # def __post_init__(self):
-    #     self.__unsafe_hash__ = hash(
-    #         (self.function,) + tuple(map(unsafe_hash, self.args))
-    #     )
+    def __eq__(self, value) -> bool:
+        """
+        Only equal if generic types and values are equal.
+        """
+        if isinstance(self, Expression):
+            if isinstance(value, Expression):
+                types_equal = get_type(self) == get_type(value)
+                values_equal = (self._function, value._arguments) == (
+                    self._function,
+                    value._arguments,
+                )
+                return types_equal and values_equal
+            return False
+        return self == value
 
 
 T = typing.TypeVar("T")
+
+
+class LiteralExpression(Expression, typing.Generic[T]):
+    """
+    This is meant to be used when are computing a Python value.
+    """
+
+    ...
+
+
+def is_expression_type(t: typing.Type) -> bool:
+    """
+    Checks if a type is a subclass of expression. Also works on generic types.
+    """
+    if typing_inspect.is_generic_type(t):
+        t = typing_inspect.get_origin(t)
+    return issubclass(t, Expression)
+
+
+def create_expression(
+    fn: typing.Callable[..., T],
+    args: typing.Tuple,
+) -> typing.Union[T, LiteralExpression[T]]:
+    """
+    Given a function and some arguments, return the right expression for the return type.
+
+
+    If the return type is not an expression subclass, returns a LiteralExpression of that type.
+    """
+    # We need to get acces to the actual function, because even though the wrapped
+    # one has the same signature, the globals wont be set properly for
+    # typing.inspect_type
+    fn_for_typing = getattr(fn, '__wrapped__', fn)
+    return_type = infer_return_type(fn_for_typing, *map(get_type, args))
+
+    if is_expression_type(return_type):
+        return typing.cast(
+            T, typing.cast(typing.Type[Expression], return_type)(fn, args)
+        )
+    # MYPY: ???
+    return LiteralExpression[return_type](fn, args)  # type: ignore
+
+
+T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
+
+
+def expression(fn: T_callable) -> T_callable:
+    """
+    Creates an expresion object by wrapping a Python function and providing a function
+    that will take in the args and return an expression of the right type.
+    """
+
+    @functools.wraps(fn)
+    def expresion_(*args):
+        return create_expression(expresion_, args)
+
+    return typing.cast(T_callable, expresion_)
+
+
+T_Expression = typing.TypeVar("T_Expression", bound="Expression")
 
 
 @dataclasses.dataclass
@@ -48,70 +125,50 @@ class ExpressionFolder(typing.Generic[T]):
     """
     Traverses this expression graph and transforms each node, from the bottom up.
 
-    You provide two functions, one to transform the leaves, and a second to transform the calls.
-
-    Each node is transformed once, and only once, based on it's id.
+    You provide two functions, one to transform the leaves, and a second to transform the expressions.
     """
 
     value_fn: typing.Callable[[object], T]
-    call_fn: typing.Callable[[typing.Callable, typing.Tuple[T, ...]], T]
+    expression_fn: typing.Callable[
+        [typing.Type[Expression], typing.Callable, typing.Tuple[T, ...]], T
+    ]
 
     def __call__(self, expr: object):
-        if isinstance(expr, RecursiveCall):
-            return self.call_fn(  # type: ignore
-                expr.function, tuple(self(arg) for arg in expr.args)
+        if isinstance(expr, Expression):
+            return self.expression_fn(  # type: ignore
+                get_type(expr),
+                expr._function,
+                tuple(self(arg) for arg in expr._arguments),
             )
         return self.value_fn(expr)  # type: ignore
 
 
-ValueType = typing.Union[T, Call[typing.Any, T]]
-ExpressionType = typing.Union[T, RecursiveCall[typing.Any, T]]
-
-
-def to_expression(val: ValueType[T]) -> ExpressionType[T]:
-    if isinstance(val, Instance):
-        return to_expression(val._call)
-    if isinstance(val, Call):
-        return RecursiveCall(
-            val.function, tuple(to_expression(arg) for arg in val.args)
-        )
-    return val
-
-
-_from_expression_folder = ExpressionFolder(lambda v: v, lambda fn, args: fn(*args))
-
-
-def from_expression(val: ExpressionType[T]) -> T:
-    return _from_expression_folder(val)
+fold_identity = ExpressionFolder(lambda v: v, lambda t, fn, args: t(fn, args))
 
 
 @dataclasses.dataclass
 class ExpressionReplacer:
-    # Not using dict, because we might not have hashable keys
-    mapping: typing.Tuple[typing.Tuple[typing.Any, typing.Any], ...]
+    """
+    Replaces certain subexpression in an expression with values.
+    """
+
+    mapping: typing.Dict
     folder: ExpressionFolder = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self.folder = ExpressionFolder(self._value_fn, self._call_fn)
+        self.folder = ExpressionFolder(self._value_fn, self._expression_fn)
 
     def __call__(self, expr):
         return self.folder(expr)
 
     def _value_fn(self, o):
-        return self._get(o, o)
+        return self._get(o)
 
-    def _call_fn(self, fn, args):
-        call = RecursiveCall(fn, args)
-        return self._get(call, call)
+    def _expression_fn(self, t, fn, args):
+        return self._get(t(fn, args))
 
-    def _get(self, key, default):
-        for actual_key, value in self.mapping:
+    def _get(self, key):
+        for actual_key, value in self.mapping.items():
             if actual_key == key:
                 return value
-        return default
-
-
-def expression_replacer(
-    mapping: typing.Tuple[typing.Tuple[typing.Any, typing.Any], ...]
-) -> typing.Callable:
-    return ExpressionReplacer(mapping)
+        return key

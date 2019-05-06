@@ -49,3 +49,10 @@ open htmlcov/index.html
 ```bash
 sphinx-autobuild docs docs/_build/html/
 ```
+
+
+---
+
+Switch to Expression syntax. everything is expression with _function and _arguments
+
+Use generic types for generic types, only allow these options on expression
