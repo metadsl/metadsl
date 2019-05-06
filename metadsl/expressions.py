@@ -20,7 +20,7 @@ __all__ = [
 T_expression = typing.TypeVar("T_expression", bound="Expression")
 
 
-@dataclasses.dataclass(eq=False, unsafe_hash=True)
+@dataclasses.dataclass(eq=False)
 class Expression:
     """
     Subclass this type and provide relevent methods for your type. Do not add any fields.
@@ -46,16 +46,14 @@ class Expression:
         """
         Only equal if generic types and values are equal.
         """
-        if isinstance(self, Expression):
-            if isinstance(value, Expression):
-                types_equal = get_type(self) == get_type(value)
-                values_equal = (self._function, value._arguments) == (
-                    self._function,
-                    value._arguments,
-                )
-                return types_equal and values_equal
+        if not isinstance(value, Expression):
             return False
-        return self == value
+
+        return (
+            self._function == value._function
+            and get_type(self) == get_type(value)
+            and self._arguments == value._arguments
+        )
 
 
 T = typing.TypeVar("T")
@@ -152,7 +150,7 @@ class ExpressionReplacer:
     Replaces certain subexpression in an expression with values.
     """
 
-    mapping: typing.Dict
+    mapping: typing.Mapping
     folder: ExpressionFolder = dataclasses.field(init=False)
 
     def __post_init__(self):

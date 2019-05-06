@@ -19,7 +19,7 @@ def get_type(v: T) -> typing.Type[T]:
 
 
 # MYPY: ???
-typevar_mapping_typing = typing.Dict[typing.TypeVar, typing.Type]  # type: ignore
+typevar_mapping_typing = typing.Mapping[typing.TypeVar, typing.Type]  # type: ignore
 
 
 def match_types(hint: typing.Type, t: typing.Type) -> typevar_mapping_typing:

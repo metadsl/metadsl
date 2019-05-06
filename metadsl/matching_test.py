@@ -56,5 +56,5 @@ def _add_zero_rule(a: _Number) -> typing.Tuple[Expression, Expression]:
 class TestPureRule:
     def test_add_zero(self):
         s = _from_str("str")
-        expr = _from_int(0) + s
+        expr = s + _from_int(0)
         assert _add_zero_rule(expr) == s

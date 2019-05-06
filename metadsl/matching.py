@@ -84,7 +84,7 @@ def extract_wildcard(o: object) -> typing.Optional[Wildcard]:
 
 
 # a number of (wildcard expression, replacement) pairs
-WildcardMapping = typing.Dict[Expression, object]
+WildcardMapping = typing.Mapping[Expression, object]
 
 
 @dataclasses.dataclass
@@ -100,7 +100,7 @@ class MatchRule:
     """
 
     # the wildcards that are present in the template
-    wildcards: typing.Tuple[Expression, ...]
+    wildcards: typing.List[Expression]
 
     # expression containing wildcard expression it that will be matched against the
     # incoming expression
@@ -126,7 +126,7 @@ class InferredPureMatchRule:
 
     def __post_init__(self):
         arg_type_hints, _ = get_type_hints(self.pure_match_function)
-        wildcards = tuple(map(create_wildcard, arg_type_hints))
+        wildcards = list(map(create_wildcard, arg_type_hints))
         template, result = self.pure_match_function(*wildcards)
         self.result = result
         self.match_rule = MatchRule(wildcards, template, self._match)
@@ -146,7 +146,7 @@ class InferredMatchRule(typing.Generic[T]):
     def __post_init__(self):
         # Create one wildcard` per argument
         arg_type_hints, _ = get_type_hints(self.match_function)
-        wildcards = tuple(map(create_wildcard, arg_type_hints))
+        wildcards = list(map(create_wildcard, arg_type_hints))
 
         # Call the function first to create a template with the wildcards
         template, _ = self.match_function(*wildcards)
@@ -167,7 +167,7 @@ class InferredMatchRule(typing.Generic[T]):
 
 
 def match_expression(
-    wildcards: typing.Tuple[Expression, ...], template: object, expr: object
+    wildcards: typing.List[Expression], template: object, expr: object
 ) -> WildcardMapping:
     """
     Returns a mapping of wildcards to the objects at that level, or None if it does not match.
@@ -177,7 +177,7 @@ def match_expression(
     Mutally recursive with match_value
     """
     if template in wildcards:
-        return {typing.cast(Expression, template): expr}
+        return UnhashableMapping(Item(typing.cast(Expression, template), expr))
     if isinstance(expr, Expression):
         if not isinstance(template, Expression) or template._function != expr._function:
             raise ValueError
@@ -185,8 +185,9 @@ def match_expression(
             *(
                 match_expression(wildcards, arg_template, arg_value)
                 for arg_template, arg_value in zip(template._arguments, expr._arguments)
-            )
+            ),
+            dict_constructor=UnhashableMapping
         )
     if template != expr:
         raise ValueError
-    return {}
+    return UnhashableMapping()
