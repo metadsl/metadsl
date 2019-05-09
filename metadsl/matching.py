@@ -20,34 +20,19 @@ from .dict_tools import *
 from .typing_tools import *
 from .rules import Rule
 
-__all__ = ["create_wildcard", "extract_wildcard", "Wildcard", "rule", "pure_rule"]
+__all__ = ["create_wildcard", "extract_wildcard", "Wildcard", "rule"]
 
-T = typing.TypeVar("T")
+T = typing.TypeVar("T", bound=Expression)
+
 
 # Mapping from wildcards to the matching pattern and replacement
-PureFunctionType = typing.Callable[..., typing.Tuple[T, T]]
-# Mapping from wildcards to the matching pattern and replacement thunk
-MatchFunctionType = typing.Callable[
-    ..., typing.Tuple[T, typing.Callable[[], typing.Optional[T]]]
-]
-
-
-def pure_rule(fn: PureFunctionType) -> Rule:
-    """
-    Creates a new rule given a callable that accepts wildcards and returns
-    the match value and the replacement value.
-
-    Use this over the `rule` whenever the template can map to the result, without
-    any functions applied, i.e. when the leaf nodes are just moved around and not changed.
-    """
-
-    return InferredPureMatchRule(fn)
+MatchFunctionType = typing.Callable[..., typing.Tuple[T, typing.Optional[T]]]
 
 
 def rule(fn: MatchFunctionType) -> Rule:
     """
     Creates a new rule given a callable that accepts wildcards and returns
-    the match value and a thunk of the replacement value.
+    the match value and the replacement value.
     """
 
     return InferredMatchRule(fn)
@@ -61,7 +46,7 @@ class Wildcard(typing.Generic[T]):
 
 
 @expression
-def wildcard(wildcard: Wildcard[T]) -> T:
+def wildcard(wildcard: E[Wildcard[T]]) -> T:
     ...
 
 
@@ -118,48 +103,27 @@ class MatchRule:
 
 
 @dataclasses.dataclass
-class InferredPureMatchRule:
-    # TODO: Remove this from class, just need in init.
-    pure_match_function: PureFunctionType
-    match_rule: MatchRule = dataclasses.field(init=False)
-    result: object = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        arg_type_hints, _ = get_type_hints(self.pure_match_function)
-        wildcards = list(map(create_wildcard, arg_type_hints))
-        template, result = self.pure_match_function(*wildcards)
-        self.result = result
-        self.match_rule = MatchRule(wildcards, template, self._match)
-
-    def _match(self, wildcards_to_args: WildcardMapping) -> typing.Optional[object]:
-        return ExpressionReplacer(wildcards_to_args)(self.result)
-
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        return self.match_rule(expr)
-
-
-@dataclasses.dataclass
 class InferredMatchRule(typing.Generic[T]):
     match_function: MatchFunctionType
     match_rule: MatchRule = dataclasses.field(init=False)
+    result: typing.Optional[Expression] = dataclasses.field(init=False)
 
     def __post_init__(self):
         # Create one wildcard` per argument
-        arg_type_hints, _ = get_type_hints(self.match_function)
-        wildcards = list(map(create_wildcard, arg_type_hints))
+        wildcards = [create_wildcard(a) for a in get_arg_hints(self.match_function)]
 
         # Call the function first to create a template with the wildcards
-        template, _ = self.match_function(*wildcards)
+        template, self.result = self.match_function(*wildcards)
 
         self.match_rule = MatchRule(wildcards, template, self._match)
 
     def _match(self, wildcards_to_args: WildcardMapping) -> typing.Optional[object]:
+        if self.result is not None:
+            return ExpressionReplacer(wildcards_to_args)(self.result)
+
         args = (wildcards_to_args[wildcard] for wildcard in self.match_rule.wildcards)
 
-        _, expression_thunk = self.match_function(*args)
-        expression = expression_thunk()
-        if expression is None:
-            return None
+        _, expression = self.match_function(*args)
         return expression
 
     def __call__(self, expr: object) -> typing.Optional[object]:

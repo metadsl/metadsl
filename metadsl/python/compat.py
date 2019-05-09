@@ -1,111 +1,116 @@
 from __future__ import annotations
 
-from metadsl import *
+import numbers
 import typing
-import dataclasses
 
 import metadsl.python.pure as py_pure
+import typing_inspect
+from metadsl import *
+from metadsl.typing_tools import safe_issubclass
 
-__all__ = ["Integer", "Tuple", "Number", "Optional", "Boolean", "create_instance"]
+__all__ = ["Integer", "Number", "Number", "IntegerTuple"]
 
 T = typing.TypeVar("T")
 
 
-def create_instance(instance_type: InstanceType[T], value: object) -> T:
-    """
-    Takes an instance type and a Python value and creates an instance of that type.
-    """
-    # TODO: Make this dispatch extensible
+@register_converter
+def _bool_to_boolean(t: typing.Type[T], value: object) -> T:
+    if safe_issubclass(t, py_pure.Boolean) and isinstance(value, bool):
+        return typing.cast(T, py_pure.Boolean.from_bool(value))
+    return NotImplemented
 
-    # Instances should be passed through, changing the type
-    if isinstance(value, Instance):
-        return instance_type(value.__value__)  # type: ignore
 
-    # Tuples
-    if instance_type.type == py_pure.Tuple and isinstance(value, tuple):
-        item_type, = instance_type.args
-        items = [create_instance(item_type, item) for item in value]
-        return py_pure.Tuple.from_items(item_type, *items)  # type: ignore
+class Integer(Wrap[py_pure.Integer]):
+    @wrap(py_pure.Integer.__add__)
+    def __add__(self, other: object) -> Integer:
+        ...
 
-    # Optional
-    if instance_type.type == py_pure.Optional:
-        inner_type, = instance_type.args
-        if value is None:
-            return py_pure.Optional.create_none(inner_type)  # type: ignore
-        return py_pure.Optional.create_some(  # type: ignore
-            create_instance(inner_type, value)
+    @wrap(py_pure.Integer.__mul__)
+    def __mul__(self, other: object) -> Integer:
+        ...
+
+
+@register_converter
+def _int_to_integer(t: typing.Type[T], value: object) -> T:
+    if (
+        safe_issubclass(t, py_pure.Integer)
+        and isinstance(value, int)
+        and not isinstance(value, bool)
+    ):
+        return typing.cast(T, py_pure.Integer.from_int(value))
+    return NotImplemented
+
+
+class Number(Wrap[py_pure.Number]):
+    @wrap(py_pure.Number.__add__)
+    def __add__(self, other: object) -> Number:
+        ...
+
+    @wrap(py_pure.Number.__mul__)
+    def __mul__(self, other: object) -> Number:
+        ...
+
+
+@register_converter
+def _number_to_number(t: typing.Type[T], value: object) -> T:
+    if safe_issubclass(t, py_pure.Number) and isinstance(value, numbers.Number):
+        return typing.cast(T, py_pure.Number.from_number(value))
+    return NotImplemented
+
+
+class IntegerTuple(Wrap[py_pure.Tuple[py_pure.Integer]]):
+    @wrap(py_pure.Tuple.__getitem__)
+    def __getitem__(self, index: object) -> Integer:
+        ...
+
+
+@register_converter
+def _tuple_to_tuple(t: typing.Type[T], value: object) -> T:
+    if safe_issubclass(t, py_pure.Tuple) and isinstance(value, tuple):
+        inner_type, = typing_inspect.get_args(t)
+        return typing.cast(
+            T,
+            py_pure.Tuple.from_items(
+                inner_type, *(convert(inner_type, a) for a in value)
+            ),
         )
-    if isinstance(value, dict):
-        value = tuple(value.items())
-
-    return instance_type(value)
-
-class Boolean(Instance):
-    """
-    bool
-    """
-
-    @classmethod
-    def from_pure(cls, p: py_pure.Boolean) -> "Boolean":
-        return cls(p.__value__)
-
-    @property
-    def pure(self) -> py_pure.Boolean:
-        return py_pure.Boolean(self.__value__)
+    return NotImplemented
 
 
-class Integer(Instance):
-    """
-    int
-    """
-
-    @classmethod
-    def from_pure(cls, p: py_pure.Integer) -> "Integer":
-        return cls(p.__value__)
-
-    @property
-    def pure(self) -> py_pure.Integer:
-        return py_pure.Integer(self.__value__)
+@register_converter
+def _to_optional(t: typing.Type[T], value: object) -> T:
+    if safe_issubclass(t, py_pure.Optional):
+        inner_type, = typing_inspect.get_args(t)
+        if value is None:
+            return typing.cast(T, py_pure.Optional.none(inner_type))
+        return typing.cast(T, py_pure.Optional.some(convert(inner_type, value)))
+    return NotImplemented
 
 
-class Number(Instance):
-    """
-    numbers.Number
-    """
+@register_converter
+def _to_union(t: typing.Type[T], value: object) -> T:
+    if safe_issubclass(t, py_pure.Union):
+        left_type, right_type = typing_inspect.get_args(t)
 
-    @classmethod
-    def from_pure(cls, p: py_pure.Number) -> "Number":
-        return cls(p.__value__)
+        try:
+            left_converted = convert(left_type, value)
+        except NotImplementedError:
+            left_converted = None
 
-    @property
-    def pure(self) -> py_pure.Number:
-        return py_pure.Number(self.__value__)
+        try:
+            right_converted = convert(right_type, value)
+        except NotImplementedError:
+            right_converted = None
+        if left_converted is not None and right_converted is not None:
+            raise ValueError(f"Ambigious conversion: {value} to {t}")
 
-
-@dataclasses.dataclass(frozen=True)
-class Tuple(Instance, typing.Generic[T]):
-    item_type: InstanceType[T]
-
-    @classmethod
-    def from_pure(cls, p: py_pure.Tuple[typing.Any], item_type: InstanceType[T]) -> "Tuple[T]":
-        return cls(p.__value__, item_type)
-
-    @property
-    def pure(self) -> py_pure.Tuple[T]:
-        return py_pure.Tuple(self.__value__, self.item_type)
-
-    def __getitem__(self, index: typing.Any) -> T:
-        return self.pure[create_instance(instance_type(Integer), index).pure]
-
-
-@dataclasses.dataclass(frozen=True)
-class Optional(Instance, typing.Generic[T]):
-    inner_type: InstanceType[T]
-
-    @classmethod
-    def from_pure(cls, p: py_pure.Optional[T]) -> "Optional[T]":
-        return cls(p.__value__, p.inner_type)
-
-    @property
-    def pure(self) -> py_pure.Optional[T]:
-        return py_pure.Optional(self.__value__, self.inner_type)
+        if left_converted is None and right_converted is None:
+            return NotImplemented
+        if left_converted:
+            return typing.cast(
+                T, py_pure.Union.left(left_type, right_type, left_converted)
+            )
+        return typing.cast(
+            T, py_pure.Union.right(left_type, right_type, right_converted)
+        )
+    return NotImplemented

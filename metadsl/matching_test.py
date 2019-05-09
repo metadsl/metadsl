@@ -11,7 +11,7 @@ class _SomeExpression(Expression):
 
 class TestWildcard:
     def test_create_literal(self):
-        w = create_wildcard(int)
+        w = create_wildcard(E[int])  # type: ignore
         assert get_type(w) == LiteralExpression[int]
         assert isinstance(extract_wildcard(w), Wildcard)
 
@@ -26,16 +26,18 @@ class _Number(Expression):
     def __add__(self, other: _Number) -> _Number:
         ...
 
+
 @expression
-def _from_int(i: int) -> _Number:
+def _from_int(i: E[int]) -> _Number:
     ...
 
 
 @rule
-def _add_rule(
-    a: int, b: int
-) -> typing.Tuple[Expression, typing.Callable[[], Expression]]:
-    return _from_int(a) + _from_int(b), lambda: _from_int(a + b)
+def _add_rule(a: E[int], b: E[int]) -> typing.Tuple[_Number, typing.Optional[_Number]]:
+    return (
+        _from_int(a) + _from_int(b),
+        _from_int(a + b) if isinstance(a, int) and isinstance(b, int) else None,
+    )
 
 
 class TestRule:
@@ -43,13 +45,14 @@ class TestRule:
         expr = _from_int(1) + _from_int(2)
         assert _add_rule(expr) == _from_int(3)
 
+
 @expression
-def _from_str(s: str) -> _Number:
+def _from_str(s: E[str]) -> _Number:
     ...
 
 
-@pure_rule
-def _add_zero_rule(a: _Number) -> typing.Tuple[Expression, Expression]:
+@rule
+def _add_zero_rule(a: _Number) -> typing.Tuple[_Number, _Number]:
     return a + _from_int(0), a
 
 

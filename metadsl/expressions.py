@@ -4,7 +4,7 @@ import dataclasses
 import typing
 import typing_inspect
 import functools
-
+import inspect
 from .typing_tools import *
 
 __all__ = [
@@ -13,6 +13,7 @@ __all__ = [
     "ExpressionFolder",
     "ExpressionReplacer",
     "LiteralExpression",
+    "E",
     "fold_identity",
     "is_expression_type",
 ]
@@ -61,45 +62,73 @@ T = typing.TypeVar("T")
 
 class LiteralExpression(Expression, typing.Generic[T]):
     """
-    This is meant to be used when are computing a Python value.
+    This is meant to be used when are computing a Python value that is not an expression.
     """
 
     ...
+
+
+E = typing.Union[T, LiteralExpression[T]]
 
 
 def is_expression_type(t: typing.Type) -> bool:
     """
     Checks if a type is a subclass of expression. Also works on generic types.
     """
-    if typing_inspect.is_generic_type(t):
-        t = typing_inspect.get_origin(t)
-    return issubclass(t, Expression)
+    return safe_issubclass(t, Expression)
 
 
-def create_expression(
-    fn: typing.Callable[..., T], args: typing.Tuple
-) -> typing.Union[T, LiteralExpression[T]]:
+def extract_literal_expression_type(
+    t: typing.Type
+) -> typing.Optional[typing.Type[LiteralExpression]]:
+    """
+    If t is a literal expression type, then it returns the literal expression type, else none.
+    """
+    if not typing_inspect.is_union_type(t):
+        return None
+    l, r = typing_inspect.get_args(t)
+    l_is_expression = is_expression_type(l)
+    r_is_expression = is_expression_type(r)
+    if l_is_expression and r_is_expression:
+        raise TypeError(f"Cannot use union of expression {t}")
+    if not l_is_expression and not r_is_expression:
+        return None
+    return l if l_is_expression else r
+
+
+def create_expression(fn: typing.Callable[..., T], args: typing.Tuple) -> T:
     """
     Given a function and some arguments, return the right expression for the return type.
-
-
-    If the return type is not an expression subclass, returns a LiteralExpression of that type.
     """
-    # We need to get acces to the actual function, because even though the wrapped
+    # We need to get access to the actual function, because even though the wrapped
     # one has the same signature, the globals wont be set properly for
     # typing.inspect_type
     fn_for_typing = getattr(fn, "__wrapped__", fn)
-    return_type = infer_return_type(fn_for_typing, *map(get_type, args))
 
-    if is_expression_type(return_type):
-        return typing.cast(
-            T, typing.cast(typing.Type[Expression], return_type)(fn, args)
-        )
-    # MYPY: ???
-    return LiteralExpression[return_type](fn, args)  # type: ignore
+    arg_types = [get_type(arg) for arg in args]
+    return_type: typing.Type[Expression] = infer_return_type(fn_for_typing, *arg_types)
+
+    # If it is a literal return value, create the literal expression
+    return_type = extract_literal_expression_type(return_type) or return_type
+    if not is_expression_type(return_type):
+        raise TypeError(f"Must return expression type not {return_type}")
+
+    return typing.cast(T, return_type(fn, args))
 
 
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
+
+
+def n_function_args(fn: typing.Callable) -> int:
+    """
+    Returns the number of args a function takes, raising an error if there are any non parameter args or variable args.
+    """
+    n = 0
+    for param in inspect.signature(fn).parameters.values():
+        if param.kind != param.POSITIONAL_OR_KEYWORD:
+            raise TypeError(f"Arg type of {param} not supported for function {fn}")
+        n += 1
+    return n
 
 
 def expression(fn: T_callable) -> T_callable:
@@ -107,6 +136,15 @@ def expression(fn: T_callable) -> T_callable:
     Creates an expresion object by wrapping a Python function and providing a function
     that will take in the args and return an expression of the right type.
     """
+    # Note: Cannot do this because of forward type references not resolved for methods in classes
+
+    # # Verify that it can be called with just expression types
+    # inferred: typing.Type = infer_return_type(fn, *(Expression for _ in range(n_function_args(fn))))
+    # inferred = extract_literal_expression_type(inferred) or inferred
+    # if not typing_inspect.is_typevar(inferred) and not is_expression_type(inferred):
+    #     raise TypeError(
+    #         f"{fn} should return an expression type when passed in expression types, not a {inferred}"
+    #     )
 
     @functools.wraps(fn)
     def expresion_(*args):

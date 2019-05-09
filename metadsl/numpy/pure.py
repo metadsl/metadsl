@@ -18,7 +18,6 @@ __all__ = [
 ]
 
 class NDArray(Expression):
-    @property  # type: ignore
     @expression
     def shape(self) -> Tuple[Integer]:
         ...
@@ -126,5 +125,3 @@ def arange(
     dtype: Optional[DType],
 ) -> NDArray:
     ...
-
-

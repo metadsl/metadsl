@@ -1,5 +1,7 @@
 import typing
 
+import pytest
+
 from .typing_tools import *
 
 T = typing.TypeVar("T")
@@ -31,6 +33,10 @@ def _generic_class_return(arg: T) -> _GenericClass[T]:
     ...
 
 
+def _union_arg(a: typing.Union[int, _GenericClass[int]]) -> int:
+    ...
+
+
 class TestInferReturnType:
     def test_simple(self):
         assert infer_return_type(_simple_return) == int
@@ -58,3 +64,15 @@ class TestInferReturnType:
 
     def test_non_generic_class_method(self):
         assert infer_return_type(_NonGenericClass.method, _NonGenericClass) == int
+
+    def test_union_arg_left(self):
+        assert infer_return_type(_union_arg, int) == int
+
+    def test_union_arg_right(self):
+        assert infer_return_type(_union_arg, _GenericClass[int]) == int
+
+    def test_union_arg_neither(self):
+        with pytest.raises(TypeError):
+            infer_return_type(_union_arg, float)
+        with pytest.raises(TypeError):
+            infer_return_type(_union_arg, _GenericClass[float])

@@ -11,12 +11,12 @@ T = typing.TypeVar("T")
 
 
 @expression
-def fn(a: Expression, b: Expression) -> Expression:
+def fn(a: T, b: T) -> T:
     ...
 
 
 @expression
-def value_fn(a: int) -> Expression:
+def value_fn(a: E[int]) -> Expression:
     ...
 
 
@@ -25,7 +25,7 @@ class Subclass(Expression):
 
 
 @expression
-def subclass_fn(a: int) -> Subclass:
+def subclass_fn(a: E[int]) -> Subclass:
     ...
 
 
@@ -39,7 +39,7 @@ class Generic(Expression, typing.Generic[T]):
 
 
 @expression
-def instance_arg_fn(a: int) -> Generic[int]:
+def instance_arg_fn(a: E[int]) -> Generic[int]:
     ...
 
 
@@ -48,7 +48,7 @@ def test_expression_subclass_generic() -> None:
 
 
 @expression
-def mutable_fn(a: typing.List) -> Expression:
+def mutable_fn(a: E[typing.List]) -> Expression:
     ...
 
 

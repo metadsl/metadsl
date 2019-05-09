@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import numbers
 
 from metadsl import *
 import typing
@@ -10,12 +10,25 @@ T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
 
+class Boolean(Expression):
+    @staticmethod
+    @expression
+    def from_bool(b: E[bool]) -> Boolean:
+        ...
+
 class Integer(Expression):
     @staticmethod
     @expression
-    def from_int(i: int) -> Integer:
+    def from_int(i: E[int]) -> Integer:
         ...
 
+    @expression
+    def __add__(self, other: Integer) -> Integer:
+        ...
+
+    @expression
+    def __mul__(self, other: Integer) -> Integer:
+        ...
 
 class Tuple(Expression, typing.Generic[T]):
     """
@@ -46,9 +59,16 @@ class Number(Expression):
 
     @staticmethod
     @expression
-    def from_number(i: int) -> Number:
+    def from_number(i: numbers.Number) -> Number:
         ...
 
+    @expression
+    def __add__(self, other: Number) -> Number:
+        ...
+
+    @expression
+    def __mul__(self, other: Number) -> Number:
+        ...
 
 class Optional(Expression, typing.Generic[T]):
     @staticmethod
@@ -58,10 +78,10 @@ class Optional(Expression, typing.Generic[T]):
 
     @staticmethod
     def none(t: typing.Type[T]) -> Optional[T]:
-        return Optional[t](Optional.non_expr, ())  # type: ignore
+        return Optional[t](Optional.none_expr, ())  # type: ignore
 
     @classmethod
-    def non_expr(cls: typing.Type[Optional[T]]) -> Optional[T]:
+    def none_expr(cls: typing.Type[Optional[T]]) -> Optional[T]:
         ...
 
 
