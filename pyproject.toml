@@ -28,8 +28,16 @@ test = [
 ]
 doc = [
     "sphinx",
-    "sphinx-autodoc-typehints"
+    "sphinx-autodoc-typehints",
+    "sphinx_rtd_theme",
+    'recommonmark',
+    "nbsphinx",
+    "ipykernel",
+    "IPython",
+    "sphinx-autobuild"
 ]
 dev = [
-    "jupyterlab"
+    "jupyterlab",
+    "nbconvert",
+    "pudb"
 ]

@@ -5,25 +5,30 @@ This is a preliminary roadmap to drive the direction of development here.
 We would appreciate any input from the community on what would be useful for them, that could serve
 to inform this roadmap.
 
-1. Add examples in docs for low level usage
-  1. Create  API for doing arithmetic (adding/multipling numbers)
-    1. Show how to write translater that does partial evaluation
-    2. Show how to write compiler to Python AST
-    3. Add variables and show how these show up in Python AST
-    4. Show how to create wrapped version that deals with implicit conversion with python types
-  2. Create typed lambda calculus API
+1. Add examples in docs for low level usage / create typed lambda calculus API
     1. Show how to convert between [De Bruijn index](https://en.wikipedia.org/wiki/De_Bruijn_index) and named variable
     2. Show how to implement [Church numerals](https://en.wikipedia.org/wiki/Church_encoding#Church_numerals)
-       and arithmatic on top of it
+       and arithmetic on top of it
     3. Show how to convert between these and python integers
-   
+
 2. Support initial use case with NumPy API that translates to other backends (more details below)
   1. Be able to build up NumPy expression
-  2. Create simple transformer to turn numpy expressions into pytorch AST.
+  2. Create simple transformer to turn NumPy expressions into PyTorch AST.
 
+3. Start basing MoA off of this
 
 ## Prototype of initial NumPy API
-*This is not implemented yet but is the desired API.*
+
+The initial use case is in scientific computing, where:
+
+1. You want to use the the APIs you know and love (ex. NumPy).
+2. But you want it to execute in a new way (ex. on a GPU or distributed across machines).
+3. And you want to optimize a chain of operations before executing (ex. `(x * y)[0]` -> `x[0] * y[0]` / [Mathematics of Arrays](https://paperpile.com/app/p/5de098dd-606d-0124-a25d-db5309f99394)).
+
+
+Here we lay out an end user API that we can create in `metadsl`.
+
+**This is not implemented yet, but serves to guide development**. 
 
 ### 1. NumPy API
 

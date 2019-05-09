@@ -4,12 +4,6 @@
 
 A framework for creating domain specific language libraries in Python.
 
-The initial use case is in scientific computing, where:
-
-1. You want to use the the APIs you know and love (ex. NumPy).
-2. But you want it to execute in a new way (ex. on a GPU or distributed accross machines).
-3. And you want to optimize a chain of operations before executing (ex. `(x * y)[0]` -> `x[0] * y[0]` / [Mathematics of Arrays](https://paperpile.com/app/p/5de098dd-606d-0124-a25d-db5309f99394)).
-
 
 ## Guiding Principles
 
@@ -21,8 +15,6 @@ expressions, they should be able to write those things in a pluggable manner, so
 effort. 
 
 This means we have to explicitly expose the protocols of the different levels to foster distributed collaboration and reuse. 
-
-## [Roadmap](./ROADMAP.md)
 
 ## Development
 
@@ -55,9 +47,5 @@ open htmlcov/index.html
 ### Docs
 
 ```bash
-cd docs/
-# build
-make html
-# serve
-python -m http.server -d _build/html/
+sphinx-autobuild docs docs/_build/html/
 ```
