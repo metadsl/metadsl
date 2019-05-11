@@ -12,7 +12,15 @@ import typing
 import dataclasses
 from .expressions import *
 
-__all__ = ["Rule", "RulesRepeatSequence", "RulesRepeatFold", "RuleSequence", "RuleFold", "RuleRepeat"]
+__all__ = [
+    "Rule",
+    "RulesRepeatSequence",
+    "RulesRepeatFold",
+    "RuleSequence",
+    "RuleInOrder",
+    "RuleFold",
+    "RuleRepeat",
+]
 
 # takes in an expression object and returns a new one if it matches, otherwise returns None
 # We type this as `object` instead of `Expression` because  we can pass in a leaf of an expression
@@ -77,6 +85,28 @@ class RulesRepeatFold:
         return rule
 
 
+@dataclasses.dataclass(init=False)
+class RuleInOrder:
+    """
+    Returns a new replacement rule that executes each of the rules in order,
+    returning a new expression if any of them replaced.
+    """
+
+    rules: typing.Tuple[Rule, ...]
+
+    def __init__(self, *rules: Rule):
+        self.rules = rules
+
+    def __call__(self, expr: object) -> typing.Optional[object]:
+        did_replace = False
+        for rule in self.rules:
+            res = rule(expr)
+            if res is not None:
+                did_replace = True
+                expr = res
+        return expr if did_replace else None
+
+
 @dataclasses.dataclass
 class RuleSequence:
     """
@@ -126,7 +156,10 @@ class RuleFold:
         return (True, new_value)
 
     def _expression_fn(
-        self, type: typing.Type[Expression], fn: typing.Callable, args: typing.Tuple[Intermediate, ...]
+        self,
+        type: typing.Type[Expression],
+        fn: typing.Callable,
+        args: typing.Tuple[Intermediate, ...],
     ) -> Intermediate:
         new_args: typing.List[object] = []
         any_matched = False
