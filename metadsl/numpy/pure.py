@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 from metadsl import *
-from metadsl.python.pure import *
+from metadsl.python.expressions import *
 
 __all__ = [
     "NDArray",

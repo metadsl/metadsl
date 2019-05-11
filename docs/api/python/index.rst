@@ -7,5 +7,5 @@ metadsl.python
 .. toctree::
    :maxdepth: 3
 
-   pure
-   compat
+   expressions
+   wraps

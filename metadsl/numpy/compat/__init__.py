@@ -19,40 +19,6 @@ Things it does not preserve:
 It should be just as accepting as the default NumPy API in the type of objects it takes. 
 """
 
-from __future__ import annotations
-
-import typing
-
-from metadsl import *
-import metadsl.numpy.pure as np_pure
-import metadsl.python.compat as py_compat
-
-__all__ = ["arange", "NDArray"]
-
-T = typing.TypeVar("T")
-
-
-@wrap(np_pure.arange)
-def arange(start, stop, step, dtype) -> NDArray:
-    ...
-
-
-class NDArray(Wrap[np_pure.NDArray]):
-    @wrap(np_pure.NDArray.shape)
-    def shape(self) -> py_compat.IntegerTuple:
-        ...
-
-    @wrap(np_pure.NDArray.__add__)
-    def __add__(self, other: object) -> NDArray:
-        ...
-
-    @wrap(np_pure.NDArray.__mul__)
-    def __mul__(self, other: object) -> NDArray:
-        ...
-
-    @wrap(np_pure.NDArray.__getitem__)
-    def __getitem__(self, idxs: object) -> NDArray:
-        ...
 
     # def __gt__(self, other) -> "NDArray":
     #     return self.from_pure(
