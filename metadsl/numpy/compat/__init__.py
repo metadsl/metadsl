@@ -1,6 +1,6 @@
 """
 
-No Numpy is a replica of the NumPy API that can be used without requiring NumPy.
+This is a replica of the NumPy API that can be used without requiring NumPy.
 
 You should be able to import from `metadsl.nonumpy.compat` just as you would from `numpy` and use all
 the functions and objects you are accustomed to.

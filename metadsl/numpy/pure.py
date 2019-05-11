@@ -7,14 +7,7 @@ from metadsl.python.pure import *
 __all__ = [
     "NDArray",
     "DType",
-    "ArrayOrder",
-    "Optional",
-    "Number",
-    "array",
     "arange",
-    "UFunc",
-    "UFuncKwargs",
-    "UFuncMethod",
 ]
 
 class NDArray(Expression):

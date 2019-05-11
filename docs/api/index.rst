@@ -1,10 +1,15 @@
 API
 ===
 
+.. automodule:: metadsl
+
 .. toctree::
    :maxdepth: 3
 
-   calls
    expressions
    rules
    matching
+   wraps
+   conversion
+   python/index
+   numpy/index
