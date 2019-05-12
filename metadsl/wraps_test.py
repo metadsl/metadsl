@@ -6,13 +6,14 @@ from .wraps import *
 from .expressions import *
 
 
+T_some = typing.TypeVar("T_some", bound="SomeExpr")
+
+
 class SomeExpr(Expression):
-    pass
-
-
-@expression
-def create() -> SomeExpr:
-    ...
+    @classmethod
+    @expression
+    def create(cls: typing.Type[T_some]) -> T_some:
+        ...
 
 
 @expression
@@ -25,7 +26,7 @@ def fn(a: SomeExpr, b: Expression) -> SomeExpr:
     ...
 
 
-class SomeWrap(Wrap[SomeExpr]):
+class SomeWrap(SomeExpr):
     pass
 
 
@@ -35,33 +36,31 @@ def fn_wrapped(a: object, b: object) -> SomeWrap:
 
 
 def test_wrap_function():
-    result = fn_wrapped(SomeWrap(create()), create_expr())
-    assert result == SomeWrap(SomeExpr(fn, (create(), create_expr())))
+    result = fn_wrapped(SomeWrap.create(), create_expr())
+    assert result == SomeWrap(fn, (SomeExpr.create(), create_expr()))
 
 
 T = typing.TypeVar("T")
 
+T_expr = typing.TypeVar("T_expr", bound="Expr")
+
 
 class Expr(Expression, typing.Generic[T]):
-    pass
+    @classmethod
+    @expression
+    def create(cls: typing.Type[T_expr]) -> T_expr:
+        ...
 
 
-class WrapExpr(Wrap[Expr[T]]):
-    ...
-
-
-@expression
-def create_int() -> Expr[int]:
-    ...
-
-
-@wrap(create_int)
-def wrapped_create_int() -> WrapExpr[int]:
+class WrapExpr(Expr[int]):
     ...
 
 
 def test_wrap_returns_generic():
-    assert wrapped_create_int() == WrapExpr[int](Expr[int](create_int, tuple()))
+    assert WrapExpr.create() == WrapExpr(Expr.create, ())
+
+
+T_number = typing.TypeVar("T_number", bound="Number")
 
 
 class Number(Expression):
@@ -69,22 +68,22 @@ class Number(Expression):
     def __add__(self, other: Number) -> Number:
         ...
 
+    @classmethod
+    @expression
+    def create(cls: typing.Type[T_number]) -> T_number:
+        ...
 
-@expression
-def create_number() -> Number:
-    ...
 
-
-class WrapNumber(Wrap[Number]):
-    @wrap(Number.__add__)
+class WrapNumber(Number):
+    @wrap_method
     def __add__(self, other: object) -> WrapNumber:
         ...
 
 
 def test_wrap_method():
-    n = create_number()
-    k = create_number()
-    assert WrapNumber(n) + k == WrapNumber(n + k)
+    n = WrapNumber.create()
+    k = Number.create()
+    assert n + k == WrapNumber(Number.__add__, (Number.create(), Number.create()))
 
 
 class List(Expression, typing.Generic[T]):

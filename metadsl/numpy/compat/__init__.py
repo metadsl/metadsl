@@ -18,6 +18,79 @@ Things it does not preserve:
 
 It should be just as accepting as the default NumPy API in the type of objects it takes. 
 """
+import typing
+import metadsl.numpy.wraps
+import dataclasses
+
+__all__ = ["arange"]
+
+@dataclasses.dataclass
+class NDArray:
+    array: metadsl.numpy.wraps.NDArray
+
+    @property
+    def shape(self) -> Tuple[Integer]:
+        return self.array.shape()
+
+    def __add__(self, other: typing.Any) -> NDArray:
+        return self.array + other
+
+    @expression
+    def __mul__(self, other: NDArray) -> NDArray:
+        ...
+
+    @expression
+    def __getitem__(self, idxs: Union[Integer, Tuple[Integer]]) -> NDArray:
+        ...
+
+
+# If arange is called with one positional argument, it is the stop, and you cannot set the start with a kward
+@typing.overload
+def arange(stop, *, step=None, dtype=None) -> NDArray:
+    ...
+
+
+# If arange is called with two positional arguments, the first is stop, and the second is start
+@typing.overload
+def arange(start, stop, step=None, dtype=None) -> NDArray:
+    ...
+
+
+def arange(*args, **kwargs) -> NDArray:
+    start: typing.Any
+    if len(args) == 1:
+        stop, = args
+        start = None
+        assert kwargs.keys() < {"step", "dtype"}
+        step, dtype = kwargs.get("step"), kwargs.get("dtype")
+    elif len(args) == 2:
+        start, stop = args
+        assert kwargs.keys() < {"step", "dtype"}
+        step, dtype = kwargs.get("step"), kwargs.get("dtype")
+    elif len(args) == 3:
+        start, stop, step = args
+        assert kwargs.keys() < {"dtype"}
+        dtype = kwargs.get("dtype")
+    elif len(args) == 4:
+        start, stop, step, dtype = args
+        assert not kwargs.keys()
+    else:
+        raise RuntimeError("Cannot pass more than 4 arguments to `arange`")
+    return NDArray.from_pure(
+        np_pure.arange(
+            create_instance(
+                instance_type(py_pure.Optional, instance_type(py_pure.Number)), start
+            ),
+            create_instance(instance_type(py_pure.Number), stop),
+            create_instance(
+                instance_type(py_pure.Optional, instance_type(py_pure.Number)), step
+            ),
+            create_instance(
+                instance_type(py_pure.Optional, instance_type(np_pure.DType)), dtype
+            ),
+        )
+    )
+
 
 
     # def __gt__(self, other) -> "NDArray":
@@ -116,50 +189,3 @@ It should be just as accepting as the default NumPy API in the type of objects i
 #         )
 #     )
 
-
-# # If arange is called with one positional argument, it is the stop, and you cannot set the start with a kward
-# @typing.overload
-# def arange(stop, *, step=None, dtype=None) -> NDArray:
-#     ...
-
-
-# # If arange is called with two positional arguments, the first is stop, and the second is start
-# @typing.overload
-# def arange(start, stop, step=None, dtype=None) -> NDArray:
-#     ...
-
-
-# def arange(*args, **kwargs) -> NDArray:
-#     start: typing.Any
-#     if len(args) == 1:
-#         stop, = args
-#         start = None
-#         assert kwargs.keys() < {"step", "dtype"}
-#         step, dtype = kwargs.get("step"), kwargs.get("dtype")
-#     elif len(args) == 2:
-#         start, stop = args
-#         assert kwargs.keys() < {"step", "dtype"}
-#         step, dtype = kwargs.get("step"), kwargs.get("dtype")
-#     elif len(args) == 3:
-#         start, stop, step = args
-#         assert kwargs.keys() < {"dtype"}
-#         dtype = kwargs.get("dtype")
-#     elif len(args) == 4:
-#         start, stop, step, dtype = args
-#         assert not kwargs.keys()
-#     else:
-#         raise RuntimeError("Cannot pass more than 4 arguments to `arange`")
-#     return NDArray.from_pure(
-#         np_pure.arange(
-#             create_instance(
-#                 instance_type(py_pure.Optional, instance_type(py_pure.Number)), start
-#             ),
-#             create_instance(instance_type(py_pure.Number), stop),
-#             create_instance(
-#                 instance_type(py_pure.Optional, instance_type(py_pure.Number)), step
-#             ),
-#             create_instance(
-#                 instance_type(py_pure.Optional, instance_type(np_pure.DType)), dtype
-#             ),
-#         )
-#     )

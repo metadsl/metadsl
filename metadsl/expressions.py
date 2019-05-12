@@ -96,20 +96,26 @@ def extract_literal_expression_type(
     return l if l_is_expression else r
 
 
-def create_expression(fn: typing.Callable[..., T], args: typing.Tuple) -> T:
+def create_expression(
+    fn: typing.Callable[..., T],
+    args: typing.Tuple,
+    return_type: typing.Optional[typing.Type[Expression]],
+) -> T:
     """
     Given a function and some arguments, return the right expression for the return type.
     """
-    # We need to get access to the actual function, because even though the wrapped
-    # one has the same signature, the globals wont be set properly for
-    # typing.inspect_type
-    fn_for_typing = getattr(fn, "__wrapped__", fn)
+    if not return_type:
+        # We need to get access to the actual function, because even though the wrapped
+        # one has the same signature, the globals wont be set properly for
+        # typing.inspect_type
+        fn_for_typing = getattr(fn, "__wrapped__", fn)
 
-    arg_types = [get_type(arg) for arg in args]
-    return_type: typing.Type[Expression] = infer_return_type(fn_for_typing, *arg_types)
+        arg_types = [get_type(arg) for arg in args]
+        return_type = infer_return_type(fn_for_typing, *arg_types)
 
-    # If it is a literal return value, create the literal expression
-    return_type = extract_literal_expression_type(return_type) or return_type
+        # If it is a literal return value, create the literal expression
+        return_type = extract_literal_expression_type(return_type) or return_type
+
     if not is_expression_type(return_type):
         raise TypeError(f"Must return expression type not {return_type}")
 
@@ -147,8 +153,8 @@ def expression(fn: T_callable) -> T_callable:
     #     )
 
     @functools.wraps(fn)
-    def expresion_(*args):
-        return create_expression(expresion_, args)
+    def expresion_(*args, _return_type=None):
+        return create_expression(expresion_, args, _return_type)
 
     return typing.cast(T_callable, expresion_)
 
