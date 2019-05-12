@@ -21,7 +21,7 @@ __all__ = [
 T_expression = typing.TypeVar("T_expression", bound="Expression")
 
 
-@dataclasses.dataclass(eq=False)
+@dataclasses.dataclass(eq=False, repr=False)
 class Expression:
     """
     Subclass this type and provide relevent methods for your type. Do not add any fields.

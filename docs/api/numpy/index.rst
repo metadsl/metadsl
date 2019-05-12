@@ -8,4 +8,4 @@ metadsl.numpy
    :maxdepth: 3
 
    expressions
-   wraps
+..    wraps

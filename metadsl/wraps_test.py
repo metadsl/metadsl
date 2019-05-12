@@ -1,109 +1,109 @@
-from __future__ import annotations
+# from __future__ import annotations
 
-import typing
+# import typing
 
-from .wraps import *
-from .expressions import *
-
-
-T_some = typing.TypeVar("T_some", bound="SomeExpr")
+# from .wraps import *
+# from .expressions import *
 
 
-class SomeExpr(Expression):
-    @classmethod
-    @expression
-    def create(cls: typing.Type[T_some]) -> T_some:
-        ...
+# T_some = typing.TypeVar("T_some", bound="SomeExpr")
 
 
-@expression
-def create_expr() -> Expression:
-    ...
+# class SomeExpr(Expression):
+#     @classmethod
+#     @expression
+#     def create(cls: typing.Type[T_some]) -> T_some:
+#         ...
 
 
-@expression
-def fn(a: SomeExpr, b: Expression) -> SomeExpr:
-    ...
+# @expression
+# def create_expr() -> Expression:
+#     ...
 
 
-class SomeWrap(SomeExpr):
-    pass
+# @expression
+# def fn(a: SomeExpr, b: Expression) -> SomeExpr:
+#     ...
 
 
-@wrap(fn)
-def fn_wrapped(a: object, b: object) -> SomeWrap:
-    ...
+# class SomeWrap(SomeExpr):
+#     pass
 
 
-def test_wrap_function():
-    result = fn_wrapped(SomeWrap.create(), create_expr())
-    assert result == SomeWrap(fn, (SomeExpr.create(), create_expr()))
+# @wrap(fn)
+# def fn_wrapped(a: object, b: object) -> SomeWrap:
+#     ...
 
 
-T = typing.TypeVar("T")
-
-T_expr = typing.TypeVar("T_expr", bound="Expr")
-
-
-class Expr(Expression, typing.Generic[T]):
-    @classmethod
-    @expression
-    def create(cls: typing.Type[T_expr]) -> T_expr:
-        ...
+# def test_wrap_function():
+#     result = fn_wrapped(SomeWrap.create(), create_expr())
+#     assert result == SomeWrap(fn, (SomeExpr.create(), create_expr()))
 
 
-class WrapExpr(Expr[int]):
-    ...
+# T = typing.TypeVar("T")
+
+# T_expr = typing.TypeVar("T_expr", bound="Expr")
 
 
-def test_wrap_returns_generic():
-    assert WrapExpr.create() == WrapExpr(Expr.create, ())
+# class Expr(Expression, typing.Generic[T]):
+#     @classmethod
+#     @expression
+#     def create(cls: typing.Type[T_expr]) -> T_expr:
+#         ...
 
 
-T_number = typing.TypeVar("T_number", bound="Number")
+# class WrapExpr(Expr[int]):
+#     ...
 
 
-class Number(Expression):
-    @expression
-    def __add__(self, other: Number) -> Number:
-        ...
-
-    @classmethod
-    @expression
-    def create(cls: typing.Type[T_number]) -> T_number:
-        ...
+# def test_wrap_returns_generic():
+#     assert WrapExpr.create() == WrapExpr(Expr.create, ())
 
 
-class WrapNumber(Number):
-    @wrap_method
-    def __add__(self, other: object) -> WrapNumber:
-        ...
+# T_number = typing.TypeVar("T_number", bound="Number")
 
 
-def test_wrap_method():
-    n = WrapNumber.create()
-    k = Number.create()
-    assert n + k == WrapNumber(Number.__add__, (Number.create(), Number.create()))
+# class Number(Expression):
+#     @expression
+#     def __add__(self, other: Number) -> Number:
+#         ...
+
+#     @classmethod
+#     @expression
+#     def create(cls: typing.Type[T_number]) -> T_number:
+#         ...
 
 
-class List(Expression, typing.Generic[T]):
-    @expression
-    def __getitem__(self, idx: Number) -> T:
-        ...
+# class WrapNumber(Number):
+#     @wrap_method
+#     def __add__(self, other: object) -> WrapNumber:
+#         ...
 
 
-@expression
-def create_list_number() -> List[Number]:
-    ...
+# def test_wrap_method():
+#     n = WrapNumber.create()
+#     k = Number.create()
+#     assert n + k == WrapNumber(Number.__add__, (Number.create(), Number.create()))
 
 
-class WrapListInt(Wrap[List[Number]]):
-    @wrap(List.__getitem__)
-    def __getitem__(self, idx: object) -> WrapNumber:
-        ...
+# class List(Expression, typing.Generic[T]):
+#     @expression
+#     def __getitem__(self, idx: Number) -> T:
+#         ...
 
 
-def test_wrap_method_generic():
-    l = create_list_number()
-    i = create_number()
-    assert WrapListInt(l)[i] == WrapNumber(l[i])
+# @expression
+# def create_list_number() -> List[Number]:
+#     ...
+
+
+# class WrapListInt(Wrap[List[Number]]):
+#     @wrap(List.__getitem__)
+#     def __getitem__(self, idx: object) -> WrapNumber:
+#         ...
+
+
+# def test_wrap_method_generic():
+#     l = create_list_number()
+#     i = create_number()
+#     assert WrapListInt(l)[i] == WrapNumber(l[i])
