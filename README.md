@@ -37,11 +37,19 @@ flit install --symlink
 ### Tests
 
 This runs mypy and tests, and reports coverage.
+
 ```bash
-pytest
+pytest --cov
 # open coverage file
 open htmlcov/index.html
 ```
+
+You can also test that the documentation notebooks run correctly, but this
+[must be run separately from the code coverage](https://github.com/computationalmodelling/nbval/issues/116):
+
+```bash
+pytest docs/*.ipynb --nbval
+````
 
 
 ### Docs
