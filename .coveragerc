@@ -5,5 +5,3 @@ source =
 [report]
 omit =
     *_test.py
-    **/test_*.py
-    metadsl/*/**

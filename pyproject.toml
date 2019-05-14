@@ -8,7 +8,8 @@ author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
-    "typing_extensions"
+    "typing_extensions",
+    "typing_inspect"
 ]
 requires-python = ">=3.7"
 classifiers = [
