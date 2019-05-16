@@ -125,32 +125,11 @@ def create_expression(
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 
-def n_function_args(fn: typing.Callable) -> int:
-    """
-    Returns the number of args a function takes, raising an error if there are any non parameter args or variable args.
-    """
-    n = 0
-    for param in inspect.signature(fn).parameters.values():
-        if param.kind != param.POSITIONAL_OR_KEYWORD:
-            raise TypeError(f"Arg type of {param} not supported for function {fn}")
-        n += 1
-    return n
-
-
 def expression(fn: T_callable) -> T_callable:
     """
     Creates an expresion object by wrapping a Python function and providing a function
     that will take in the args and return an expression of the right type.
     """
-    # Note: Cannot do this because of forward type references not resolved for methods in classes
-
-    # # Verify that it can be called with just expression types
-    # inferred: typing.Type = infer_return_type(fn, *(Expression for _ in range(n_function_args(fn))))
-    # inferred = extract_literal_expression_type(inferred) or inferred
-    # if not typing_inspect.is_typevar(inferred) and not is_expression_type(inferred):
-    #     raise TypeError(
-    #         f"{fn} should return an expression type when passed in expression types, not a {inferred}"
-    #     )
 
     @functools.wraps(fn)
     def expresion_(*args, _return_type=None):
