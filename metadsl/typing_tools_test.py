@@ -15,7 +15,7 @@ def _generic_return(arg: T) -> T:
     ...
 
 
-class _GenericClass(typing.Generic[T]):
+class _GenericClass(GenericCheck, typing.Generic[T]):
     def method(self) -> T:
         ...
 

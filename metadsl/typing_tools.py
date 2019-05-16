@@ -7,14 +7,39 @@ import inspect
 
 from .dict_tools import *
 
-__all__ = [
-    "infer_return_type",
-    "get_type",
-    "get_arg_hints",
-    "safe_isinstance",
-    "safe_issubclass",
-]
+__all__ = ["infer_return_type", "get_type", "get_arg_hints", "GenericCheck"]
 T = typing.TypeVar("T")
+
+
+
+class GenericCheckType(type):
+    def __subclasscheck__(cls, sub):
+        """
+        Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
+        """
+        sub = getattr(sub, "__origin__", sub)
+        if hasattr(cls, "__origin__"):
+            return issubclass(sub, cls)
+        return super().__subclasscheck__(sub)
+
+
+class GenericCheck(metaclass=GenericCheckType):
+    """
+    Subclass this to support isinstance and issubclass checks with generic classes.
+    """
+    pass
+
+
+# Allow isinstance and issubclass calls on generic types
+def generic_subclasscheck(self, cls):
+    """
+    Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
+    """
+    cls = getattr(cls, "__origin__", cls)
+    return issubclass(self.__origin__, cls)
+
+
+typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
 
 
 def get_type(v: T) -> typing.Type[T]:
@@ -39,12 +64,13 @@ def match_types(hint: typing.Type, t: typing.Type) -> typevar_mapping_typing:
             return match_types(l, t)
         except TypeError:
             pass
+
         try:
             return match_types(r, t)
         except TypeError:
-            raise TypeError(f"Cannot match type {t} with hitn {hint}")
+            raise TypeError(f"Cannot match type {t} with hint {hint}")
 
-    if not safe_issubclass(t, hint):
+    if not issubclass(t, hint):
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return safe_merge(
         *(
@@ -105,7 +131,7 @@ def infer_return_type(
     by looking at the type signature and matching generics.
     """
     arg_hints = get_arg_hints(fn, arg_types[0] if arg_types else None)
-    return_hint = typing.get_type_hints(fn)['return']
+    return_hint = typing.get_type_hints(fn)["return"]
 
     matches: typevar_mapping_typing = safe_merge(
         *(
@@ -115,23 +141,3 @@ def infer_return_type(
         )
     )
     return replace_typevars(matches, return_hint)
-
-
-def get_base_type(t: typing.Type) -> typing.Type:
-    return typing_inspect.get_origin(t) or t
-
-
-def safe_isinstance(obj: object, t: typing.Type) -> bool:
-    """
-    Works with types that are generic. If they are generic,
-    just checks if the value is an instance of the base type.
-    """
-    return isinstance(obj, get_base_type(t))
-
-
-def safe_issubclass(cls: typing.Type, cls_: typing.Type) -> bool:
-    """
-    Works with types that are generic. If they are generic,
-    just checks if the base types ar e
-    """
-    return issubclass(get_base_type(cls), get_base_type(cls_))
