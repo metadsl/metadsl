@@ -11,7 +11,6 @@ __all__ = ["infer_return_type", "get_type", "get_arg_hints", "GenericCheck"]
 T = typing.TypeVar("T")
 
 
-
 class GenericCheckType(type):
     def __subclasscheck__(cls, sub):
         """
@@ -27,6 +26,7 @@ class GenericCheck(metaclass=GenericCheckType):
     """
     Subclass this to support isinstance and issubclass checks with generic classes.
     """
+
     pass
 
 
