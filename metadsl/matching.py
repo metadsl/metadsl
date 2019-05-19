@@ -63,9 +63,9 @@ def extract_wildcard(o: object) -> typing.Optional[Wildcard]:
     """
     if not isinstance(o, Expression):
         return None
-    if o._function != wildcard:
+    if o.function != wildcard:
         return None
-    return o._arguments[0]
+    return typing.cast(Wildcard, o.args[0])
 
 
 # a number of (wildcard expression, replacement) pairs
@@ -104,16 +104,16 @@ class MatchRule:
 
 @dataclasses.dataclass
 class InferredMatchRule(typing.Generic[T]):
-    match_function: MatchFunctionType
+    matchfunction: MatchFunctionType
     match_rule: MatchRule = dataclasses.field(init=False)
     result: typing.Optional[Expression] = dataclasses.field(init=False)
 
     def __post_init__(self):
         # Create one wildcard` per argument
-        wildcards = [create_wildcard(a) for a in get_arg_hints(self.match_function)]
+        wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
 
         # Call the function first to create a template with the wildcards
-        template, self.result = self.match_function(*wildcards)
+        template, self.result = self.matchfunction(*wildcards)
 
         self.match_rule = MatchRule(wildcards, template, self._match)
 
@@ -123,7 +123,7 @@ class InferredMatchRule(typing.Generic[T]):
 
         args = (wildcards_to_args[wildcard] for wildcard in self.match_rule.wildcards)
 
-        _, expression = self.match_function(*args)
+        _, expression = self.matchfunction(*args)
         return expression
 
     def __call__(self, expr: object) -> typing.Optional[object]:
@@ -143,15 +143,24 @@ def match_expression(
     if template in wildcards:
         return UnhashableMapping(Item(typing.cast(Expression, template), expr))
     if isinstance(expr, Expression):
-        if not isinstance(template, Expression) or template._function != expr._function:
+        if not isinstance(template, Expression) or template.function != expr.function:
             raise ValueError
-        return safe_merge(
-            *(
-                match_expression(wildcards, arg_template, arg_value)
-                for arg_template, arg_value in zip(template._arguments, expr._arguments)
-            ),
-            dict_constructor=UnhashableMapping
-        )
+
+        # TODO: Verify same # of args and same kwargs
+        # TODO: march kwargs
+        # TODO: Add *args matching
+        # matched_args = (
+        #         match_expression(wildcards, arg_template, arg_value)
+        #         for arg_template, arg_value in zip(template.args, expr.args)
+        #     )
+        # matched_kwargs = for k, v in 
+        # return safe_merge(
+        #     *(
+        #         match_expression(wildcards, arg_template, arg_value)
+        #         for arg_template, arg_value in zip(template.args, expr.args)
+        #     ),
+        #     dict_constructor=UnhashableMapping
+        # )
     if template != expr:
         raise ValueError
     return UnhashableMapping()

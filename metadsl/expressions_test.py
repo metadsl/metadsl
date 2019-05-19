@@ -57,9 +57,30 @@ class SubclassWithMethod(Expression):
     def __add__(self, other: SubclassWithMethod) -> SubclassWithMethod:
         ...
 
+
+class WithClassMethodGeneric(Expression, typing.Generic[T]):
+    @expression
+    def get(self) -> T:
+        ...
+
+    @expression
+    @classmethod
+    def create(cls) -> WithClassMethodGeneric[T]:
+        ...
+
+
+# TODO: What should function
+
+
+def test_classmethod():
+    c = WithClassMethodGeneric[Subclass].create()
+    assert isinstance(c.get(), Subclass)
+
+
 @expression
 def create_method_subclass(i: int) -> SubclassWithMethod:
     ...
+
 
 TEST_EXPRESSIONS: typing.Iterable[object] = [
     value_fn(123),
@@ -76,6 +97,6 @@ def test_fold_identity(instance) -> None:
     """
     You should be able to decompose any instances into it's type and expression and recompose it.
     """
-    result = fold_identity(instance)
+    result = ExpressionFolder(lambda e: e)(instance)
     assert instance == result
 

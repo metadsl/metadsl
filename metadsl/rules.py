@@ -124,10 +124,6 @@ class RuleSequence:
         return res
 
 
-# we fold up the expression tree, maintaining the current expression
-Intermediate = typing.Tuple[bool, object]
-
-
 @dataclasses.dataclass
 class RuleFold:
     """
@@ -137,41 +133,24 @@ class RuleFold:
 
     rule: Rule
     folder: ExpressionFolder = dataclasses.field(init=False)
+    executed_rule: bool = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self.folder = ExpressionFolder(self._value_fn, self._expression_fn)
+        self.folder = ExpressionFolder(self.fn)
 
     def __call__(self, expr: object) -> typing.Optional[object]:
-        # Folds over the expression, at each step returning a tuple of (matched, value)
-        # where matched is a boolean if any rules have matched yet and value is the replaced value
-        matched, res = self.folder(expr)
-        if not matched:
+        self.executed_rule = False
+        res = self.folder(expr)
+        if not self.executed_rule:
             return None
         return res
 
-    def _value_fn(self, value: object) -> Intermediate:
+    def fn(self, value: object) -> object:
         new_value = self.rule(value)  # type: ignore
         if new_value is None:
-            return (False, value)
-        return (True, new_value)
-
-    def _expression_fn(
-        self,
-        type: typing.Type[Expression],
-        fn: typing.Callable,
-        args: typing.Tuple[Intermediate, ...],
-    ) -> Intermediate:
-        new_args: typing.List[object] = []
-        any_matched = False
-        # This call matched if any of it's args had matched.
-        for (matched, arg) in args:
-            any_matched = any_matched or matched
-            new_args.append(arg)
-        expr = type(fn, tuple(new_args))
-        new_expr = self.rule(expr)  # type: ignore
-        if new_expr is None:
-            return (any_matched, expr)
-        return (True, new_expr)
+            return value
+        self.executed_rule = True
+        return new_value
 
 
 @dataclasses.dataclass

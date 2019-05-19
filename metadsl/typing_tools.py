@@ -3,12 +3,14 @@ from __future__ import annotations
 import typing
 import typing_inspect
 import inspect
-
+import functools
+import dataclasses
 
 from .dict_tools import *
 
-__all__ = ["infer_return_type", "get_type", "get_arg_hints", "GenericCheck"]
+__all__ = ["get_type", "get_arg_hints", "GenericCheck", "infer"]
 T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
 
 class GenericCheckType(type):
@@ -30,6 +32,30 @@ class GenericCheck(metaclass=GenericCheckType):
     pass
 
 
+original_generic_getattr = typing._GenericAlias.__getattr__  # type: ignore
+
+
+def generic_getattr(self, attr):
+    """
+    Allows classmethods to get generic types
+    by checking if we are getting a descriptor type
+    and if we are, we pass in the generic type as the class
+    instead of the origin type.
+
+    Modified from
+    https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L694-L699
+    """
+
+    if "__origin__" in self.__dict__ and not typing._is_dunder(attr):  # type: ignore
+        # If the attribute is a descriptor, pass in the generic class
+        property = self.__origin__.__getattribute__(self.__origin__, attr)
+        if hasattr(property, "__get__"):
+            return property.__get__(None, self)
+        # Otherwise, just resolve it normally
+        return getattr(self.__origin__, attr)
+    raise AttributeError(attr)
+
+
 # Allow isinstance and issubclass calls on generic types
 def generic_subclasscheck(self, cls):
     """
@@ -40,6 +66,7 @@ def generic_subclasscheck(self, cls):
 
 
 typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
+typing._GenericAlias.__getattr__ = generic_getattr  # type: ignore
 
 
 def get_type(v: T) -> typing.Type[T]:
@@ -50,6 +77,13 @@ def get_type(v: T) -> typing.Type[T]:
 
 
 typevar_mapping_typing = typing.Mapping[typing.TypeVar, typing.Type]  # type: ignore
+
+
+def match_type(hint: typing.Type[T], value: T) -> typevar_mapping_typing:
+    if typing_inspect.get_origin(hint) == type:
+        inner_hint, = typing_inspect.get_args(hint)
+        return match_types(inner_hint, typing.cast(typing.Type, value))
+    return match_types(hint, typing_inspect.get_generic_type(value))
 
 
 def match_types(hint: typing.Type, t: typing.Type) -> typevar_mapping_typing:
@@ -82,14 +116,29 @@ def match_types(hint: typing.Type, t: typing.Type) -> typevar_mapping_typing:
     )
 
 
-def replace_typevars(
-    typevars: typevar_mapping_typing, hint: typing.Type
-) -> typing.Type:
+def get_origin_type(t: typing.Type) -> typing.Type:
+    """
+    Takes in a type, and if it is a generic type, returns the original type hint.
+
+    typing.List[int] -> typing.List[T]
+    """
+    t = typing_inspect.get_origin(t) or t
+
+    params = typing_inspect.get_parameters(t)
+    if params:
+        return t[params]
+    return t
+
+
+T_type = typing.TypeVar("T_type", bound=typing.Type)
+
+
+def replace_typevars(typevars: typevar_mapping_typing, hint: T_type) -> T_type:
     """
     Replaces type vars in a type hint with other types.
     """
     if typing_inspect.is_typevar(hint):
-        return typevars.get(hint, hint)
+        return typing.cast(T_type, typevars.get(hint, hint))
     args = typing_inspect.get_args(hint)
     if not args:
         return hint
@@ -97,47 +146,140 @@ def replace_typevars(
     return typing_inspect.get_origin(hint)[replaced_args]
 
 
-def get_arg_hints(
-    fn: typing.Callable, first_arg_type: typing.Optional[typing.Type] = None
-) -> typing.Tuple[typing.Type, ...]:
-    """
-    Returns back the arg type hints.
-    """
-    hints = typing.get_type_hints(fn)
-    arg_hints: typing.List[typing.Type] = []
-    for arg_name in inspect.signature(fn).parameters.keys():
-
-        # Special case for inferring type hint for self arg, by looking at type of first arg
-        if arg_name == "self" and first_arg_type is not None:
-            new_self_hint = typing_inspect.get_origin(first_arg_type) or first_arg_type
-
-            params = typing_inspect.get_parameters(new_self_hint)
-            if params:
-                new_self_hint = new_self_hint[
-                    typing_inspect.get_parameters(new_self_hint)
-                ]
-            arg_hints.append(new_self_hint)
-            continue
-
-        arg_hints.append(hints[arg_name])
-    return tuple(arg_hints)
+def get_arg_hints(fn: typing.Callable) -> typing.List[typing.Type]:
+    signature = inspect.signature(fn)
+    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
+    return [hints[param] for param in signature.parameters.keys()]
 
 
 def infer_return_type(
-    fn: typing.Callable[..., T], *arg_types: typing.Type
-) -> typing.Type[T]:
-    """
-    Returns the infered return type of the function, based on it's argument types,
-    by looking at the type signature and matching generics.
-    """
-    arg_hints = get_arg_hints(fn, arg_types[0] if arg_types else None)
-    return_hint = typing.get_type_hints(fn)["return"]
+    fn: typing.Callable[..., T],
+    instance: object,
+    owner: typing.Optional[typing.Type],
+    args: typing.Tuple[object, ...],
+    kwargs: typing.Mapping[str, object],
+) -> typing.Tuple[
+    typing.Tuple[object, ...], typing.Mapping[str, object], typing.Type[T]
+]:
 
-    matches: typevar_mapping_typing = safe_merge(
-        *(
-            match_types(arg_hint, arg_type)
-            for arg_hint, arg_type in zip(arg_hints, arg_types)
-            if arg_hint is not None
+    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
+
+    signature = inspect.signature(fn)
+
+    # This case is triggered if we got here from a __get__ call
+    # in a descriptor
+    if owner:
+        first_arg_name = next(iter(signature.parameters.keys()))
+        if instance:
+            # If we have called this as a method, then add the instance
+            # to the args and infer the type hint for this first arg
+            args = (instance,) + args
+            if first_arg_name not in hints:
+                hints[first_arg_name] = get_origin_type(get_type(instance))
+        else:
+            # If we called this as a class method, add the owner to
+            # the args add the inferred type to the hints.
+            args = (owner,) + args  # type: ignore
+            if first_arg_name not in hints:
+                hints[first_arg_name] = typing.Type[get_origin_type(owner)]
+
+    bound = signature.bind(*args, **kwargs)
+    bound.apply_defaults()
+
+    # We need to edit the arguments to pop off the variable one
+    arguments = bound.arguments
+
+    for arg_name, p in signature.parameters.items():
+        if p.kind == inspect.Parameter.VAR_POSITIONAL:
+            variable_args = arguments.pop(arg_name)
+            argument_items = list(arguments.items())
+            argument_items += [(arg_name, a) for a in variable_args]
+            break
+    else:
+        argument_items = list(arguments.items())
+
+    return_hint: typing.Type[T] = hints.pop("return")
+
+    mappings: typing.List[typevar_mapping_typing] = [
+        match_type(hints[name], arg) for name, arg in argument_items
+    ]
+    try:
+        matches: typevar_mapping_typing = safe_merge(*mappings)
+    except ValueError:
+        raise TypeError(f"Couldn't merge mappings {mappings}")
+    args = bound.args
+    # Remove first arg if it was a class.
+    if owner and not instance:
+        args = args[1:]
+    return args, bound.kwargs, replace_typevars(matches, return_hint)
+
+
+WrapperType = typing.Callable[
+    [
+        typing.Callable[..., T],
+        typing.Tuple[object, ...],
+        typing.Mapping[str, object],
+        typing.Type[T],
+    ],
+    U,
+]
+
+
+@dataclasses.dataclass(repr=False)
+class Infer(typing.Generic[T, U]):
+    fn: typing.Callable[..., T]
+    wrapper: WrapperType[T, U]
+
+    def __post_init__(self):
+        # This case is if we are wrapping a classmethod.
+        # We should grab the original function, so we can inspect
+        # it's signature
+        if isinstance(self.fn, classmethod):
+            self.fn = self.fn.__func__
+
+        functools.update_wrapper(self, self.fn)
+
+    def __call__(self, *args, **kwargs) -> U:
+        return self.wrapper(  # type: ignore
+            self.fn, *infer_return_type(self.fn, None, None, args, kwargs)
         )
-    )
-    return replace_typevars(matches, return_hint)
+
+    def __get__(self, instance, owner) -> BoundInfer[T, U]:
+        return BoundInfer(self.fn, self.wrapper, instance, owner)  # type: ignore
+
+
+@dataclasses.dataclass(repr=False)
+class BoundInfer(typing.Generic[T, U]):
+    fn: typing.Callable[..., T]
+    wrapper: WrapperType[T, U]
+    instance: object
+    owner: typing.Type
+
+    def __call__(self, *args, **kwargs) -> U:
+        return self.wrapper(  # type: ignore
+            self.fn,
+            *infer_return_type(self.fn, self.instance, self.owner, args, kwargs),
+        )
+
+
+def infer(fn: typing.Callable[..., T], wrapper: WrapperType[T, U]) -> typing.Callable:
+    """
+    Wraps a function to return the args, kwargs, and the inferred return type based
+    on the arguments.
+
+    Note that this works with classmethod but must be placed above them until
+    https://github.com/python/cpython/pull/8405 is merged.
+
+    This raise a TypeError when called with types that are invalid.
+
+    It refers on the explicit generic types of the arguments, it does not traverse
+    them to check their types. That means if you pass in `[1, 2, 3]` it won't know
+    this is a `typing.List[int]`. Instead it, will only know if you create a generic
+    instance manually from a custom generic class like, `MyList[int](1, 2, 3)`.
+
+    >>> def fn(a: T) -> typing.List[T]:
+        ...
+    >>> infer(fn, lambda fn, args, kwargs, return_type: args, kwargs, return_type)(10)
+    ((10,), {}, typing.List[int])
+    """
+    return Infer(fn, wrapper)

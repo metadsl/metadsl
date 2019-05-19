@@ -3,7 +3,8 @@ from __future__ import annotations
 import dataclasses
 import typing
 import typing_inspect
-import functools
+import itertools
+
 from .typing_tools import *
 
 __all__ = [
@@ -13,7 +14,6 @@ __all__ = [
     "ExpressionReplacer",
     "LiteralExpression",
     "E",
-    "fold_identity",
 ]
 
 T_expression = typing.TypeVar("T_expression", bound="Expression")
@@ -24,22 +24,33 @@ class Expression(GenericCheck):
     """
     Subclass this type and provide relevent methods for your type. Do not add any fields.
 
-    If the `_function` is called with `_arguments` then it should return `self`.
+    If the `function` is called with `arguments` then it should return `self`.
 
     The arguments should match the proper types specified in the type annotation of the function.
     The return type of the function should either be the the expression itself or
     LiteralExpression of the return type.
     """
 
-    _function: typing.Callable
-    _arguments: typing.Tuple
+    function: typing.Callable
+    args: typing.Tuple[object, ...]
+    kwargs: typing.Mapping[str, object]
 
     def __str__(self):
-        return f"{self._function.__qualname__}({', '.join(map(str, self._arguments))})"
+        arg_strings = (str(arg) for arg in self.args)
+        kwarg_strings = (f"{str(k)}={str(v)}" for k, v in self.kwargs.items())
+        return f"{self._function_str}({', '.join(itertools.chain(arg_strings, kwarg_strings))})"
+
+    @property
+    def _function_str(self):
+        return self.function.__qualname__
+
+    @property
+    def _type_str(self):
+        t = get_type(self)
+        return getattr(t, "__qualname__", str(t))
 
     def __repr__(self):
-        t = get_type(self)
-        return f"{getattr(t, '__qualname__', t)}({self._function.__qualname__}, {repr(self._arguments)})"
+        return f"{self._type_str}({self._function_str}, {repr(self.args)}, {repr(self.kwargs)})"
 
     def __eq__(self, value) -> bool:
         """
@@ -49,9 +60,10 @@ class Expression(GenericCheck):
             return False
 
         return (
-            self._function == value._function
+            self.function == value.function
             and get_type(self) == get_type(value)
-            and self._arguments == value._arguments
+            and self.args == value.args
+            and self.kwargs == value.kwargs
         )
 
 
@@ -87,20 +99,19 @@ def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
     raise TypeError(f"{t} is not an expression type")
 
 
-def create_expression(fn: typing.Callable[..., T], args: typing.Tuple) -> T:
+def wrap_infer(
+    fn: typing.Callable[..., T],
+    args: typing.Tuple[object, ...],
+    kwargs: typing.Mapping[str, object],
+    return_type: typing.Type[T],
+) -> T:
     """
     Given a function and some arguments, return the right expression for the return type.
     """
-    # We need to get access to the actual function, because even though the wrapped
-    # one has the same signature, the globals wont be set properly for
-    # typing.inspect_type
-    fn_for_typing = getattr(fn, "__wrapped__", fn)
 
-    arg_types = [get_type(arg) for arg in args]
-    return_type = infer_return_type(fn_for_typing, *arg_types)
     expr_return_type = extract_expression_type(return_type)
 
-    return typing.cast(T, expr_return_type(fn, args))
+    return typing.cast(T, expr_return_type(fn, args, kwargs))
 
 
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
@@ -112,40 +123,32 @@ def expression(fn: T_callable) -> T_callable:
     that will take in the args and return an expression of the right type.
     """
 
-    @functools.wraps(fn)
-    def expresion_(*args):
-        return create_expression(expresion_, args)
-
-    return typing.cast(T_callable, expresion_)
+    return typing.cast(T_callable, infer(fn, wrap_infer))
 
 
 T_Expression = typing.TypeVar("T_Expression", bound="Expression")
 
 
 @dataclasses.dataclass
-class ExpressionFolder(typing.Generic[T]):
+class ExpressionFolder:
     """
     Traverses this expression graph and transforms each node, from the bottom up.
-
-    You provide two functions, one to transform the leaves, and a second to transform the expressions.
     """
 
-    value_fn: typing.Callable[[object], T]
-    expression_fn: typing.Callable[
-        [typing.Type[Expression], typing.Callable, typing.Tuple[T, ...]], T
-    ]
+    fn: typing.Callable[[object], object]
 
     def __call__(self, expr: object):
+        fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
-            return self.expression_fn(  # type: ignore
-                get_type(expr),
-                expr._function,
-                tuple(self(arg) for arg in expr._arguments),
+            t: typing.Type[Expression] = get_type(expr)
+            return fn(
+                t(
+                    expr.function,
+                    tuple(self(arg) for arg in expr.args),
+                    {k: self(v) for k, v in expr.kwargs},
+                )
             )
-        return self.value_fn(expr)  # type: ignore
-
-
-fold_identity = ExpressionFolder(lambda v: v, lambda t, fn, args: t(fn, args))
+        return fn(expr)
 
 
 @dataclasses.dataclass
@@ -158,19 +161,10 @@ class ExpressionReplacer:
     folder: ExpressionFolder = dataclasses.field(init=False)
 
     def __post_init__(self):
-        self.folder = ExpressionFolder(self._value_fn, self._expression_fn)
+        self.folder = ExpressionFolder(self.fn)
 
     def __call__(self, expr):
         return self.folder(expr)
 
-    def _value_fn(self, o):
-        return self._get(o)
-
-    def _expression_fn(self, t, fn, args):
-        return self._get(t(fn, args))
-
-    def _get(self, key):
-        for actual_key, value in self.mapping.items():
-            if actual_key == key:
-                return value
-        return key
+    def fn(self, o):
+        return self.mapping.get(o, o)
