@@ -39,7 +39,7 @@ flit install --symlink
 This runs mypy and tests, and reports coverage.
 
 ```bash
-pytest --cov
+pytest --cov --mypy
 # open coverage file
 open htmlcov/index.html
 ```
