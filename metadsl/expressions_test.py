@@ -80,8 +80,37 @@ def create_method_subclass(i: int) -> SubclassWithMethod:
 def variadic(*args: int) -> Expression:
     ...
 
+
 def test_variadic():
     assert variadic(1, 2).args == (1, 2)
+
+
+@expression
+def create_variadic_ints() -> typing.Iterable[int]:
+    ...
+
+
+def test_iterated():
+    assert variadic(1, 2, *create_variadic_ints(), 3, 4) == Expression(
+        variadic,
+        (
+            1,
+            2,
+            IteratedPlaceholder[int](
+                create_iterated_placeholder,
+                (
+                    PlaceholderExpression[typing.Iterable[int]](
+                        create_variadic_ints, (), {}
+                    ),
+                ),
+                {},
+            ),
+            3,
+            4,
+        ),
+        {},
+    )
+
 
 TEST_EXPRESSIONS: typing.Iterable[object] = [
     value_fn(123),

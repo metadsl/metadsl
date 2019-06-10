@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import functools
 import inspect
 import typing
 import copy
 import typing_inspect
-
+import collections.abc
 from .dict_tools import *
 
 __all__ = [
@@ -15,6 +14,7 @@ __all__ = [
     "infer",
     "TypeVarMapping",
     "OfType",
+    "ExpandedType",
 ]
 
 T = typing.TypeVar("T")
@@ -52,6 +52,15 @@ class OfType(GenericCheck, typing.Generic[T]):
     pass
 
 
+class ExpandedType(GenericCheck, typing.Generic[T]):
+    """
+    ExpandedType should be thought of as being expanded when passed into a function,
+    so that `fn(ExpandedType[int]())` will be thought of as `fn(*xs)` where xs is an iterable of `int`.
+    """
+
+    pass
+
+
 # Allow isinstance and issubclass calls on generic types
 def generic_subclasscheck(self, cls):
     """
@@ -62,6 +71,15 @@ def generic_subclasscheck(self, cls):
 
 
 typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
+
+
+def get_origin(t: typing.Type) -> typing.Type:
+    origin = typing_inspect.get_origin(t)
+    # Need workaround for iterables
+    # https://github.com/ilevkivskyi/typing_inspect/issues/36
+    if origin == collections.abc.Iterable:
+        return typing.Iterable
+    return origin
 
 
 def get_type(v: T) -> typing.Type[T]:
@@ -90,24 +108,19 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         of_type, = typing_inspect.get_args(typing_inspect.get_generic_type(t))
         assert issubclass(of_type, typing.Type)
         t, = typing_inspect.get_args(of_type)
+        return match_types(hint, t)
 
     # If the type is an OfType[T] then we should really just consider it as T
-    if issubclass(t, OfType):
+    if issubclass(t, OfType) and not issubclass(hint, OfType):
+        t, = typing_inspect.get_args(t)
+        return match_types(hint, t)
+
+    # Matching an expanded type is like matching just whatever it represents
+    if issubclass(t, ExpandedType):
         t, = typing_inspect.get_args(t)
 
     if typing_inspect.is_typevar(hint):
         return {hint: t}
-    if typing_inspect.is_union_type(hint):
-        l, r = typing_inspect.get_args(hint)
-        try:
-            return match_types(l, t)
-        except TypeError:
-            pass
-
-        try:
-            return match_types(r, t)
-        except TypeError:
-            raise TypeError(f"Cannot match type {t} with hint {hint}")
 
     if not issubclass(t, hint):
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
@@ -127,7 +140,7 @@ def get_origin_type(t: typing.Type) -> typing.Type:
 
     typing.List[int] -> typing.List[T]
     """
-    t = typing_inspect.get_origin(t) or t
+    t = get_origin(t) or t
 
     params = typing_inspect.get_parameters(t)
     if params:
@@ -148,7 +161,7 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
     if not args:
         return hint
     replaced_args = tuple(replace_typevars(typevars, arg) for arg in args)
-    return typing_inspect.get_origin(hint)[replaced_args]
+    return get_origin(hint)[replaced_args]
 
 
 def get_arg_hints(fn: typing.Callable) -> typing.List[typing.Type]:
@@ -202,24 +215,17 @@ def infer_return_type(
     return bound.args, bound.kwargs, replace_typevars(matches, return_hint)
 
 
-WrapperType = typing.Callable[
-    [
-        typing.Callable[..., T],
-        typing.Tuple[object, ...],
-        typing.Mapping[str, object],
-        typing.Type[T],
+def infer(
+    fn: typing.Callable[..., T]
+) -> typing.Callable[
+    ...,
+    typing.Tuple[
+        typing.Tuple[object, ...], typing.Mapping[str, object], typing.Type[T]
     ],
-    U,
-]
-
-
-def infer(fn: typing.Callable[..., T], wrapper: WrapperType[T, U]) -> typing.Callable:
+]:
     """
     Wraps a function to return the args, kwargs, and the inferred return type based
     on the arguments.
-
-    Note that this works with classmethod but must be placed above them until
-    https://github.com/python/cpython/pull/8405 is merged.
 
     This raise a TypeError when called with types that are invalid.
 
@@ -230,12 +236,11 @@ def infer(fn: typing.Callable[..., T], wrapper: WrapperType[T, U]) -> typing.Cal
 
     >>> def fn(a: T) -> typing.List[T]:
         ...
-    >>> infer(fn, lambda fn, args, kwargs, return_type: args, kwargs, return_type)(10)
+    >>> infer(fn)(10)
     ((10,), {}, typing.List[int])
     """
 
-    @functools.wraps(fn)
-    def infer_inner(*args, **kwargs):
-        return wrapper(fn, *infer_return_type(fn, args, kwargs))
+    def infer_inner(*args, __fn=fn, **kwargs):
+        return infer_return_type(__fn, args, kwargs)
 
     return infer_inner

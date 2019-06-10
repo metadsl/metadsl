@@ -61,6 +61,32 @@ class TestRule:
 
         assert _concat_lists(_list(int, 1) + _list(int, 2)) == _list(int, 1, 2)
 
+    def test_variable_args(self):
+        @rule
+        def _concat_lists(
+            tp: typing.Type[T], ls: typing.Iterable[T], rs: typing.Iterable[T]
+        ) -> R[_List[T]]:
+            return _list(tp, *ls) + _list(tp, *rs), lambda: _list(tp, *ls, *rs)
+
+        assert _concat_lists(_list(int, 1, 2) + _list(int, 3, 4)) == _list(
+            int, 1, 2, 3, 4
+        )
+
+    def test_variable_args_right_side(self):
+        @rule
+        def _concat_lists_minus_end(
+            tp: typing.Type[T],
+            ls: typing.Iterable[T],
+            rs: typing.Iterable[T],
+            l: T,
+            r: T,
+        ) -> R[_List[T]]:
+            return _list(tp, *ls, l) + _list(tp, *rs, r), lambda: _list(tp, *ls, *rs)
+
+        assert _concat_lists_minus_end(_list(int, 1, 2) + _list(int, 3, 4)) == _list(
+            int, 1, 3
+        )
+
 
 @expression
 def _from_str(s: str) -> _Number:
@@ -77,3 +103,9 @@ class TestPureRule:
         s = _from_str("str")
         expr = s + _from_int(0)
         assert _add_zero_rule(expr) == s
+
+
+# TODO:
+# Update python and numpy examples
+# Update notebooks
+

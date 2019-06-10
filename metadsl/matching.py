@@ -103,6 +103,21 @@ class MatchRule:
         return expression_thunk()
 
 
+def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
+    """
+    Collapses the middle of a tuple into another nested tuple, keeping l on the left side
+    uncollapsed and r on the right side un collapsed
+
+    >>> collapse_tuple(tuple(range(10)), 3, 4)
+    (0, 1, 2, (3, 4, 5), 6, 7, 8, 9)
+    >>> collapse_tuple(tuple(range(5)), 3, 0)
+    (0, 1, 2, (3, 4))
+    """
+    if r == 0:
+        return tuple([*t[:l], t[l:]])
+    return tuple([*t[:l], t[l:-r], *t[-r:]])
+
+
 def match_expression(
     wildcards: typing.List[Expression], template: object, expr: object
 ) -> WildcardMapping:
@@ -116,26 +131,62 @@ def match_expression(
         return UnhashableMapping(Item(typing.cast(Expression, template), expr))
 
     if isinstance(expr, Expression):
-        if (
-            not isinstance(template, Expression)
-            or expr.function != template.function
-            or len(expr.args) != len(template.args)
-            or set(expr.kwargs.keys()) != set(template.kwargs.keys())
-        ):
+        if not isinstance(template, Expression) or expr.function != template.function:
             raise ValueError
+        if set(expr.kwargs.keys()) != set(template.kwargs.keys()):
+            raise TypeError("Wrong kwargs in match")
 
-        # TODO: Add *args matching
+        template_args: typing.Iterable[object]
+        expr_args: typing.Iterable[object]
+
+        # Process args in the template that can represent any number of args.
+        # These are the "IteratedPlaceholder"s
+        # Allow one iterated placeholder in the template args
+        # For example fn(a, b, [...], *c, d, e, [...])
+        # Here `c` should take as many args as it can between the ends,
+        # Each of those should be matched against the inner
+        iterated_args = [
+            arg for arg in template.args if isinstance(arg, IteratedPlaceholder)
+        ]
+        if iterated_args:
+            # template args, minus the iterator, is the minimum length of the values
+            # If they have less values than this, raise an error
+            if len(expr.args) < len(template.args) - 1:
+                raise TypeError("Wrong number of args in match")
+            template_args_ = list(template.args)
+            # Only support one iterated arg for now
+            # TODO: Support more than one, would require branching
+            template_iterated, = iterated_args
+            template_index_iterated = list(template.args).index(template_iterated)
+
+            # Swap template iterated with inner wildcard
+            template_args_[template_index_iterated], = template_iterated.args
+            template_args = template_args_
+
+            expr_args = collapse_tuple(
+                expr.args,
+                template_index_iterated,
+                # The number we should preserve on the right, is the number of template
+                # args after index
+                len(template.args) - template_index_iterated - 1,
+            )
+
+        else:
+            if len(template.args) != len(expr.args):
+                raise TypeError("Wrong number of args in match")
+            template_args = template.args
+            expr_args = expr.args
 
         return safe_merge(
             *(
                 match_expression(wildcards, arg_template, arg_value)
-                for arg_template, arg_value in zip(template.args, expr.args)
+                for arg_template, arg_value in zip(template_args, expr_args)
             ),
             *(
                 match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
                 for key in template.kwargs.keys()
             ),
-            dict_constructor=UnhashableMapping
+            dict_constructor=UnhashableMapping,
         )
     if template != expr:
         raise ValueError

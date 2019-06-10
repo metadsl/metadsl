@@ -9,12 +9,8 @@ from .typing_tools import *
 T = typing.TypeVar("T")
 
 
-def extract_return_type(fn, args, kwargs, return_type):
-    return return_type
-
-
 def i(fn):
-    return infer(fn, extract_return_type)
+    return lambda *args, **kwargs: infer(fn)(*args, **kwargs)[-1]
 
 
 def test_simple():
@@ -82,17 +78,6 @@ class _NonGenericClass:
 def test_non_generic_method():
 
     assert _NonGenericClass().method() == int
-
-
-def test_union_arg():
-    @i
-    def _union_arg(a: typing.Union[int, str]) -> int:
-        ...
-
-    assert _union_arg(123) == int
-    assert _union_arg("sdf") == int
-    with pytest.raises(TypeError):
-        _union_arg([1, 2, 3])
 
 
 def test_variable_args():

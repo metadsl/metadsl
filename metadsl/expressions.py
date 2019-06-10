@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import typing
+import functools
 
 from .typing_tools import *
 
@@ -12,6 +13,8 @@ __all__ = [
     "ExpressionFolder",
     "ExpressionReplacer",
     "PlaceholderExpression",
+    "IteratedPlaceholder",
+    "create_iterated_placeholder",
 ]
 
 T_expression = typing.TypeVar("T_expression", bound="Expression")
@@ -78,28 +81,14 @@ class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     It is also needed when using Wildcards in expressions when doing matching.
     """
 
-    pass
+    def __iter__(self):
+        return iter((create_iterated_placeholder(self),))
 
 
 def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
     if issubclass(t, Expression):
         return t
     return PlaceholderExpression[t]  # type: ignore
-
-
-def wrap_infer(
-    fn: typing.Callable[..., T],
-    args: typing.Tuple[object, ...],
-    kwargs: typing.Mapping[str, object],
-    return_type: typing.Type[T],
-) -> T:
-    """
-    Given a function and some arguments, return the right expression for the return type.
-    """
-
-    expr_return_type = extract_expression_type(return_type)
-
-    return typing.cast(T, expr_return_type(fn, args, kwargs))
 
 
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
@@ -111,7 +100,29 @@ def expression(fn: T_callable) -> T_callable:
     that will take in the args and return an expression of the right type.
     """
 
-    return typing.cast(T_callable, infer(fn, wrap_infer))
+    @functools.wraps(fn)
+    def expression_inner(*args, __inferred=infer(fn), **kwargs):
+        new_args, new_kwargs, return_type = __inferred(*args, **kwargs)
+        expr_return_type = extract_expression_type(return_type)
+        return expr_return_type(expression_inner, new_args, new_kwargs)
+
+    return typing.cast(T_callable, expression_inner)
+
+
+class IteratedPlaceholder(Expression, ExpandedType, typing.Generic[T]):
+    pass
+
+
+@expression
+def create_iterated_placeholder(
+    i: PlaceholderExpression[typing.Iterable[T]]
+) -> IteratedPlaceholder[T]:
+    """
+    If a placeholder is of an iterable T, calling iter on it should return an iterable placeholder of the inner type.
+
+    Used in matching with variable args.
+    """
+    ...
 
 
 T_Expression = typing.TypeVar("T_Expression", bound="Expression")

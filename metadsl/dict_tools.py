@@ -14,7 +14,7 @@ class Item(typing.Generic[T, V]):
     value: V
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(init=False)
 class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
     """
     Like a dictionary, but can have unhashable keys.
