@@ -60,18 +60,17 @@ def test_generic_class_arg():
     )
 
 
-class _GenericClassClassMethod(GenericCheck, typing.Generic[T]):
-    @i
-    @classmethod
-    def create(cls) -> _GenericClassClassMethod[T]:
-        ...
+@i
+def create(tp: typing.Type[T]) -> T:
+    ...
 
 
-def test_generic_classmethood():
+def test_type_arg():
 
-    assert _GenericClassClassMethod[int].create() == _GenericClassClassMethod[int]
-    assert _GenericClassClassMethod[float].create() == _GenericClassClassMethod[float]
-    assert _GenericClassClassMethod[int].create() != _GenericClassClassMethod
+    assert create(int) == int
+    assert create(float) == float
+    assert create(_GenericClassMethod[int]) == _GenericClassMethod[int]
+    assert create(_GenericClassMethod[int]) != _GenericClassMethod
 
 
 class _NonGenericClass:
@@ -83,18 +82,6 @@ class _NonGenericClass:
 def test_non_generic_method():
 
     assert _NonGenericClass().method() == int
-
-
-class _NonGenericClassClassMethod(GenericCheck):
-    @i
-    @classmethod
-    def create(cls, i: int) -> int:
-        ...
-
-
-def test_non_generic_classmethod():
-
-    assert _NonGenericClassClassMethod.create(123) == int
 
 
 def test_union_arg():

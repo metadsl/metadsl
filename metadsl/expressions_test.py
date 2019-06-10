@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing
 import typing_inspect
-
 import pytest
 
 from .expressions import *
@@ -16,7 +15,7 @@ def fn(a: T, b: T) -> T:
 
 
 @expression
-def value_fn(a: E[int]) -> Expression:
+def value_fn(a: int) -> Expression:
     ...
 
 
@@ -25,7 +24,7 @@ class Subclass(Expression):
 
 
 @expression
-def subclass_fn(a: E[int]) -> Subclass:
+def subclass_fn(a: int) -> Subclass:
     ...
 
 
@@ -37,9 +36,13 @@ class Generic(Expression, typing.Generic[T]):
     def get_inner_type(self) -> typing.Type[T]:
         return typing_inspect.get_args(typing_inspect.get_generic_type(self))[0]
 
+    @expression
+    def get(self) -> T:
+        ...
+
 
 @expression
-def instance_arg_fn(a: E[int]) -> Generic[int]:
+def instance_arg_fn(a: int) -> Generic[int]:
     ...
 
 
@@ -48,7 +51,7 @@ def test_expression_subclass_generic() -> None:
 
 
 @expression
-def mutable_fn(a: E[typing.List]) -> Expression:
+def mutable_fn(a: typing.List) -> Expression:
     ...
 
 
@@ -58,22 +61,13 @@ class SubclassWithMethod(Expression):
         ...
 
 
-class WithClassMethodGeneric(Expression, typing.Generic[T]):
-    @expression
-    def get(self) -> T:
-        ...
-
-    @expression
-    @classmethod
-    def create(cls) -> WithClassMethodGeneric[T]:
-        ...
-
-
-# TODO: What should function
+@expression
+def create_generic(t: typing.Type[T]) -> Generic[T]:
+    ...
 
 
 def test_classmethod():
-    c = WithClassMethodGeneric[Subclass].create()
+    c = create_generic(Subclass)
     assert isinstance(c.get(), Subclass)
 
 
@@ -82,6 +76,13 @@ def create_method_subclass(i: int) -> SubclassWithMethod:
     ...
 
 
+@expression
+def variadic(*args: int) -> Expression:
+    ...
+
+def test_variadic():
+    assert variadic(1, 2).args == (1, 2)
+
 TEST_EXPRESSIONS: typing.Iterable[object] = [
     value_fn(123),
     fn(value_fn(10), value_fn(11)),
@@ -89,6 +90,7 @@ TEST_EXPRESSIONS: typing.Iterable[object] = [
     instance_arg_fn(10),
     create_method_subclass(10) + create_method_subclass(10),
     mutable_fn([1, 2, 3]),  # mutable value that doesn't have hash
+    variadic(1, 2, 3),
 ]
 
 

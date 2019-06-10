@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-import typing
-import typing_inspect
 import itertools
+import typing
 
 from .typing_tools import *
 
@@ -12,8 +11,7 @@ __all__ = [
     "expression",
     "ExpressionFolder",
     "ExpressionReplacer",
-    "LiteralExpression",
-    "E",
+    "PlaceholderExpression",
 ]
 
 T_expression = typing.TypeVar("T_expression", bound="Expression")
@@ -70,33 +68,23 @@ class Expression(GenericCheck):
 T = typing.TypeVar("T")
 
 
-class LiteralExpression(Expression, typing.Generic[T]):
+class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     """
-    This is meant to be used when are computing a Python value that is not an expression.
+    An expression that represents a type of `T`, for example T could be `int`.
+
+    This is needed when a functionr returns a non expression type, it still has to return
+    an expression under the covers until it has been replaced.
+
+    It is also needed when using Wildcards in expressions when doing matching.
     """
 
-    ...
-
-
-E = typing.Union[T, LiteralExpression[T]]
+    pass
 
 
 def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
-    """
-    If t is an expression type, return it, otherwise, it should be a union of an expression type and  non expression type
-    """
-    if typing_inspect.is_union_type(t):
-        expression_args = [
-            arg for arg in typing_inspect.get_args(t) if issubclass(arg, Expression)
-        ]
-        if len(expression_args) != 1:
-            raise TypeError(
-                f"Union must contain exactly one expression type, not {len(expression_args)}: {t}"
-            )
-        return expression_args[0]
     if issubclass(t, Expression):
         return t
-    raise TypeError(f"{t} is not an expression type")
+    return PlaceholderExpression[t]  # type: ignore
 
 
 def wrap_infer(

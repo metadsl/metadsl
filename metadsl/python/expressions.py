@@ -13,14 +13,14 @@ U = typing.TypeVar("U")
 class Boolean(Expression):
     @staticmethod
     @expression
-    def from_bool(b: E[bool]) -> Boolean:
+    def from_bool(b: bool) -> Boolean:
         ...
 
 
 class Integer(Expression):
     @staticmethod
     @expression
-    def from_int(i: E[int]) -> Integer:
+    def from_int(i: int) -> Integer:
         ...
 
     @expression

@@ -11,14 +11,12 @@ class _SomeExpression(Expression):
 
 class TestWildcard:
     def test_create_literal(self):
-        w = create_wildcard(E[int])  # type: ignore
-        assert get_type(w) == LiteralExpression[int]
-        assert isinstance(extract_wildcard(w), Wildcard)
+        w = create_wildcard(int)  # type: ignore
+        assert get_type(w) == PlaceholderExpression[int]
 
     def test_create_expression(self):
         w = create_wildcard(_SomeExpression)
         assert get_type(w) == _SomeExpression
-        assert isinstance(extract_wildcard(w), Wildcard)
 
 
 class _Number(Expression):
@@ -28,16 +26,27 @@ class _Number(Expression):
 
 
 @expression
-def _from_int(i: E[int]) -> _Number:
+def _from_int(i: int) -> _Number:
     ...
 
 
 @rule
-def _add_rule(a: E[int], b: E[int]) -> typing.Tuple[_Number, typing.Optional[_Number]]:
-    return (
-        _from_int(a) + _from_int(b),
-        _from_int(a + b) if isinstance(a, int) and isinstance(b, int) else None,
-    )
+def _add_rule(a: int, b: int) -> R[_Number]:
+    return (_from_int(a) + _from_int(b), lambda: _from_int(a + b))
+
+
+T = typing.TypeVar("T")
+
+
+class _List(Expression, typing.Generic[T]):
+    @expression
+    def __add__(self, other: _List[T]) -> _List[T]:
+        ...
+
+
+@expression
+def _list(item_type: typing.Type[T], *items: T) -> _List[T]:
+    ...
 
 
 class TestRule:
@@ -45,15 +54,22 @@ class TestRule:
         expr = _from_int(1) + _from_int(2)
         assert _add_rule(expr) == _from_int(3)
 
+    def test_type_args(self):
+        @rule
+        def _concat_lists(tp: typing.Type[T], l: T, r: T) -> R[_List[T]]:
+            return _list(tp, l) + _list(tp, r), lambda: _list(tp, l, r)
+
+        assert _concat_lists(_list(int, 1) + _list(int, 2)) == _list(int, 1, 2)
+
 
 @expression
-def _from_str(s: E[str]) -> _Number:
+def _from_str(s: str) -> _Number:
     ...
 
 
 @rule
-def _add_zero_rule(a: _Number) -> typing.Tuple[_Number, _Number]:
-    return a + _from_int(0), a
+def _add_zero_rule(a: _Number) -> R[_Number]:
+    return a + _from_int(0), lambda: a
 
 
 class TestPureRule:

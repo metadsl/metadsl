@@ -20,13 +20,13 @@ from .dict_tools import *
 from .typing_tools import *
 from .rules import Rule
 
-__all__ = ["create_wildcard", "extract_wildcard", "Wildcard", "rule"]
+__all__ = ["create_wildcard", "Wildcard", "rule", "R"]
 
 T = typing.TypeVar("T", bound=Expression)
 
-
+R = typing.Tuple[T, typing.Callable[[], typing.Optional[T]]]
 # Mapping from wildcards to the matching pattern and replacement
-MatchFunctionType = typing.Callable[..., typing.Tuple[T, typing.Optional[T]]]
+MatchFunctionType = typing.Callable[..., R]
 
 
 def rule(fn: MatchFunctionType) -> Rule:
@@ -35,18 +35,21 @@ def rule(fn: MatchFunctionType) -> Rule:
     the match value and the replacement value.
     """
 
-    return InferredMatchRule(fn)
+    return MatchRule(fn)
 
 
-@dataclasses.dataclass(eq=False)
-class Wildcard(typing.Generic[T]):
+class Wildcard(Expression, typing.Generic[T]):
     """
     Insert this somewhere in an expression tree to represent any expression or value of type T.
     """
 
 
 @expression
-def wildcard(wildcard: E[Wildcard[T]]) -> T:
+def create_wildcard_expession(t: typing.Type[T], obj: object) -> T:
+    """
+    The object inside is only needed for identity checks, to different
+    two wildcards if the objects are different.
+    """
     ...
 
 
@@ -54,18 +57,7 @@ def create_wildcard(t: typing.Type[T]) -> T:
     """
     Returns a wildcard of type "t"
     """
-    return wildcard(Wildcard[t]())  # type: ignore
-
-
-def extract_wildcard(o: object) -> typing.Optional[Wildcard]:
-    """
-    Returns a wildcard, if the expression was created from one, or else None.
-    """
-    if not isinstance(o, Expression):
-        return None
-    if o.function != wildcard:
-        return None
-    return typing.cast(Wildcard, o.args[0])
+    return create_wildcard_expession(t, object())
 
 
 # a number of (wildcard expression, replacement) pairs
@@ -84,50 +76,31 @@ class MatchRule:
     You can also return None from the rule to signal that it won't match.
     """
 
+    matchfunction: MatchFunctionType
+
     # the wildcards that are present in the template
-    wildcards: typing.List[Expression]
+    wildcards: typing.List[Expression] = dataclasses.field(init=False)
 
     # expression containing wildcard expression it that will be matched against the
     # incoming expression
-    template: object
-    # function that takes a mapping of wildcard expression to their replacements
-    # and return a new object
-    match: typing.Callable[[WildcardMapping], typing.Optional[object]]
+    template: object = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        # Create one wildcard` per argument
+        self.wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
+
+        # Call the function first to create a template with the wildcards
+        self.template, _ = self.matchfunction(*self.wildcards)
 
     def __call__(self, expr: object) -> typing.Optional[object]:
         try:
             wildcards_to_nodes = match_expression(self.wildcards, self.template, expr)
         except ValueError:
             return None
-        return self.match(wildcards_to_nodes)  # type: ignore
+        args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
 
-
-@dataclasses.dataclass
-class InferredMatchRule(typing.Generic[T]):
-    matchfunction: MatchFunctionType
-    match_rule: MatchRule = dataclasses.field(init=False)
-    result: typing.Optional[Expression] = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        # Create one wildcard` per argument
-        wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
-
-        # Call the function first to create a template with the wildcards
-        template, self.result = self.matchfunction(*wildcards)
-
-        self.match_rule = MatchRule(wildcards, template, self._match)
-
-    def _match(self, wildcards_to_args: WildcardMapping) -> typing.Optional[object]:
-        if self.result is not None:
-            return ExpressionReplacer(wildcards_to_args)(self.result)
-
-        args = (wildcards_to_args[wildcard] for wildcard in self.match_rule.wildcards)
-
-        _, expression = self.matchfunction(*args)
-        return expression
-
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        return self.match_rule(expr)
+        _, expression_thunk = self.matchfunction(*args)
+        return expression_thunk()
 
 
 def match_expression(
@@ -137,30 +110,33 @@ def match_expression(
     Returns a mapping of wildcards to the objects at that level, or None if it does not match.
 
     A wildcard can match either an expression or a value. If it matches two nodes, they must be equal.
-
-    Mutally recursive with match_value
     """
+
     if template in wildcards:
         return UnhashableMapping(Item(typing.cast(Expression, template), expr))
+
     if isinstance(expr, Expression):
-        if not isinstance(template, Expression) or template.function != expr.function:
+        if (
+            not isinstance(template, Expression)
+            or expr.function != template.function
+            or len(expr.args) != len(template.args)
+            or set(expr.kwargs.keys()) != set(template.kwargs.keys())
+        ):
             raise ValueError
 
-        # TODO: Verify same # of args and same kwargs
-        # TODO: march kwargs
         # TODO: Add *args matching
-        # matched_args = (
-        #         match_expression(wildcards, arg_template, arg_value)
-        #         for arg_template, arg_value in zip(template.args, expr.args)
-        #     )
-        # matched_kwargs = for k, v in 
-        # return safe_merge(
-        #     *(
-        #         match_expression(wildcards, arg_template, arg_value)
-        #         for arg_template, arg_value in zip(template.args, expr.args)
-        #     ),
-        #     dict_constructor=UnhashableMapping
-        # )
+
+        return safe_merge(
+            *(
+                match_expression(wildcards, arg_template, arg_value)
+                for arg_template, arg_value in zip(template.args, expr.args)
+            ),
+            *(
+                match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
+                for key in template.kwargs.keys()
+            ),
+            dict_constructor=UnhashableMapping
+        )
     if template != expr:
         raise ValueError
     return UnhashableMapping()
