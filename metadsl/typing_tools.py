@@ -122,6 +122,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     if typing_inspect.is_typevar(hint):
         return {hint: t}
 
+    if typing_inspect.is_typevar(t):
+        return {}
+
     if not issubclass(t, hint):
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return safe_merge(

@@ -1,39 +1,27 @@
 # """
 # Useful for to convert object to boxed types.
 # """
-# import typing
-# import typing_inspect
-# from .typing_tools import safe_isinstance
+import typing
 
-# __all__ = ["register_converter", "convert"]
-# T = typing.TypeVar("T")
+from .expressions import *
+from .matching import *
 
-# convert_type = typing.Callable[[typing.Type[T], object], T]
-
-# converters: typing.List[convert_type] = []
+__all__ = ["convert_identity_rule"]
+T = typing.TypeVar("T")
 
 
-# def convert(type: typing.Type[T], value: object) -> T:
-#     """
-#     Converts a value to a certain type.
-#     """
-#     for converter in converters:
-#         res = converter(type, value)
-#         if res != NotImplemented:
-#             return res
-#     raise NotImplementedError(f"Cannot convert {value} to {type}")
+@expression
+def convert(type: typing.Type[T], value: object) -> T:
+    """
+    Converts a value to a certain type.
+    """
+    ...
 
 
-# def register_converter(converter: convert_type) -> None:
-#     """
-#     Registers a converter to use. The converter should take in a type and a value, 
-#     and return that value converted to the type if it can or NotImplemented.
-#     """
-#     converters.append(converter)
+@rule
+def convert_identity_rule(t: typing.Type[T], value: T) -> R[T]:
+    """
+    When the value is an instance of the type being converted, we can convert it.
+    """
+    return convert(t, value), lambda: value
 
-
-# @register_converter
-# def identity_converter(t: typing.Type[T], value: object) -> T:
-#     if safe_isinstance(value, t):
-#         return value  # type: ignore
-#     return NotImplemented
