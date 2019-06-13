@@ -208,7 +208,11 @@ def infer_return_type(
     args: typing.Tuple[object, ...],
     kwargs: typing.Mapping[str, object],
 ) -> typing.Tuple[
-    typing.Tuple[object, ...], typing.Mapping[str, object], typing.Type[T]
+    # type of owner, with typevars replaced
+    typing.Optional[typing.Type],
+    typing.Tuple[object, ...],
+    typing.Mapping[str, object],
+    typing.Type[T],
 ]:
 
     hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
@@ -223,14 +227,15 @@ def infer_return_type(
             # If we have called this as a method, then add the instance
             # to the args and infer the type hint for this first arg
             args = (instance,) + args
-            if first_arg_name not in hints:
-                hints[first_arg_name] = get_origin_type(get_type(instance))
+            first_arg_type = get_origin_type(get_type(instance))
         else:
             # If we called this as a class method, add the owner to
             # the args add the inferred type to the hints.
             args = (owner,) + args  # type: ignore
-            if first_arg_name not in hints:
-                hints[first_arg_name] = typing.Type[get_origin_type(owner)]
+            first_arg_type = typing.Type[get_origin_type(owner)]  # type: ignore
+
+        if first_arg_name not in hints:
+            hints[first_arg_name] = first_arg_type
 
     bound = signature.bind(*args, **kwargs)
     bound.apply_defaults()
@@ -258,6 +263,9 @@ def infer_return_type(
         raise TypeError(f"Couldn't merge mappings {mappings}")
 
     return (
+        replace_typevars(matches, get_origin_type(owner))
+        if owner and not instance
+        else None,
         # Remove first arg if it was a class.
         bound.args[1:] if owner and not instance else bound.args,
         bound.kwargs,
@@ -276,7 +284,7 @@ WrapperType = typing.Callable[
 ]
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass
 class Infer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
     wrapper: WrapperType[T, U]
@@ -292,14 +300,14 @@ class Infer(typing.Generic[T, U]):
 
     def __call__(self, *args, **kwargs) -> U:
         return self.wrapper(  # type: ignore
-            self, *infer_return_type(self.fn, None, None, args, kwargs)
+            self, *infer_return_type(self.fn, None, None, args, kwargs)[1:]
         )
 
     def __get__(self, instance, owner) -> BoundInfer[T, U]:
         return BoundInfer(self.fn, self.wrapper, instance, owner)  # type: ignore
 
 
-@dataclasses.dataclass(repr=False)
+@dataclasses.dataclass
 class BoundInfer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
     wrapper: WrapperType[T, U]
@@ -307,8 +315,22 @@ class BoundInfer(typing.Generic[T, U]):
     owner: typing.Type
 
     def __call__(self, *args, **kwargs) -> U:
+        owner_replaced, *rest = infer_return_type(
+            self.fn, self.instance, self.owner, args, kwargs
+        )
         return self.wrapper(  # type: ignore
-            self, *infer_return_type(self.fn, self.instance, self.owner, args, kwargs)
+            # Normalize this method so that equality checks on the returned function are consistant:
+            # * Remove the instance, because it is already present in the args
+            # * Remove the params from the owner, if in a method, because they are present on the arg.
+            # * Add the params to the owner, by using type of first arg, if we are in a classmethod, since that isn't in the args
+            dataclasses.replace(  # type: ignore
+                self,
+                instance=None,
+                owner=get_origin(self.owner) or self.owner
+                if self.instance
+                else owner_replaced,
+            ),
+            *rest,
         )
 
 
