@@ -10,7 +10,7 @@ T = typing.TypeVar("T")
 
 
 def i(fn):
-    return lambda *args, **kwargs: infer(fn)(*args, **kwargs)[-1]
+    return infer(fn, lambda fn, args, kwargs, return_type: return_type)
 
 
 def test_simple():
@@ -56,17 +56,30 @@ def test_generic_class_arg():
     )
 
 
-@i
-def create(tp: typing.Type[T]) -> T:
-    ...
+class _GenericClassCreate(GenericCheck, typing.Generic[T]):
+    @i
+    def create(cls) -> T:
+        ...
+
+    @i
+    def create_item(cls, item: T) -> T:
+        ...
 
 
-def test_type_arg():
+def test_create():
 
-    assert create(int) == int
-    assert create(float) == float
-    assert create(_GenericClassMethod[int]) == _GenericClassMethod[int]
-    assert create(_GenericClassMethod[int]) != _GenericClassMethod
+    assert _GenericClassCreate[int].create() == int
+    assert _GenericClassCreate[float].create() == float
+    assert (
+        _GenericClassCreate[_GenericClassMethod[int]].create()
+        == _GenericClassMethod[int]
+    )
+    assert _GenericClassCreate[_GenericClassMethod[int]].create() != _GenericClassMethod
+
+
+def test_create_type_from_arg():
+
+    assert _GenericClassCreate.create_item(123) == int
 
 
 class _NonGenericClass:
