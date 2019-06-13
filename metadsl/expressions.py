@@ -42,7 +42,7 @@ class Expression(GenericCheck):
 
     @property
     def _function_str(self):
-        return self.function.__qualname__
+        return getattr(self.function, "__qualname__", str(self.function))
 
     @property
     def _type_str(self):
@@ -133,16 +133,23 @@ class ExpressionFolder:
     """
 
     fn: typing.Callable[[object], object]
+    type_fn: typing.Callable[[type], type] = lambda tp: tp
 
     def __call__(self, expr: object):
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
-            t: typing.Type[Expression] = get_type(expr)
+            type_fn: typing.Callable[[type], type] = self.type_fn  # type: ignore
             return fn(
-                t(
-                    expr.function,
-                    tuple(self(arg) for arg in expr.args),
-                    {k: self(v) for k, v in expr.kwargs},
+                (
+                    # map type function to owner of bound method
+                    dataclasses.replace(  # type: ignore
+                        expr.function, owner=type_fn(expr.function.owner)
+                    )
+                    if isinstance(expr.function, BoundInfer)
+                    else expr.function
+                )(
+                    *(self(arg) for arg in expr.args),
+                    **{k: self(v) for k, v in expr.kwargs},
                 )
             )
         return fn(expr)
