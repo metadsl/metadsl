@@ -18,7 +18,7 @@ import dataclasses
 from .expressions import *
 from .dict_tools import *
 from .typing_tools import *
-from .rules import Rule
+from .rules import Rule, NoMatch
 
 __all__ = ["create_wildcard", "Wildcard", "rule", "R"]
 
@@ -93,14 +93,17 @@ class MatchRule:
         self.template, _ = self.matchfunction(*self.wildcards)
 
     def __call__(self, expr: object) -> typing.Optional[object]:
-        try:
-            wildcards_to_nodes = match_expression(self.wildcards, self.template, expr)
-        except ValueError:
-            return None
+        typevars, wildcards_to_nodes = match_expression(  # type: ignore
+            self.wildcards, self.template, expr
+        )
+
         args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
 
         _, expression_thunk = self.matchfunction(*args)
-        return expression_thunk()
+        # Replace typevars in resualt with their matched values
+        return ExpressionFolder(lambda e: e, lambda tp: replace_typevars(typevars, tp))(
+            expression_thunk()
+        )
 
 
 def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
@@ -120,7 +123,7 @@ def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
 
 def match_expression(
     wildcards: typing.List[Expression], template: object, expr: object
-) -> WildcardMapping:
+) -> typing.Tuple[TypeVarMapping, WildcardMapping]:
     """
     Returns a mapping of wildcards to the objects at that level, or None if it does not match.
 
@@ -128,11 +131,22 @@ def match_expression(
     """
 
     if template in wildcards:
-        return UnhashableMapping(Item(typing.cast(Expression, template), expr))
+        # Match type of wildcard with type of expression
+        return (
+            match_values(template, expr),
+            UnhashableMapping(Item(typing.cast(Expression, template), expr)),
+        )
 
     if isinstance(expr, Expression):
-        if not isinstance(template, Expression) or expr.function != template.function:
-            raise ValueError
+        if not isinstance(template, Expression):
+            raise NoMatch
+        try:
+            fn_typevar_mappings: TypeVarMapping = match_functions(
+                template.function, expr.function
+            )
+        except TypeError:
+            raise NoMatch
+
         if set(expr.kwargs.keys()) != set(template.kwargs.keys()):
             raise TypeError("Wrong kwargs in match")
 
@@ -177,7 +191,7 @@ def match_expression(
             template_args = template.args
             expr_args = expr.args
 
-        return safe_merge(
+        type_mappings, expr_mappings = zip(
             *(
                 match_expression(wildcards, arg_template, arg_value)
                 for arg_template, arg_value in zip(template_args, expr_args)
@@ -185,9 +199,14 @@ def match_expression(
             *(
                 match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
                 for key in template.kwargs.keys()
+            )
+        )
+        return (
+            safe_merge(
+                fn_typevar_mappings, *type_mappings, dict_constructor=UnhashableMapping
             ),
-            dict_constructor=UnhashableMapping,
+            safe_merge(*expr_mappings, dict_constructor=UnhashableMapping),
         )
     if template != expr:
-        raise ValueError
-    return UnhashableMapping()
+        raise NoMatch
+    return match_values(template, expr), UnhashableMapping()

@@ -16,6 +16,10 @@ __all__ = [
     "infer",
     "TypeVarMapping",
     "OfType",
+    "replace_typevars",
+    "match_functions",
+    "match_values",
+    "BoundInfer",
     "ExpandedType",
 ]
 
@@ -31,6 +35,8 @@ class GenericCheckType(type):
         sub = getattr(sub, "__origin__", sub)
         if hasattr(cls, "__origin__"):
             return issubclass(sub, cls)
+        if sub == typing.Any:
+            return False
 
         # Needed when checking if T is instance of Expression
         if isinstance(sub, typing.TypeVar):  # type: ignore
@@ -114,17 +120,25 @@ def get_type(v: T) -> typing.Type[T]:
     """
     Returns the type of the value with generic arguments preserved.
     """
-    return typing_inspect.get_generic_type(v)
+    tp = typing_inspect.get_generic_type(v)
+    # Special case, only support homogoneous tuple that are inferred to iterables
+    if tp == tuple:
+        return typing.Iterable[get_type(v[0]) if v else typing.Any]  # type: ignore
+    return tp
 
 
 TypeVarMapping = typing.Mapping[typing.TypeVar, typing.Type]  # type: ignore
+
+
+def match_values(hint_value: T, value: T) -> TypeVarMapping:
+    return match_type(get_type(hint_value), value)
 
 
 def match_type(hint: typing.Type[T], value: T) -> TypeVarMapping:
     if typing_inspect.get_origin(hint) == type:
         inner_hint, = typing_inspect.get_args(hint)
         return match_types(inner_hint, typing.cast(typing.Type, value))
-    return match_types(hint, typing_inspect.get_generic_type(value))
+    return match_types(hint, get_type(value))
 
 
 def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
@@ -133,7 +147,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     # If it is an instance of OfType[Type[T]], then we should consider it as T
     if isinstance(t, OfType):
-        of_type, = typing_inspect.get_args(typing_inspect.get_generic_type(t))
+        of_type, = typing_inspect.get_args(get_type(t))
         assert issubclass(of_type, typing.Type)
         t, = typing_inspect.get_args(of_type)
         return match_types(hint, t)
@@ -142,13 +156,16 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     if issubclass(t, OfType) and not issubclass(hint, OfType):
         t, = typing_inspect.get_args(t)
         return match_types(hint, t)
+    if issubclass(hint, OfType) and not issubclass(t, OfType):
+        hint, = typing_inspect.get_args(hint)
+        return match_types(hint, t)
 
     # Matching an expanded type is like matching just whatever it represents
     if issubclass(t, ExpandedType):
         t, = typing_inspect.get_args(t)
 
     if typing_inspect.is_typevar(hint):
-        return {hint: t}
+        return {hint: t} if hint != t and t != typing.Any else {}
 
     if typing_inspect.is_typevar(t):
         return {}
@@ -357,3 +374,13 @@ def infer(
     """
 
     return Infer(fn, wrapper)
+
+
+def match_functions(
+    fn_with_typevars: typing.Callable, fn: typing.Callable
+) -> TypeVarMapping:
+    if not isinstance(fn_with_typevars, BoundInfer) or not isinstance(fn, BoundInfer):
+        if fn_with_typevars == fn:
+            return {}
+        raise TypeError(f"{fn_with_typevars} != {fn}")
+    return match_types(fn_with_typevars.owner, fn.owner)

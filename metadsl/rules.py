@@ -14,6 +14,7 @@ from .expressions import *
 
 __all__ = [
     "Rule",
+    "NoMatch",
     "RulesRepeatSequence",
     "RulesRepeatFold",
     "RuleSequence",
@@ -22,10 +23,15 @@ __all__ = [
     "RuleRepeat",
 ]
 
-# takes in an expression object and returns a new one if it matches, otherwise returns None
+
+class NoMatch(Exception):
+    pass
+
+
+# takes in an expression object and returns a new one if it matches, otherwise raises NoMatch
 # We type this as `object` instead of `Expression` because  we can pass in a leaf of an expression
 # tree which is not an expression object.
-Rule = typing.Callable[[object], typing.Optional[object]]
+Rule = typing.Callable[[object], object]
 
 
 @dataclasses.dataclass
@@ -100,11 +106,16 @@ class RuleInOrder:
     def __call__(self, expr: object) -> typing.Optional[object]:
         did_replace = False
         for rule in self.rules:
-            res = rule(expr)
-            if res is not None:
+            try:
+                res = rule(expr)
+            except NoMatch:
+                pass
+            else:
                 did_replace = True
                 expr = res
-        return expr if did_replace else None
+        if not did_replace:
+            raise NoMatch
+        return expr
 
 
 @dataclasses.dataclass
@@ -116,12 +127,12 @@ class RuleSequence:
     rules: typing.Tuple[Rule, ...]
 
     def __call__(self, expr: object) -> typing.Optional[object]:
-        res = None
         for rule in self.rules:
-            res = rule(expr)
-            if res is not None:
-                return res
-        return res
+            try:
+                return rule(expr)
+            except NoMatch:
+                pass
+        raise NoMatch
 
 
 @dataclasses.dataclass
@@ -146,8 +157,9 @@ class RuleFold:
         return res
 
     def fn(self, value: object) -> object:
-        new_value = self.rule(value)  # type: ignore
-        if new_value is None:
+        try:
+            new_value = self.rule(value)  # type: ignore
+        except NoMatch:
             return value
         self.executed_rule = True
         return new_value
@@ -162,15 +174,15 @@ class RuleRepeat:
     rule: Rule
 
     def __call__(self, expr: object) -> typing.Optional[object]:
-        replaced = self.rule(expr)  # type: ignore
-        if replaced is None:
-            return None
-        expr = replaced
+        try:
+            expr = self.rule(expr)  # type: ignore
+        except NoMatch:
+            return expr
         for i in range(1000):
-            replaced = self.rule(expr)  # type: ignore
-            if replaced is None:
+            try:
+                expr = self.rule(expr)  # type: ignore
+            except NoMatch:
                 return expr
-            expr = replaced
         raise RuntimeError(
             f"Exceeded maximum number of repitions, rule: {self.rule}, expr: {expr}"  # type: ignore
         )

@@ -43,10 +43,10 @@ class _List(Expression, typing.Generic[T]):
     def __add__(self, other: _List[T]) -> _List[T]:
         ...
 
-
-@expression
-def _list(item_type: typing.Type[T], *items: T) -> _List[T]:
-    ...
+    @expression
+    @classmethod
+    def create(cls, *items: T) -> _List[T]:
+        ...
 
 
 class TestRule:
@@ -56,35 +56,46 @@ class TestRule:
 
     def test_type_args(self):
         @rule
-        def _concat_lists(tp: typing.Type[T], l: T, r: T) -> R[_List[T]]:
-            return _list(tp, l) + _list(tp, r), lambda: _list(tp, l, r)
+        def _concat_lists(l: T, r: T) -> R[_List[T]]:
+            return _List.create(l) + _List.create(r), lambda: _List.create(l, r)
 
-        assert _concat_lists(_list(int, 1) + _list(int, 2)) == _list(int, 1, 2)
+        assert _concat_lists(_List.create(1) + _List.create(2)) == _List.create(1, 2)
 
     def test_variable_args(self):
         @rule
         def _concat_lists(
-            tp: typing.Type[T], ls: typing.Iterable[T], rs: typing.Iterable[T]
+            ls: typing.Iterable[T], rs: typing.Iterable[T]
         ) -> R[_List[T]]:
-            return _list(tp, *ls) + _list(tp, *rs), lambda: _list(tp, *ls, *rs)
+            return (
+                _List[T].create(*ls) + _List[T].create(*rs),
+                lambda: _List[T].create(*ls, *rs),
+            )
 
-        assert _concat_lists(_list(int, 1, 2) + _list(int, 3, 4)) == _list(
-            int, 1, 2, 3, 4
+        assert _concat_lists(_List.create(1, 2) + _List.create(3, 4)) == _List.create(
+            1, 2, 3, 4
+        )
+        assert (
+            _concat_lists(_List[int].create() + _List[int].create())
+            == _List[int].create()
         )
 
     def test_variable_args_right_side(self):
         @rule
         def _concat_lists_minus_end(
-            tp: typing.Type[T],
-            ls: typing.Iterable[T],
-            rs: typing.Iterable[T],
-            l: T,
-            r: T,
+            ls: typing.Iterable[T], rs: typing.Iterable[T], l: T, r: T
         ) -> R[_List[T]]:
-            return _list(tp, *ls, l) + _list(tp, *rs, r), lambda: _list(tp, *ls, *rs)
+            return (
+                _List[T].create(*ls, l) + _List[T].create(*rs, r),
+                lambda: _List[T].create(*ls, *rs),
+            )
 
-        assert _concat_lists_minus_end(_list(int, 1, 2) + _list(int, 3, 4)) == _list(
-            int, 1, 3
+        assert _concat_lists_minus_end(
+            _List.create(1, 2) + _List.create(3, 4)
+        ) == _List.create(1, 3)
+
+        assert (
+            _concat_lists_minus_end(_List.create(1) + _List.create(3))
+            == _List[int].create()
         )
 
 
@@ -103,9 +114,3 @@ class TestPureRule:
         s = _from_str("str")
         expr = s + _from_int(0)
         assert _add_zero_rule(expr) == s
-
-
-# TODO:
-# Update python and numpy examples
-# Update notebooks
-

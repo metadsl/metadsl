@@ -171,3 +171,11 @@ def test_keyword_default():
 
     assert default_kwarg() == (default_kwarg, (10,), {}, int)
     assert default_kwarg(b="df") == (default_kwarg, ("df",), {}, str)
+
+
+def test_tuple_for_iterable():
+    @i
+    def fn(xs: typing.Iterable[T]) -> T:  # type: ignore
+        ...
+
+    assert fn((1, 2)) == (fn, ((1, 2),), {}, int)
