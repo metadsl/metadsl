@@ -4,23 +4,12 @@ Useful for to convert object to boxed types.
 from __future__ import annotations
 import typing
 
-from .expressions import *
-from .matching import *
+from ..expressions import *
+from ..matching import *
+from .maybe import *
 
-__all__ = ["Converter", "convert_identity_rule", "convert_to_maybe", "Maybe"]
+__all__ = ["Converter", "convert_identity_rule", "convert_to_maybe"]
 T = typing.TypeVar("T")
-
-
-class Maybe(Expression, typing.Generic[T]):
-    @expression
-    @classmethod
-    def just(cls, value: T) -> Maybe[T]:
-        ...
-
-    @expression
-    @classmethod
-    def nothing(cls) -> Maybe[T]:
-        ...
 
 
 class Converter(Expression, typing.Generic[T]):
