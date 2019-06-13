@@ -40,6 +40,11 @@ class Generic(Expression, typing.Generic[T]):
     def get(self) -> T:
         ...
 
+    @expression
+    @classmethod
+    def create(cls) -> Generic[T]:
+        ...
+
 
 @expression
 def instance_arg_fn(a: int) -> Generic[int]:
@@ -61,13 +66,8 @@ class SubclassWithMethod(Expression):
         ...
 
 
-@expression
-def create_generic(t: typing.Type[T]) -> Generic[T]:
-    ...
-
-
 def test_classmethod():
-    c = create_generic(Subclass)
+    c = Generic[Subclass].create()
     assert isinstance(c.get(), Subclass)
 
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import typing
-import functools
 
 from .typing_tools import *
 
@@ -94,19 +93,18 @@ def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 
+def wrapper(fn, args, kwargs, return_type):
+    expr_return_type = extract_expression_type(return_type)
+    return expr_return_type(fn, args, kwargs)
+
+
 def expression(fn: T_callable) -> T_callable:
     """
     Creates an expresion object by wrapping a Python function and providing a function
     that will take in the args and return an expression of the right type.
     """
 
-    @functools.wraps(fn)
-    def expression_inner(*args, __inferred=infer(fn), **kwargs):
-        new_args, new_kwargs, return_type = __inferred(*args, **kwargs)
-        expr_return_type = extract_expression_type(return_type)
-        return expr_return_type(expression_inner, new_args, new_kwargs)
-
-    return typing.cast(T_callable, expression_inner)
+    return typing.cast(T_callable, infer(fn, wrapper))
 
 
 class IteratedPlaceholder(Expression, ExpandedType, typing.Generic[T]):
