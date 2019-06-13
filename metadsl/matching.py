@@ -201,12 +201,17 @@ def match_expression(
                 for key in template.kwargs.keys()
             )
         )
-        return (
-            safe_merge(
-                fn_typevar_mappings, *type_mappings, dict_constructor=UnhashableMapping
-            ),
-            safe_merge(*expr_mappings, dict_constructor=UnhashableMapping),
-        )
+        try:
+            return (
+                safe_merge(
+                    fn_typevar_mappings,
+                    *type_mappings,
+                    dict_constructor=UnhashableMapping
+                ),
+                safe_merge(*expr_mappings, dict_constructor=UnhashableMapping),
+            )
+        except ValueError:
+            raise NoMatch
     if template != expr:
         raise NoMatch
     return match_values(template, expr), UnhashableMapping()
