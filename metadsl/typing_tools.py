@@ -215,24 +215,32 @@ def infer_return_type(
     typing.Type[T],
 ]:
 
-    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
+    # Get inner function if we have one, like if this is a classmethod
+    inner_fn = getattr(fn, "__func__", fn)
+    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(inner_fn)
+    signature = inspect.signature(inner_fn)
 
-    signature = inspect.signature(fn)
+    is_classmethod = isinstance(fn, classmethod)
+    if is_classmethod:
+        assert owner and not instance
 
     # This case is triggered if we got here from a __get__ call
     # in a descriptor
     if owner:
         first_arg_name = next(iter(signature.parameters.keys()))
-        if instance:
-            # If we have called this as a method, then add the instance
-            # to the args and infer the type hint for this first arg
-            args = (instance,) + args
-            first_arg_type = get_origin_type(get_type(instance))
-        else:
+        if is_classmethod:
             # If we called this as a class method, add the owner to
             # the args add the inferred type to the hints.
             args = (owner,) + args  # type: ignore
             first_arg_type = typing.Type[get_origin_type(owner)]  # type: ignore
+        elif instance:
+            # If we have called this as a method, then add the instance
+            # to the args and infer the type hint for this first arg
+            args = (instance,) + args
+            first_arg_type = get_origin_type(get_type(instance))
+        # we are calling an instance method on the class and passing the instance as the first arg
+        else:
+            first_arg_type = get_origin_type(get_type(args[0]))
 
         if first_arg_name not in hints:
             hints[first_arg_name] = first_arg_type
@@ -263,11 +271,11 @@ def infer_return_type(
         raise TypeError(f"Couldn't merge mappings {mappings}")
 
     return (
-        replace_typevars(matches, get_origin_type(owner))
-        if owner and not instance
+        replace_typevars(matches, get_origin_type(owner))  # type: ignore
+        if is_classmethod
         else None,
-        # Remove first arg if it was a class.
-        bound.args[1:] if owner and not instance else bound.args,
+        # Remove first arg if it was a classmethod
+        bound.args[1:] if is_classmethod else bound.args,
         bound.kwargs,
         replace_typevars(matches, return_hint),
     )
@@ -290,12 +298,6 @@ class Infer(typing.Generic[T, U]):
     wrapper: WrapperType[T, U]
 
     def __post_init__(self):
-        # This case is if we are wrapping a classmethod.
-        # We should grab the original function, so we can inspect
-        # it's signature
-        if isinstance(self.fn, classmethod):
-            self.fn = self.fn.__func__
-
         functools.update_wrapper(self, self.fn)
 
     def __call__(self, *args, **kwargs) -> U:
@@ -326,9 +328,9 @@ class BoundInfer(typing.Generic[T, U]):
             dataclasses.replace(  # type: ignore
                 self,
                 instance=None,
-                owner=get_origin(self.owner) or self.owner
-                if self.instance
-                else owner_replaced,
+                owner=owner_replaced
+                if isinstance(self.fn, classmethod)
+                else get_origin(self.owner) or self.owner,
             ),
             *rest,
         )

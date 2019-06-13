@@ -39,6 +39,20 @@ def test_generic_class_arg():
     c = _GenericClassMethod[int]()
     assert c.method() == (_GenericClassMethod.method, (c,), {}, int)
     assert c.method() != (_GenericClassMethod[int].method, (c,), {}, int)
+    assert _GenericClassMethod.method(c) == (_GenericClassMethod.method, (c,), {}, int)
+    assert _GenericClassMethod[int].method(c) == (
+        _GenericClassMethod.method,
+        (c,),
+        {},
+        int,
+    )
+    assert _GenericClassMethod[int].method(c) != (
+        _GenericClassMethod[int].method,
+        (c,),
+        {},
+        int,
+    )
+
     c2 = _GenericClassMethod[_GenericClassMethod[int]]()
     assert c2.method() == (
         _GenericClassMethod.method,
@@ -50,10 +64,12 @@ def test_generic_class_arg():
 
 class _GenericClassCreate(GenericCheck, typing.Generic[T]):
     @i
+    @classmethod
     def create(cls) -> T:
         ...
 
     @i
+    @classmethod
     def create_item(cls, item: T) -> T:
         ...
 
@@ -119,6 +135,7 @@ def test_non_generic_method():
 
     c = _NonGenericClass()
     assert c.method() == (_NonGenericClass.method, (c,), {}, int)
+    assert _NonGenericClass.method(c) == (_NonGenericClass.method, (c,), {}, int)
 
 
 def test_variable_args():
