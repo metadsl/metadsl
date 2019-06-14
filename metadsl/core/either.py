@@ -6,6 +6,7 @@ from ..matching import *
 from .conversion import *
 from .maybe import *
 from .abstraction import *
+from .rules import *
 
 __all__ = ["Either"]
 
@@ -30,16 +31,19 @@ class Either(Expression, typing.Generic[T, U]):
         ...
 
 
+@rules.append
 @rule
 def either_match_left(l: Abstraction[T, V], r: Abstraction[U, V], v: T) -> R[V]:
     return Either[T, U].left(v).match(l, r), lambda: l(v)
 
 
+@rules.append
 @rule
 def either_match_right(l: Abstraction[T, V], r: Abstraction[U, V], v: U) -> R[V]:
     return Either[T, U].right(v).match(l, r), lambda: r(v)
 
 
+@rules.append
 @rule
 def convert_to_either(x: object) -> R[Maybe[Either[T, U]]]:
     def replacement() -> Maybe[Either[T, U]]:

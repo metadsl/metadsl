@@ -1,6 +1,7 @@
 import pytest
 from ..rules import NoMatch
 from .conversion import *
+from .maybe import *
 
 
 class TestConvertIdentity:

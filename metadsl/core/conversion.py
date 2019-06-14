@@ -7,6 +7,7 @@ import typing
 from ..expressions import *
 from ..matching import *
 from .maybe import *
+from .rules import *
 
 __all__ = ["Converter", "convert_identity_rule", "convert_to_maybe"]
 T = typing.TypeVar("T")
@@ -22,6 +23,7 @@ class Converter(Expression, typing.Generic[T]):
         ...
 
 
+@rules.append
 @rule
 def convert_identity_rule(value: T) -> R[Maybe[T]]:
     """
@@ -30,6 +32,7 @@ def convert_identity_rule(value: T) -> R[Maybe[T]]:
     return Converter[T].convert(value), lambda: Maybe.just(value)
 
 
+@rules.append
 @rule
 def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
     return (
