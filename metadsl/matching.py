@@ -20,7 +20,7 @@ from .dict_tools import *
 from .typing_tools import *
 from .rules import Rule, NoMatch
 
-__all__ = ["create_wildcard", "Wildcard", "rule", "R"]
+__all__ = ["create_wildcard", "Wildcard", "rule", "R", "default_rule"]
 
 T = typing.TypeVar("T", bound=Expression)
 
@@ -36,6 +36,49 @@ def rule(fn: MatchFunctionType) -> Rule:
     """
 
     return MatchRule(fn)
+
+
+T_Callable = typing.TypeVar("T_Callable", bound=typing.Callable)
+
+
+def default_rule(fn: typing.Callable) -> Rule:
+    """
+    Creates a rule based on the body of a passed in expression function
+    """
+    return DefaultRule(fn)
+
+
+@dataclasses.dataclass
+class DefaultRule:
+    fn: typing.Callable
+    inner_fn: typing.Callable = dataclasses.field(init=False)
+    exposed_fn: typing.Callable = dataclasses.field(init=False)
+
+    def __post_init__(self):
+        self.inner_fn = self.fn.__wrapped__  # type: ignore
+        self.exposed_fn = self.fn.__exposed__  # type: ignore
+
+    def __call__(self, expr: object) -> object:
+        """
+        This rule should match whenever the expression is this function.
+
+        Then, all it has to do is get the type variable mapping given the current args
+        and apply it to the return value. This is so that if the body uses generic type
+        variables, they are turned into the actual instantiations. 
+        """
+        if not isinstance(expr, Expression) or expr.function != self.exposed_fn:
+            raise NoMatch
+
+        args = expr.args
+
+        fn = self.fn
+        # If this is a classmethod, pass in the origin class
+        if isinstance(fn, BoundInfer) and fn.is_classmethod:
+            args = (typing.cast(object, fn._owner_origin),) + args
+
+        return replace_typevars_expression(
+            self.inner_fn(*args, **expr.kwargs), expr.typevars
+        )
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -100,25 +143,25 @@ class MatchRule:
         args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
 
         _, expression_thunk = self.matchfunction(*args)
-        # Replace typevars in resualt with their matched values
-        return ExpressionFolder(lambda e: e, lambda tp: replace_typevars(typevars, tp))(
-            expression_thunk()
-        )
+
+        return replace_typevars_expression(expression_thunk(), typevars)
 
 
-def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
+def replace_typevars_expression(expression: object, typevars: TypeVarMapping) -> object:
     """
-    Collapses the middle of a tuple into another nested tuple, keeping l on the left side
-    uncollapsed and r on the right side un collapsed
+    Replaces all typevars in classmethods in an expression.
 
-    >>> collapse_tuple(tuple(range(10)), 3, 4)
-    (0, 1, 2, (3, 4, 5), 6, 7, 8, 9)
-    >>> collapse_tuple(tuple(range(5)), 3, 0)
-    (0, 1, 2, (3, 4))
+    >>> import typing
+    >>> T = typing.TypeVar("T")
+    >>> class List(Expression, typing.Generic[T]):
+    ...     @expression
+    ...     @classmethod
+    ...     def create(cls) -> List[T]:
+    ...         ...
+    >>> replace_typevars_expression(List[T].create(), {T: int})
+    List[int].create()
     """
-    if r == 0:
-        return tuple([*t[:l], t[l:]])
-    return tuple([*t[:l], t[l:-r], *t[-r:]])
+    return ExpressionFolder(typevars=typevars)(expression)
 
 
 def match_expression(
@@ -138,11 +181,12 @@ def match_expression(
         )
 
     if isinstance(expr, Expression):
-        if not isinstance(template, Expression):
+        if not isinstance(template, Expression) or template.function != expr.function:
             raise NoMatch
         try:
-            fn_typevar_mappings: TypeVarMapping = match_functions(
-                template.function, expr.function
+            # Try to merge the two mappings, if they cannot merge, then we don't have a match
+            fn_typevar_mappings: TypeVarMapping = merge_typevars(
+                expr.typevars, template.typevars
             )
         except TypeError:
             raise NoMatch
@@ -199,15 +243,11 @@ def match_expression(
             *(
                 match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
                 for key in template.kwargs.keys()
-            )
+            ),
         )
         try:
             return (
-                safe_merge(
-                    fn_typevar_mappings,
-                    *type_mappings,
-                    dict_constructor=UnhashableMapping
-                ),
+                merge_typevars(fn_typevar_mappings, *type_mappings),
                 safe_merge(*expr_mappings, dict_constructor=UnhashableMapping),
             )
         except ValueError:
@@ -215,3 +255,19 @@ def match_expression(
     if template != expr:
         raise NoMatch
     return match_values(template, expr), UnhashableMapping()
+
+
+def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
+    """
+    Collapses the middle of a tuple into another nested tuple, keeping l on the left side
+    uncollapsed and r on the right side un collapsed
+
+    >>> collapse_tuple(tuple(range(10)), 3, 4)
+    (0, 1, 2, (3, 4, 5), 6, 7, 8, 9)
+    >>> collapse_tuple(tuple(range(5)), 3, 0)
+    (0, 1, 2, (3, 4))
+    """
+    if r == 0:
+        return tuple([*t[:l], t[l:]])
+    return tuple([*t[:l], t[l:-r], *t[-r:]])
+

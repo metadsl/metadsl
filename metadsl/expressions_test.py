@@ -5,6 +5,7 @@ import typing_inspect
 import pytest
 
 from .expressions import *
+from .expressions import T as expressions_T
 
 T = typing.TypeVar("T")
 
@@ -100,14 +101,16 @@ def test_iterated():
                 create_iterated_placeholder,
                 (
                     PlaceholderExpression[typing.Iterable[int]](
-                        create_variadic_ints, (), {}
+                        create_variadic_ints, (), {}, {}
                     ),
                 ),
                 {},
+                {expressions_T: int},
             ),
             3,
             4,
         ),
+        {},
         {},
     )
 
@@ -120,6 +123,8 @@ TEST_EXPRESSIONS: typing.Iterable[object] = [
     create_method_subclass(10) + create_method_subclass(10),
     mutable_fn([1, 2, 3]),  # mutable value that doesn't have hash
     variadic(1, 2, 3),
+    Generic[int].create(),
+    Generic[Generic[int]].create(),
 ]
 
 
@@ -131,3 +136,30 @@ def test_fold_identity(instance) -> None:
     result = ExpressionFolder(lambda e: e)(instance)
     assert instance == result
 
+
+U = typing.TypeVar("U")
+
+
+def test_fold_typevars_identity():
+    assert ExpressionFolder()(Generic[T].create()) == Generic[T].create()
+    assert ExpressionFolder()(Generic[U].create()) == Generic[U].create()
+
+
+def test_fold_typevars_replace():
+    assert (
+        ExpressionFolder(typevars={T: int})(Generic[T].create())
+        == Generic[int].create()
+    )
+    assert (
+        ExpressionFolder(typevars={U: int})(Generic[U].create())
+        == Generic[int].create()
+    )
+
+
+def test_fold_typevars_replace_skip_missing():
+    assert (
+        ExpressionFolder(typevars={U: int})(Generic[T].create()) == Generic[T].create()
+    )
+    assert (
+        ExpressionFolder(typevars={T: int})(Generic[U].create()) == Generic[U].create()
+    )

@@ -21,6 +21,8 @@ __all__ = [
     "match_values",
     "BoundInfer",
     "ExpandedType",
+    "replace_fn_typevars",
+    "merge_typevars",
 ]
 
 T = typing.TypeVar("T")
@@ -141,6 +143,32 @@ def match_type(hint: typing.Type[T], value: T) -> TypeVarMapping:
     return match_types(hint, get_type(value))
 
 
+def merge_typevars(*typevars: TypeVarMapping) -> TypeVarMapping:
+    """
+    Merges typevar mappings. If there is a duplicate key, either the values should be the
+    same or one should have `typing.Any` type, or one should be a typevar itself. If it is a typevar,
+    that typevar is also set to the other's value
+    """
+    merged: TypeVarMapping = {}
+    for tvs in typevars:  # type: ignore
+        for tv, tp in tvs.items():
+            if tv not in merged:
+                merged[tv] = tp  # type: ignore
+                continue
+            prev_tp = merged[tv]
+            if prev_tp == typing.Any:
+                merged[tv] = tp  # type: ignore
+            elif prev_tp == tp or tp == typing.Any:
+                pass
+            elif typing_inspect.is_typevar(prev_tp):
+                merged[prev_tp] = merged[tv] = tp  # type: ignore
+            elif typing_inspect.is_typevar(tp):
+                merged[tp] = prev_tp  # type: ignore
+            else:
+                raise TypeError(f"Cannot merge {prev_tp} and {tp} for type var {tv}")
+    return merged
+
+
 def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
@@ -165,14 +193,14 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         t, = typing_inspect.get_args(t)
 
     if typing_inspect.is_typevar(hint):
-        return {hint: t} if hint != t and t != typing.Any else {}
+        return {hint: t}
 
     if typing_inspect.is_typevar(t):
         return {}
 
     if not issubclass(t, hint):
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
-    return safe_merge(
+    return merge_typevars(
         *(
             match_types(inner_hint, inner_t)
             for inner_hint, inner_t in zip(
@@ -222,24 +250,18 @@ def infer_return_type(
     fn: typing.Callable[..., T],
     instance: object,
     owner: typing.Optional[typing.Type],
+    owner_origin: typing.Optional[typing.Type],
+    is_classmethod,
     args: typing.Tuple[object, ...],
     kwargs: typing.Mapping[str, object],
 ) -> typing.Tuple[
-    # type of owner, with typevars replaced
-    typing.Optional[typing.Type],
     typing.Tuple[object, ...],
     typing.Mapping[str, object],
     typing.Type[T],
+    TypeVarMapping,
 ]:
-
-    # Get inner function if we have one, like if this is a classmethod
-    inner_fn = getattr(fn, "__func__", fn)
-    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(inner_fn)
-    signature = inspect.signature(inner_fn)
-
-    is_classmethod = isinstance(fn, classmethod)
-    if is_classmethod:
-        assert owner and not instance
+    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
+    signature = inspect.signature(fn)
 
     # This case is triggered if we got here from a __get__ call
     # in a descriptor
@@ -249,7 +271,7 @@ def infer_return_type(
             # If we called this as a class method, add the owner to
             # the args add the inferred type to the hints.
             args = (owner,) + args  # type: ignore
-            first_arg_type = typing.Type[get_origin_type(owner)]  # type: ignore
+            first_arg_type = typing.Type[owner_origin]  # type: ignore
         elif instance:
             # If we have called this as a method, then add the instance
             # to the args and infer the type hint for this first arg
@@ -260,7 +282,7 @@ def infer_return_type(
             first_arg_type = get_origin_type(get_type(args[0]))
 
         if first_arg_name not in hints:
-            hints[first_arg_name] = first_arg_type
+            hints[first_arg_name] = first_arg_type  # type: ignore
 
     bound = signature.bind(*args, **kwargs)
     bound.apply_defaults()
@@ -283,18 +305,16 @@ def infer_return_type(
         match_type(hints[name], arg) for name, arg in argument_items
     ]
     try:
-        matches: TypeVarMapping = safe_merge(*mappings)
+        matches: TypeVarMapping = merge_typevars(*mappings)
     except ValueError:
         raise TypeError(f"Couldn't merge mappings {mappings}")
 
     return (
-        replace_typevars(matches, get_origin_type(owner))  # type: ignore
-        if is_classmethod
-        else None,
         # Remove first arg if it was a classmethod
         bound.args[1:] if is_classmethod else bound.args,
         bound.kwargs,
         replace_typevars(matches, return_hint),
+        matches,
     )
 
 
@@ -304,6 +324,7 @@ WrapperType = typing.Callable[
         typing.Tuple[object, ...],
         typing.Mapping[str, object],
         typing.Type[T],
+        TypeVarMapping,
     ],
     U,
 ]
@@ -316,14 +337,19 @@ class Infer(typing.Generic[T, U]):
 
     def __post_init__(self):
         functools.update_wrapper(self, self.fn)
+        self.__exposed__ = self
 
     def __call__(self, *args, **kwargs) -> U:
         return self.wrapper(  # type: ignore
-            self, *infer_return_type(self.fn, None, None, args, kwargs)[1:]
+            self, *infer_return_type(self.fn, None, None, None, None, args, kwargs)
         )
 
     def __get__(self, instance, owner) -> BoundInfer[T, U]:
-        return BoundInfer(self.fn, self.wrapper, instance, owner)  # type: ignore
+        is_classmethod = isinstance(self.fn, classmethod)
+        fn = self.fn.__func__ if is_classmethod else self.fn  # type: ignore
+        return BoundInfer(  # type: ignore
+            fn, self.wrapper, instance, owner, is_classmethod  # type: ignore
+        )
 
 
 @dataclasses.dataclass
@@ -332,24 +358,33 @@ class BoundInfer(typing.Generic[T, U]):
     wrapper: WrapperType[T, U]
     instance: object
     owner: typing.Type
+    is_classmethod: bool
+
+    def __post_init__(self):
+        functools.update_wrapper(self, self.fn)
+        self._owner_origin = get_origin_type(self.owner)
+
+        # Normalize this method so that equality checks on the returned function are consistant:
+        # * Remove the instance, because it is already present in the args
+        # * Replace the owner with the origin of the owner
+        self.__exposed__ = (
+            dataclasses.replace(self, instance=None, owner=self._owner_origin)
+            if self.instance or self.owner != self._owner_origin
+            else self
+        )
 
     def __call__(self, *args, **kwargs) -> U:
-        owner_replaced, *rest = infer_return_type(
-            self.fn, self.instance, self.owner, args, kwargs
-        )
         return self.wrapper(  # type: ignore
-            # Normalize this method so that equality checks on the returned function are consistant:
-            # * Remove the instance, because it is already present in the args
-            # * Remove the params from the owner, if in a method, because they are present on the arg.
-            # * Add the params to the owner, by using type of first arg, if we are in a classmethod, since that isn't in the args
-            dataclasses.replace(  # type: ignore
-                self,
-                instance=None,
-                owner=owner_replaced
-                if isinstance(self.fn, classmethod)
-                else get_origin(self.owner) or self.owner,
+            self.__exposed__,
+            *infer_return_type(
+                self.fn,
+                self.instance,
+                self.owner,
+                self._owner_origin,
+                self.is_classmethod,
+                args,
+                kwargs,
             ),
-            *rest,
         )
 
 
@@ -384,3 +419,13 @@ def match_functions(
             return {}
         raise TypeError(f"{fn_with_typevars} != {fn}")
     return match_types(fn_with_typevars.owner, fn.owner)
+
+
+def replace_fn_typevars(
+    fn: typing.Callable, typevars: TypeVarMapping
+) -> typing.Callable:
+    if isinstance(fn, BoundInfer):
+        return dataclasses.replace(  # type: ignore
+            fn, owner=replace_typevars(typevars, fn.owner)
+        )
+    return fn

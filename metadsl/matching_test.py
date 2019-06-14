@@ -74,6 +74,17 @@ class TestRule:
         assert _concat_lists(_List.create(1, 2) + _List.create(3, 4)) == _List.create(
             1, 2, 3, 4
         )
+
+    def test_variable_args_empty(self):
+        @rule
+        def _concat_lists(
+            ls: typing.Iterable[T], rs: typing.Iterable[T]
+        ) -> R[_List[T]]:
+            return (
+                _List[T].create(*ls) + _List[T].create(*rs),
+                lambda: _List[T].create(*ls, *rs),
+            )
+
         assert (
             _concat_lists(_List[int].create() + _List[int].create())
             == _List[int].create()
@@ -114,3 +125,106 @@ class TestPureRule:
         s = _from_str("str")
         expr = s + _from_int(0)
         assert _add_zero_rule(expr) == s
+
+
+class TestDefaultRule:
+    def test_fn(self):
+        @expression
+        def inner_fn(a: int) -> Expression:
+            ...
+
+        @expression
+        def fn(a: int) -> Expression:
+            return inner_fn(a)
+
+        assert fn(10) != inner_fn(10)
+        assert default_rule(fn)(fn(10)) == inner_fn(10)
+
+    def test_method(self):
+        class C(Expression):
+            @expression
+            def __add__(self, other: C) -> C:
+                ...
+
+            @expression
+            def double(self) -> C:
+                return self + self
+
+        globals()["C"] = C
+
+        @expression
+        def create() -> C:
+            ...
+
+        rule = default_rule(C.double)
+        assert create().double() != create() + create()
+        assert rule(create().double()) == create() + create()
+
+    def test_method_generic(self):
+        class C(Expression, typing.Generic[T]):
+            @expression
+            def __add__(self, other: C[T]) -> C[T]:
+                ...
+
+            @expression
+            def double(self) -> C[T]:
+                return self + self
+
+            @expression
+            @classmethod
+            def create(cls) -> C[T]:
+                ...
+
+        globals()["C"] = C
+
+        expr = C[int].create().double()
+
+        rule = default_rule(C.double)
+        assert rule(expr) == C[int].create() + C[int].create()
+
+        assert rule(expr) != C[str].create() + C[str].create()
+        assert expr != C[int].create() + C[int].create()
+
+    def test_classmethod_generic(self):
+        class C(Expression, typing.Generic[T]):
+            @expression
+            @classmethod
+            def create(cls) -> C[T]:
+                ...
+
+            @expression
+            @classmethod
+            def create_wrapper(cls) -> C[T]:
+                return cls.create()
+
+        globals()["C"] = C
+
+        expr = C[int].create_wrapper()
+        rule = default_rule(C.create_wrapper)
+
+        assert rule(expr) == C[int].create()
+
+        assert rule(expr) != C[str].create()
+        assert expr != C[int].create()
+
+    def test_classmethod_generic_arg(self):
+        class C(Expression, typing.Generic[T]):
+            @expression
+            @classmethod
+            def create(cls, v: T) -> C[T]:
+                ...
+
+            @expression
+            @classmethod
+            def create_wrapper(cls, v: T) -> C[T]:
+                return cls.create(v)
+
+        globals()["C"] = C
+
+        # TODO: We need to get bound classmethod somehow when calling rule??, or just unbound?
+        # It should be bound to generic params, like that in function.
+        expr = C.create_wrapper(123)
+        rule = default_rule(C.create_wrapper)
+        assert rule(expr) == C.create(123)
+
+        assert expr != C.create(123)

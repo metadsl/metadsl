@@ -22,18 +22,25 @@ T_expression = typing.TypeVar("T_expression", bound="Expression")
 @dataclasses.dataclass(eq=False, repr=False)
 class Expression(GenericCheck):
     """
+    Top level object.
     Subclass this type and provide relevent methods for your type. Do not add any fields.
 
-    If the `function` is called with `arguments` then it should return `self`.
+    Properties:
 
-    The arguments should match the proper types specified in the type annotation of the function.
-    The return type of the function should either be the the expression itself or
-    LiteralExpression of the return type.
+    Calling the function, after replacing the typevars in it (if it is a bound method),
+    with the args and kwargs should resualt in an equivalent expression:
+        
+        replace_fn_typevars(self.function, self.typevars)(*self.args, **self.kwargs) == self
+    
+    The return type of the function, inferred by replacing the typevars in and with these args and kwargs,
+    should match the type of the expression. If the return type of the function is not subclass of expression,
+    then this should be a PlaceholderExpression of that type.
     """
 
     function: typing.Callable
     args: typing.Tuple[object, ...]
     kwargs: typing.Mapping[str, object]
+    typevars: TypeVarMapping
 
     def __str__(self):
         arg_strings = (str(arg) for arg in self.args)
@@ -50,20 +57,17 @@ class Expression(GenericCheck):
         return getattr(t, "__qualname__", str(t))
 
     def __repr__(self):
-        return f"{self._type_str}({self._function_str}, {repr(self.args)}, {repr(self.kwargs)})"
+        return f"{self._type_str}({self._function_str}, {repr(self.args)}, {repr(self.kwargs)}, {repr(self.typevars)})"
 
     def __eq__(self, value) -> bool:
-        """
-        Only equal if generic types and values are equal.
-        """
         if not isinstance(value, Expression):
             return False
 
         return (
             self.function == value.function
-            and get_type(self) == get_type(value)
             and self.args == value.args
             and self.kwargs == value.kwargs
+            and self.typevars == value.typevars
         )
 
 
@@ -93,9 +97,9 @@ def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 
-def wrapper(fn, args, kwargs, return_type):
+def wrapper(fn, args, kwargs, return_type, typevars):
     expr_return_type = extract_expression_type(return_type)
-    return expr_return_type(fn, args, kwargs)
+    return expr_return_type(fn, args, kwargs, typevars)
 
 
 def expression(fn: T_callable) -> T_callable:
@@ -132,21 +136,21 @@ class ExpressionFolder:
     Traverses this expression graph and transforms each node, from the bottom up.
     """
 
-    fn: typing.Callable[[object], object]
-    type_fn: typing.Callable[[type], type] = lambda tp: tp
+    fn: typing.Callable[[object], object] = lambda e: e
+    typevars: TypeVarMapping = dataclasses.field(default_factory=dict)
 
     def __call__(self, expr: object):
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
-            type_fn: typing.Callable[[type], type] = self.type_fn  # type: ignore
             return fn(
                 (
-                    # map type function to owner of bound method
-                    dataclasses.replace(  # type: ignore
-                        expr.function, owner=type_fn(expr.function.owner)
+                    replace_fn_typevars(
+                        expr.function,
+                        {
+                            tv: replace_typevars(self.typevars, tp)
+                            for tv, tp in expr.typevars.items()  # type: ignore
+                        },
                     )
-                    if isinstance(expr.function, BoundInfer)
-                    else expr.function
                 )(
                     *(self(arg) for arg in expr.args),
                     **{k: self(v) for k, v in expr.kwargs},
