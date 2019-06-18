@@ -168,11 +168,6 @@ class RuleFold:
     """
 
     rule: Rule
-    folder: ExpressionFolder = dataclasses.field(init=False)
-    executed_rule: bool = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        self.folder = ExpressionFolder(self.fn)
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         replacement = self.call_single(expr)
@@ -180,6 +175,7 @@ class RuleFold:
             yield replacement
 
     def call_single(self, expr: object) -> typing.Optional[Replacement]:
+        replacement: typing.Optional[Replacement]
         for replacement in self.rule(expr):  # type: ignore
             return replacement
         if not isinstance(expr, Expression):
@@ -189,7 +185,7 @@ class RuleFold:
         # If we do, then we want to expand the result_whole to be the current result
         # surrounded by the expression at this level with that result replaced
         for i, arg in enumerate(expr.args):
-            replacment = self.call_single(arg)
+            replacement = self.call_single(arg)
             if replacement:
                 return dataclasses.replace(
                     replacement,
@@ -198,7 +194,7 @@ class RuleFold:
                     ),
                 )
         for key, arg in expr.kwargs.items():
-            replacment = self.call_single(arg)
+            replacement = self.call_single(arg)
             if replacement:
                 return dataclasses.replace(
                     replacement,
