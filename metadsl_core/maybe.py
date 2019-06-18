@@ -1,8 +1,7 @@
 from __future__ import annotations
 import typing
 
-from ..expressions import *
-from ..matching import *
+from metadsl import *
 from .abstraction import *
 from .rules import *
 

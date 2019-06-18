@@ -1,4 +1,4 @@
-from ..rules import RulesRepeatFold
+from metadsl import RulesRepeatFold
 
 __all__ = ["rules"]
 

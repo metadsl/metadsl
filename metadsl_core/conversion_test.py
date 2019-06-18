@@ -1,5 +1,5 @@
 import pytest
-from ..rules import NoMatch
+from metadsl import NoMatch
 from .conversion import *
 from .maybe import *
 

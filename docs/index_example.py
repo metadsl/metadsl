@@ -1,18 +1,18 @@
+from __future__ import annotations
 import metadsl
 
 
 class Number(metadsl.Expression):
     @metadsl.expression
-    def __add__(self, other: "Number") -> "Number":
+    def __add__(self, other: Number) -> Number:
         ...
 
-    @staticmethod
     @metadsl.expression
-    def from_int(i: int) -> "Number":
+    @classmethod
+    def from_int(cls, i: int) -> Number:
         ...
 
 
-@metadsl.RulesRepeatFold
 @metadsl.rule
 def add_zero(x: int, y: Number):
     return Number.from_int(x) + y, lambda: y if x == 0 else None

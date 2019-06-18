@@ -20,7 +20,6 @@ from .dict_tools import *
 from .typing_tools import *
 from .rules import Rule, NoMatch
 
-__all__ = ["create_wildcard", "Wildcard", "rule", "R", "default_rule"]
 
 T = typing.TypeVar("T", bound=Expression)
 
@@ -51,8 +50,8 @@ def default_rule(fn: typing.Callable) -> Rule:
 @dataclasses.dataclass
 class DefaultRule:
     fn: typing.Callable
-    inner_fn: typing.Callable = dataclasses.field(init=False)
-    exposed_fn: typing.Callable = dataclasses.field(init=False)
+    inner_fn: typing.Callable = dataclasses.field(init=False, repr=False)
+    exposed_fn: typing.Callable = dataclasses.field(init=False, repr=False)
 
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
@@ -149,17 +148,7 @@ class MatchRule:
 
 def replace_typevars_expression(expression: object, typevars: TypeVarMapping) -> object:
     """
-    Replaces all typevars in classmethods in an expression.
-
-    >>> import typing
-    >>> T = typing.TypeVar("T")
-    >>> class List(Expression, typing.Generic[T]):
-    ...     @expression
-    ...     @classmethod
-    ...     def create(cls) -> List[T]:
-    ...         ...
-    >>> replace_typevars_expression(List[T].create(), {T: int})
-    List[int].create()
+    Replaces all typevars found in the classmethods of an expression.
     """
     return ExpressionFolder(typevars=typevars)(expression)
 

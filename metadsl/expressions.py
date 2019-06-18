@@ -139,7 +139,10 @@ class ExpressionFolder:
     fn: typing.Callable[[object], object] = lambda e: e
     typevars: TypeVarMapping = dataclasses.field(default_factory=dict)
 
-    def __call__(self, expr: object):
+    def __call__(self, expr: object) -> typing.Iterator:
+        """
+        Gives back an iterable of expression
+        """
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
             return fn(

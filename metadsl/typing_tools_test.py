@@ -170,3 +170,25 @@ def test_tuple_for_iterable():
         ...
 
     assert fn((1, 2)) == (fn, ((1, 2),), {}, int, {T: int})
+
+
+def test_fn_args():
+    @i
+    def fn(f: typing.Callable) -> int:
+        ...
+
+    f = lambda i: 10
+    assert fn(f) == (fn, (f,), {}, int, {})
+
+
+def test_fn_args_generic():
+    def f(i: int) -> str:
+        ...
+
+    assert _GenericClassCreate[typing.Callable[[int], str]].create_item(f) == (
+        _GenericClassCreate[T].create_item,
+        (f,),
+        {},
+        typing.Callable[[int], str],
+        {T: typing.Callable[[int], str]},
+    )

@@ -2,6 +2,7 @@
 branch = True
 source = 
     metadsl
+    metadsl_core
 [report]
 omit =
     *_test.py

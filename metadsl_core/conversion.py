@@ -4,8 +4,7 @@ Useful for to convert object to boxed types.
 from __future__ import annotations
 import typing
 
-from ..expressions import *
-from ..matching import *
+from metadsl import *
 from .maybe import *
 from .rules import *
 

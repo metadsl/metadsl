@@ -7,6 +7,7 @@ import typing_inspect
 import collections.abc
 import dataclasses
 import functools
+import types
 from .dict_tools import *
 
 __all__ = [
@@ -118,6 +119,39 @@ def get_origin(t: typing.Type) -> typing.Type:
     return origin
 
 
+def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
+    """
+    Gets the type of a function:
+
+    Only supports positional args currently
+
+    >>> get_function_type(lambda i: i)
+    typing.Callable[[typing.Any], typing.Any]
+
+    >>> def fn(a: int, b: str) -> float: ...
+    >>> get_function_type(fn)
+    typing.Callable[[int, str], float]
+
+    >>> def no_return_type(a: int, b: str): ...
+    >>> get_function_type(no_return_type)
+    typing.Callable[[int, str], typing.Any]
+
+    >>> def no_arg_type(a, b: str): ...
+    >>> get_function_type(no_arg_type)
+    typing.Callable[[typing.Any, str], typing.Any]
+    """
+    signature = inspect.signature(fn)
+    type_hints = typing.get_type_hints(fn)
+    arg_hints: typing.List[typing.Type] = []
+
+    for arg_name, p in signature.parameters.items():
+        if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            arg_hints.append(type_hints.get(arg_name, typing.Any))
+        else:
+            raise NotImplementedError(f"Does not support getting type of {signature}")
+    return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]
+
+
 def get_type(v: T) -> typing.Type[T]:
     """
     Returns the type of the value with generic arguments preserved.
@@ -126,6 +160,9 @@ def get_type(v: T) -> typing.Type[T]:
     # Special case, only support homogoneous tuple that are inferred to iterables
     if tp == tuple:
         return typing.Iterable[get_type(v[0]) if v else typing.Any]  # type: ignore
+    # Special case, also support function types.
+    if tp == types.FunctionType:
+        return get_function_type(v)  # type: ignore
     return tp
 
 
@@ -169,6 +206,23 @@ def merge_typevars(*typevars: TypeVarMapping) -> TypeVarMapping:
     return merged
 
 
+def get_inner_types(t: typing.Type) -> typing.Iterable[typing.Type]:
+    """
+    Returns the inner types for a type.
+
+    Like `typing_inspect.get_args` but special cases callable, so it returns
+    the return type, then all the arg types.
+    """
+
+    if not typing_inspect.is_callable_type(t):
+        return typing_inspect.get_args(t)
+    if t == typing.Callable:
+        return []
+
+    arg_types, return_type = typing_inspect.get_args(t)
+    return [return_type] + arg_types
+
+
 def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
@@ -203,9 +257,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     return merge_typevars(
         *(
             match_types(inner_hint, inner_t)
-            for inner_hint, inner_t in zip(
-                typing_inspect.get_args(hint), typing_inspect.get_args(t)
-            )
+            for inner_hint, inner_t in zip(get_inner_types(hint), get_inner_types(t))
         )
     )
 
@@ -233,6 +285,17 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
     """
     if typing_inspect.is_typevar(hint):
         return typing.cast(T_type, typevars.get(hint, hint))
+
+    # Special case empty callable, which raisees error on getting args
+    if hint == typing.Callable:
+        return hint
+    if typing_inspect.is_callable_type(hint):
+        arg_types, return_type = typing_inspect.get_args(hint)
+        return typing.Callable[
+            [replace_typevars(typevars, a) for a in arg_types],
+            replace_typevars(typevars, return_type),
+        ]
+
     args = typing_inspect.get_args(hint)
     if not args:
         return hint
@@ -401,11 +464,6 @@ def infer(
     them to check their types. That means if you pass in `[1, 2, 3]` it won't know
     this is a `typing.List[int]`. Instead it, will only know if you create a generic
     instance manually from a custom generic class like, `MyList[int](1, 2, 3)`.
-
-    >>> def fn(a: T) -> typing.List[T]:
-        ...
-    >>> infer(fn, lambda *args: args)(10)
-    ((10,), {}, typing.List[int])
     """
 
     return Infer(fn, wrapper)

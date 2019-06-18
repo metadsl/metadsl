@@ -3,13 +3,12 @@ requires = ["flit"]
 build-backend = "flit.buildapi"
 
 [tool.flit.metadata]
-module = "metadsl"
+module = "metadsl_core"
 author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
-    "typing_extensions",
-    "typing_inspect"
+    "metadsl",
 ]
 requires-python = ">=3.7"
 classifiers = [
@@ -18,30 +17,4 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Topic :: Software Development :: Libraries :: Python Modules"
-]
-
-[tool.flit.metadata.requires-extra]
-test = [
-    "pytest",
-    "pytest-cov",
-    "pytest-mypy",
-    "pytest-randomly",
-    "pytest-xdist",
-    "pytest-testmon",
-    "mypy"
-]
-doc = [
-    "sphinx",
-    "sphinx-autodoc-typehints",
-    "sphinx_rtd_theme",
-    'recommonmark',
-    "nbsphinx",
-    "ipykernel",
-    "IPython",
-    "sphinx-autobuild"
-]
-dev = [
-    "jupyterlab",
-    "nbconvert",
-    "pudb"
 ]

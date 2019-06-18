@@ -1,10 +1,11 @@
 from __future__ import annotations
-import dataclasses
 
-from ..expressions import *
-from ..matching import *
-from .rules import *
+import dataclasses
 import typing
+
+from metadsl import *
+
+from .rules import rules
 
 __all__ = ["Abstraction"]
 
@@ -55,5 +56,5 @@ rules.append(default_rule(Abstraction.from_fn))
 def beta_reduce(var: T, body: U, arg: T) -> R[U]:
     return (
         Abstraction[T, U].create(var, body)(arg),
-        lambda: ExpressionReplacer({var: arg})(body),
+        lambda: ExpressionReplacer(UnhashableMapping(Item(var, arg)))(body),
     )
