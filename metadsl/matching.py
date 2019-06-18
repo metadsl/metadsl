@@ -18,17 +18,21 @@ import dataclasses
 from .expressions import *
 from .dict_tools import *
 from .typing_tools import *
-from .rules import Rule, NoMatch
+from .rules import Rule, Replacement
 
 
 T = typing.TypeVar("T", bound=Expression)
 
 R = typing.Tuple[T, typing.Callable[[], typing.Optional[T]]]
 # Mapping from wildcards to the matching pattern and replacement
-MatchFunctionType = typing.Callable[..., R]
+MatchFunctionType = typing.Callable[..., R[T]]
 
 
-def rule(fn: MatchFunctionType) -> Rule:
+class NoMatch(Exception):
+    pass
+
+
+def rule(fn: MatchFunctionType[T]) -> Rule[T]:
     """
     Creates a new rule given a callable that accepts wildcards and returns
     the match value and the replacement value.
@@ -57,7 +61,7 @@ class DefaultRule:
         self.inner_fn = self.fn.__wrapped__  # type: ignore
         self.exposed_fn = self.fn.__exposed__  # type: ignore
 
-    def __call__(self, expr: object) -> object:
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         """
         This rule should match whenever the expression is this function.
 
@@ -66,7 +70,7 @@ class DefaultRule:
         variables, they are turned into the actual instantiations. 
         """
         if not isinstance(expr, Expression) or expr.function != self.exposed_fn:
-            raise NoMatch
+            return
 
         args = expr.args
 
@@ -75,9 +79,10 @@ class DefaultRule:
         if isinstance(fn, BoundInfer) and fn.is_classmethod:
             args = (typing.cast(object, fn._owner_origin),) + args
 
-        return replace_typevars_expression(
+        result = replace_typevars_expression(
             self.inner_fn(*args, **expr.kwargs), expr.typevars
         )
+        yield Replacement(self, expr, result, result)
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -134,16 +139,24 @@ class MatchRule:
         # Call the function first to create a template with the wildcards
         self.template, _ = self.matchfunction(*self.wildcards)
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        typevars, wildcards_to_nodes = match_expression(  # type: ignore
-            self.wildcards, self.template, expr
-        )
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+        try:
+            typevars, wildcards_to_nodes = match_expression(  # type: ignore
+                self.wildcards, self.template, expr
+            )
+        except NoMatch:
+            return
 
         args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
 
         _, expression_thunk = self.matchfunction(*args)
 
-        return replace_typevars_expression(expression_thunk(), typevars)
+        try:
+            result = expression_thunk()
+        except NoMatch:
+            return
+        result = replace_typevars_expression(expression_thunk(), typevars)
+        yield Replacement(self, expr, result, result)
 
 
 def replace_typevars_expression(expression: object, typevars: TypeVarMapping) -> object:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 from .matching import *
+from .rules import execute_rule
 from .typing_tools import *
 from .expressions import *
 
@@ -52,14 +53,16 @@ class _List(Expression, typing.Generic[T]):
 class TestRule:
     def test_add(self):
         expr = _from_int(1) + _from_int(2)
-        assert _add_rule(expr) == _from_int(3)
+        assert execute_rule(_add_rule, expr) == _from_int(3)
 
     def test_type_args(self):
         @rule
         def _concat_lists(l: T, r: T) -> R[_List[T]]:
             return _List.create(l) + _List.create(r), lambda: _List.create(l, r)
 
-        assert _concat_lists(_List.create(1) + _List.create(2)) == _List.create(1, 2)
+        assert execute_rule(
+            _concat_lists, _List.create(1) + _List.create(2)
+        ) == _List.create(1, 2)
 
     def test_variable_args(self):
         @rule
@@ -71,9 +74,9 @@ class TestRule:
                 lambda: _List[T].create(*ls, *rs),
             )
 
-        assert _concat_lists(_List.create(1, 2) + _List.create(3, 4)) == _List.create(
-            1, 2, 3, 4
-        )
+        assert execute_rule(
+            _concat_lists, _List.create(1, 2) + _List.create(3, 4)
+        ) == _List.create(1, 2, 3, 4)
 
     def test_variable_args_empty(self):
         @rule
@@ -86,7 +89,7 @@ class TestRule:
             )
 
         assert (
-            _concat_lists(_List[int].create() + _List[int].create())
+            execute_rule(_concat_lists, _List[int].create() + _List[int].create())
             == _List[int].create()
         )
 
@@ -100,12 +103,12 @@ class TestRule:
                 lambda: _List[T].create(*ls, *rs),
             )
 
-        assert _concat_lists_minus_end(
-            _List.create(1, 2) + _List.create(3, 4)
+        assert execute_rule(
+            _concat_lists_minus_end, _List.create(1, 2) + _List.create(3, 4)
         ) == _List.create(1, 3)
 
         assert (
-            _concat_lists_minus_end(_List.create(1) + _List.create(3))
+            execute_rule(_concat_lists_minus_end, _List.create(1) + _List.create(3))
             == _List[int].create()
         )
 
@@ -124,7 +127,7 @@ class TestPureRule:
     def test_add_zero(self):
         s = _from_str("str")
         expr = s + _from_int(0)
-        assert _add_zero_rule(expr) == s
+        assert execute_rule(_add_zero_rule, expr) == s
 
 
 class TestDefaultRule:
@@ -138,7 +141,7 @@ class TestDefaultRule:
             return inner_fn(a)
 
         assert fn(10) != inner_fn(10)
-        assert default_rule(fn)(fn(10)) == inner_fn(10)
+        assert execute_rule(default_rule(fn), fn(10)) == inner_fn(10)
 
     def test_method(self):
         class C(Expression):
@@ -158,7 +161,7 @@ class TestDefaultRule:
 
         rule = default_rule(C.double)
         assert create().double() != create() + create()
-        assert rule(create().double()) == create() + create()
+        assert execute_rule(rule, create().double()) == create() + create()
 
     def test_method_generic(self):
         class C(Expression, typing.Generic[T]):
@@ -180,9 +183,9 @@ class TestDefaultRule:
         expr = C[int].create().double()
 
         rule = default_rule(C.double)
-        assert rule(expr) == C[int].create() + C[int].create()
+        assert execute_rule(rule, expr) == C[int].create() + C[int].create()
 
-        assert rule(expr) != C[str].create() + C[str].create()
+        assert execute_rule(rule, expr) != C[str].create() + C[str].create()
         assert expr != C[int].create() + C[int].create()
 
     def test_classmethod_generic(self):
@@ -202,9 +205,9 @@ class TestDefaultRule:
         expr = C[int].create_wrapper()
         rule = default_rule(C.create_wrapper)
 
-        assert rule(expr) == C[int].create()
+        assert execute_rule(rule, expr) == C[int].create()
 
-        assert rule(expr) != C[str].create()
+        assert execute_rule(rule, expr) != C[str].create()
         assert expr != C[int].create()
 
     def test_classmethod_generic_arg(self):
@@ -221,10 +224,8 @@ class TestDefaultRule:
 
         globals()["C"] = C
 
-        # TODO: We need to get bound classmethod somehow when calling rule??, or just unbound?
-        # It should be bound to generic params, like that in function.
         expr = C.create_wrapper(123)
         rule = default_rule(C.create_wrapper)
-        assert rule(expr) == C.create(123)
+        assert execute_rule(rule, expr) == C.create(123)
 
         assert expr != C.create(123)

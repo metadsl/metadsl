@@ -8,13 +8,15 @@ This allows you to take a rule that optionally replaces one node and map it thro
 and keep calling it until it no longer matches.
 """
 
+from __future__ import annotations
+
 import typing
 import dataclasses
 from .expressions import *
 
 __all__ = [
     "Rule",
-    "NoMatch",
+    "execute_rule",
     "RulesRepeatSequence",
     "RulesRepeatFold",
     "RuleSequence",
@@ -23,15 +25,36 @@ __all__ = [
     "RuleRepeat",
 ]
 
-
-class NoMatch(Exception):
-    pass
+T = typing.TypeVar("T")
 
 
-# takes in an expression object and returns a new one if it matches, otherwise raises NoMatch
-# We type this as `object` instead of `Expression` because  we can pass in a leaf of an expression
-# tree which is not an expression object.
-Rule = typing.Callable[[object], object]
+@dataclasses.dataclass
+class Replacement(typing.Generic[T]):
+    """
+    Replacement is a record of a replacement that happened.
+    """
+
+    # The rule that was executed
+    rule: Rule
+    # The initial expression passed into the rule
+    initial: object
+    # The resulting expression from the rule
+    result: object
+    # The resulting full expression, will contain `result`
+    result_whole: T
+
+
+# takes in an expression object and returns a number of replacements executed on the expression
+Rule = typing.Callable[[T], typing.Iterable[Replacement[T]]]
+
+
+def execute_rule(rule: Rule, expr: T) -> T:
+    """
+    Call a replacement rule many times, returning the last result whole.
+    """
+    for replacement in rule(expr):
+        expr = replacement.result_whole
+    return expr
 
 
 @dataclasses.dataclass
@@ -52,7 +75,7 @@ class RulesRepeatSequence:
         execute_many_times = RuleRepeat(execute_all)
         self._rule = execute_many_times
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         return self._rule(expr)  # type: ignore
 
     def append(self, rule: Rule) -> Rule:
@@ -77,12 +100,11 @@ class RulesRepeatFold:
 
     def _update_rule(self):
         execute_all = RuleSequence(self.rules)
-        execute_many_times = RuleRepeat(execute_all)
-        execute_fold = RuleFold(execute_many_times)
+        execute_fold = RuleFold(execute_all)
         execute_fold_many_times = RuleRepeat(execute_fold)
         self._rule = execute_fold_many_times
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         return self._rule(expr)  # type: ignore
 
     def append(self, rule: Rule) -> Rule:
@@ -103,19 +125,9 @@ class RuleInOrder:
     def __init__(self, *rules: Rule):
         self.rules = rules
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        did_replace = False
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
-            try:
-                res = rule(expr)
-            except NoMatch:
-                pass
-            else:
-                did_replace = True
-                expr = res
-        if not did_replace:
-            raise NoMatch
-        return expr
+            yield from rule(expr)
 
 
 @dataclasses.dataclass
@@ -126,20 +138,33 @@ class RuleSequence:
 
     rules: typing.Tuple[Rule, ...]
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
-            try:
-                return rule(expr)
-            except NoMatch:
-                pass
-        raise NoMatch
+            replaced = False
+            for replacement in rule(expr):
+                replaced = True
+                yield replacement
+            if replaced:
+                return
+
+
+def replace_expression_arg(expr: Expression, idx: int, arg: object) -> Expression:
+    args = list(expr.args)
+    args[idx] = arg
+    return dataclasses.replace(expr, args=tuple(args))
+
+
+def replace_expression_kwarg(expr: Expression, key: str, arg: object) -> Expression:
+    kwargs = dict(expr.kwargs)
+    kwargs[key] = arg
+    return dataclasses.replace(expr, kwargs=kwargs)
 
 
 @dataclasses.dataclass
 class RuleFold:
     """
-    Returns a new replacement rule that calls it on every node of the tree, returning a new expression if any of the nodes were updated
-    or None if none of them were.
+    Returns the first replacement found by starting at the top of the expression tree
+    and then recursing down into its leaves.
     """
 
     rule: Rule
@@ -149,20 +174,39 @@ class RuleFold:
     def __post_init__(self):
         self.folder = ExpressionFolder(self.fn)
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        self.executed_rule = False
-        res = self.folder(expr)
-        if not self.executed_rule:
-            return None
-        return res
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+        replacement = self.call_single(expr)
+        if replacement:
+            yield replacement
 
-    def fn(self, value: object) -> object:
-        try:
-            new_value = self.rule(value)  # type: ignore
-        except NoMatch:
-            return value
-        self.executed_rule = True
-        return new_value
+    def call_single(self, expr: object) -> typing.Optional[Replacement]:
+        for replacement in self.rule(expr):  # type: ignore
+            return replacement
+        if not isinstance(expr, Expression):
+            return None
+
+        # iterate through args and kwargs, trying to replace each of them
+        # If we do, then we want to expand the result_whole to be the current result
+        # surrounded by the expression at this level with that result replaced
+        for i, arg in enumerate(expr.args):
+            replacment = self.call_single(arg)
+            if replacement:
+                return dataclasses.replace(
+                    replacement,
+                    result_whole=replace_expression_arg(
+                        expr, i, replacement.result_whole
+                    ),
+                )
+        for key, arg in expr.kwargs.items():
+            replacment = self.call_single(arg)
+            if replacement:
+                return dataclasses.replace(
+                    replacement,
+                    result_whole=replace_expression_kwarg(
+                        expr, key, replacement.result_whole
+                    ),
+                )
+        return None
 
 
 @dataclasses.dataclass
@@ -172,17 +216,19 @@ class RuleRepeat:
     """
 
     rule: Rule
+    max_calls: int = 1000
 
-    def __call__(self, expr: object) -> typing.Optional[object]:
-        try:
-            expr = self.rule(expr)  # type: ignore
-        except NoMatch:
-            return expr
-        for i in range(1000):
-            try:
-                expr = self.rule(expr)  # type: ignore
-            except NoMatch:
-                return expr
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+        i = 0
+
+        for i in range(self.max_calls):
+            replaced = False
+            for replacement in self.rule(expr):  # type: ignore
+                replaced = True
+                yield replacement
+            if not replaced:
+                return
+            expr = replacement.result_whole
         raise RuntimeError(
             f"Exceeded maximum number of repitions, rule: {self.rule}, expr: {expr}"  # type: ignore
         )
