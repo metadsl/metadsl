@@ -1,4 +1,3 @@
-import pytest
 from metadsl import execute_rule
 from .conversion import *
 from .maybe import *

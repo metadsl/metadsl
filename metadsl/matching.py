@@ -13,6 +13,7 @@ be good to add at a later date, and could be done without having users change th
 
 import typing
 import dataclasses
+import functools
 
 # import inspect
 from .expressions import *
@@ -133,6 +134,7 @@ class MatchRule:
     template: object = dataclasses.field(init=False)
 
     def __post_init__(self):
+        functools.update_wrapper(self, self.matchfunction)
         # Create one wildcard` per argument
         self.wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
 
@@ -177,10 +179,13 @@ def match_expression(
 
     if template in wildcards:
         # Match type of wildcard with type of expression
-        return (
-            match_values(template, expr),
-            UnhashableMapping(Item(typing.cast(Expression, template), expr)),
-        )
+        try:
+            return (
+                match_values(template, expr),
+                UnhashableMapping(Item(typing.cast(Expression, template), expr)),
+            )
+        except TypeError:
+            raise NoMatch
 
     if isinstance(expr, Expression):
         if not isinstance(template, Expression) or template.function != expr.function:

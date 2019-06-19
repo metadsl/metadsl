@@ -6,6 +6,9 @@ from .abstraction import *
 from .abstraction import Variable
 
 
+T = typing.TypeVar("T")
+
+
 class TestAbstraction:
     def test_from_fn(self):
         a = execute_rule(
@@ -27,3 +30,6 @@ class TestAbstraction:
             )
             == 10
         )
+
+    def test_identity(self):
+        assert execute_rule(rules, Abstraction[T, T].from_fn(lambda i: i)("hi")) == "hi"
