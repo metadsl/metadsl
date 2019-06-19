@@ -112,6 +112,30 @@ class TestRule:
             == _List[int].create()
         )
 
+    def test_different_generic_param(self):
+        """
+        For this test, we want to make sure if we use the saem TypeVar instance in our match rule
+        that we did in our expresion, it can be seperated.
+        """
+        # Here we have `_List[T]` work for the type var `T` in the list
+        @rule
+        def _add_list_of_lists(
+            ls: typing.Iterable[T], rs: typing.Iterable[T]
+        ) -> R[_List[_List[T]]]:
+            return (
+                _List.create(_List[T].create(*ls)) + _List.create(_List[T].create(*rs)),
+                lambda: _List.create(_List[T].create(*ls, *rs)),
+            )
+
+        assert execute_rule(
+            _add_list_of_lists,
+            _List.create(_List.create(1, 2)) + _List.create(_List.create(3, 4)),
+        ) == _List.create(_List.create(1, 2, 3, 4))
+        assert execute_rule(
+            _add_list_of_lists,
+            _List.create(_List[int].create()) + _List.create(_List[int].create()),
+        ) == _List.create(_List[int].create())
+
 
 @expression
 def _from_str(s: str) -> _Number:
