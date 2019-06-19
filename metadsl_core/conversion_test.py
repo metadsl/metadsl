@@ -16,9 +16,7 @@ class TestConvertIdentity:
 class TestConvertToMaybe:
     def test_just(self):
         result = execute_rule(convert_to_maybe, Converter[Maybe[int]].convert(1))
-        import pudb
 
-        pudb.set_trace()
         assert execute_rule(
             convert_to_maybe, Converter[Maybe[int]].convert(1)
         ) == Maybe.just(Converter[int].convert(1))
