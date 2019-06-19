@@ -253,3 +253,25 @@ class TestDefaultRule:
         assert execute_rule(rule, expr) == C.create(123)
 
         assert expr != C.create(123)
+
+    def test_function_generic(self):
+        @expression
+        def identity(a: T) -> T:
+            return a
+
+        rule = default_rule(identity)
+        assert execute_rule(rule, identity(1)) == 1
+        assert execute_rule(rule, identity(_from_int(1))) == _from_int(1)
+
+    def test_function_generic_call_generic(self):
+        @expression
+        def identity(a: T) -> T:
+            ...
+
+        @expression
+        def identity_2(a: T) -> T:
+            return identity(a)
+
+        rule = default_rule(identity_2)
+        assert execute_rule(rule, identity_2(1)) == identity(1)
+        assert execute_rule(rule, identity_2(_from_int(1))) == identity(_from_int(1))
