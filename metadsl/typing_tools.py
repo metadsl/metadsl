@@ -339,10 +339,10 @@ def infer_return_type(
             # If we have called this as a method, then add the instance
             # to the args and infer the type hint for this first arg
             args = (instance,) + args
-            first_arg_type = get_origin_type(get_type(instance))
+            first_arg_type = owner_origin
         # we are calling an instance method on the class and passing the instance as the first arg
         else:
-            first_arg_type = get_origin_type(get_type(args[0]))
+            first_arg_type = owner_origin
 
         if first_arg_name not in hints:
             hints[first_arg_name] = first_arg_type  # type: ignore
