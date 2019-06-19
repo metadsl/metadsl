@@ -24,6 +24,7 @@ __all__ = [
     "ExpandedType",
     "replace_fn_typevars",
     "merge_typevars",
+    "match_types",
 ]
 
 T = typing.TypeVar("T")

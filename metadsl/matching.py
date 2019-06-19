@@ -186,10 +186,14 @@ def match_expression(
         if not isinstance(template, Expression) or template.function != expr.function:
             raise NoMatch
         try:
-            # Try to merge the two mappings, if they cannot merge, then we don't have a match
-            fn_typevar_mappings: TypeVarMapping = merge_typevars(
-                expr.typevars, template.typevars
-            )
+            # Any typevars in the template that are unbound should be matched with their
+            # versions in the expr
+
+            fn_type_mappings: typing.List[TypeVarMapping] = [
+                match_types(tp, expr.typevars[tv])
+                for tv, tp in template.typevars.items()  # type: ignore
+            ]
+
         except TypeError:
             raise NoMatch
 
@@ -249,7 +253,7 @@ def match_expression(
         )
         try:
             return (
-                merge_typevars(fn_typevar_mappings, *type_mappings),
+                merge_typevars(*fn_type_mappings, *type_mappings),
                 safe_merge(*expr_mappings, dict_constructor=UnhashableMapping),
             )
         except ValueError:
