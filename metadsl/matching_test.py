@@ -136,22 +136,32 @@ class TestRule:
             _List.create(_List[int].create()) + _List.create(_List[int].create()),
         ) == _List.create(_List[int].create())
 
+    def test_non_lambda_result(self):
+        @expression
+        def _from_str(s: str) -> _Number:
+            ...
 
-@expression
-def _from_str(s: str) -> _Number:
-    ...
+        @rule
+        def _add_zero_rule(a: _Number) -> R[_Number]:
+            return a + _from_int(0), a
 
-
-@rule
-def _add_zero_rule(a: _Number) -> R[_Number]:
-    return a + _from_int(0), lambda: a
-
-
-class TestPureRule:
-    def test_add_zero(self):
         s = _from_str("str")
         expr = s + _from_int(0)
         assert execute_rule(_add_zero_rule, expr) == s
+
+    def test_generator_rule(self):
+        @expression
+        def _from_str(s: str) -> _Number:
+            ...
+
+        @rule
+        def _add_zero_rule(a: _Number) -> R[_Number]:
+            yield a + _from_int(0), a
+            yield _from_int(0) + a, a
+
+        s = _from_str("str")
+        assert execute_rule(_add_zero_rule, s + _from_int(0)) == s
+        assert execute_rule(_add_zero_rule, _from_int(0) + s) == s
 
 
 class TestDefaultRule:
@@ -275,3 +285,4 @@ class TestDefaultRule:
         rule = default_rule(identity_2)
         assert execute_rule(rule, identity_2(1)) == identity(1)
         assert execute_rule(rule, identity_2(_from_int(1))) == identity(_from_int(1))
+

@@ -14,8 +14,9 @@ class Number(metadsl.Expression):
 
 
 @metadsl.rule
-def add_zero(x: int, y: Number):
-    return Number.from_int(x) + y, lambda: y if x == 0 else None
+def add_zero(y: Number):
+    yield Number.from_int(0) + y, y
+    yield y + Number.from_int(0), y
 
 
 assert metadsl.execute_rule(

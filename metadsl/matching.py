@@ -14,8 +14,9 @@ be good to add at a later date, and could be done without having users change th
 import typing
 import dataclasses
 import functools
+import types
+import inspect
 
-# import inspect
 from .expressions import *
 from .dict_tools import *
 from .typing_tools import *
@@ -24,7 +25,8 @@ from .rules import Rule, Replacement
 
 T = typing.TypeVar("T", bound=Expression)
 
-R = typing.Tuple[T, typing.Callable[[], typing.Optional[T]]]
+R_single = typing.Tuple[T, typing.Union[typing.Callable[[], T], T]]
+R = typing.Union[typing.Generator[R_single[T], None, None], R_single[T]]
 # Mapping from wildcards to the matching pattern and replacement
 MatchFunctionType = typing.Callable[..., R[T]]
 
@@ -129,36 +131,45 @@ class MatchRule:
     # the wildcards that are present in the template
     wildcards: typing.List[Expression] = dataclasses.field(init=False)
 
-    # expression containing wildcard expression it that will be matched against the
-    # incoming expression
-    template: object = dataclasses.field(init=False)
+    results: typing.Iterable[R_single] = dataclasses.field(init=False)
 
     def __post_init__(self):
         functools.update_wrapper(self, self.matchfunction)
         # Create one wildcard` per argument
         self.wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
 
+        # If the match function is not a generator, turn it into one
+        if not inspect.isgeneratorfunction(self.matchfunction):
+            old_match_function = self.matchfunction
+            self.matchfunction = lambda *args: (old_match_function(*args),)
         # Call the function first to create a template with the wildcards
-        self.template, _ = self.matchfunction(*self.wildcards)
+        self.results = self.matchfunction(*self.wildcards)
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
-        try:
-            typevars, wildcards_to_nodes = match_expression(  # type: ignore
-                self.wildcards, self.template, expr
-            )
-        except NoMatch:
+        for i, result in enumerate(self.results):
+            template, _ = result
+            try:
+                typevars, wildcards_to_nodes = match_expression(  # type: ignore
+                    self.wildcards, template, expr
+                )
+            except NoMatch:
+                continue
+
+            args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
+
+            _, expression_thunk = list(self.matchfunction(*args))[i]
+
+            try:
+                result_expr: object = (
+                    expression_thunk()
+                    if isinstance(expression_thunk, types.FunctionType)
+                    else expression_thunk
+                )
+            except NoMatch:
+                continue
+            result_expr = replace_typevars_expression(result_expr, typevars)
+            yield Replacement(self, expr, result_expr, result_expr)
             return
-
-        args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
-
-        _, expression_thunk = self.matchfunction(*args)
-
-        try:
-            result = expression_thunk()
-        except NoMatch:
-            return
-        result = replace_typevars_expression(expression_thunk(), typevars)
-        yield Replacement(self, expr, result, result)
 
 
 def replace_typevars_expression(expression: object, typevars: TypeVarMapping) -> object:
@@ -253,7 +264,9 @@ def match_expression(
             ),
         )
         try:
-            merged_typevars: TypeVarMapping = merge_typevars(*fn_type_mappings, *type_mappings)
+            merged_typevars: TypeVarMapping = merge_typevars(
+                *fn_type_mappings, *type_mappings
+            )
         except TypeError:
             raise NoMatch
         try:
