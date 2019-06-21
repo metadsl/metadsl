@@ -163,6 +163,20 @@ class TestRule:
         assert execute_rule(_add_zero_rule, s + _from_int(0)) == s
         assert execute_rule(_add_zero_rule, _from_int(0) + s) == s
 
+    def test_generator_rule_different_wildcards(self):
+        @expression
+        def _from_str(s: str) -> _Number:
+            ...
+
+        @rule
+        def _add_zero_rule(a: _Number, b: _Number) -> R[_Number]:
+            yield a + _from_int(0), a
+            yield _from_int(0) + b, b
+
+        s = _from_str("str")
+        assert execute_rule(_add_zero_rule, s + _from_int(0)) == s
+        assert execute_rule(_add_zero_rule, _from_int(0) + s) == s
+
 
 class TestDefaultRule:
     def test_fn(self):

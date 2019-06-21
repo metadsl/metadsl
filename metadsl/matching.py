@@ -143,7 +143,7 @@ class MatchRule:
             old_match_function = self.matchfunction
             self.matchfunction = lambda *args: (old_match_function(*args),)
         # Call the function first to create a template with the wildcards
-        self.results = self.matchfunction(*self.wildcards)
+        self.results = list(self.matchfunction(*self.wildcards))
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for i, result in enumerate(self.results):
@@ -155,10 +155,11 @@ class MatchRule:
             except NoMatch:
                 continue
 
-            args = [wildcards_to_nodes[wildcard] for wildcard in self.wildcards]
-
+            args = [
+                wildcards_to_nodes.get(wildcard, wildcard)
+                for wildcard in self.wildcards
+            ]
             _, expression_thunk = list(self.matchfunction(*args))[i]
-
             try:
                 result_expr: object = (
                     expression_thunk()
