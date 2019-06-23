@@ -153,10 +153,67 @@ def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
     return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]
 
 
+def get_bound_infer_type(b: BoundInfer) -> typing.Type[typing.Callable]:
+    """
+    Returns a typing.Callable type that corresponds to the type of the bound infer.
+
+    TODO: This logic is a combination of `get_function_type` and `infer_return_type`.
+    We should eventually merge all of this into a consistant API so we don't have to duplicate this code. 
+    """
+    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(b.fn)
+    signature = inspect.signature(b.fn)
+
+    # We want to get the original type hints for the first arg,
+    # and match those against the first arg in the bound, so we get a typevar mapping
+    first_arg_name = next(iter(signature.parameters.keys()))
+    typevars: TypeVarMapping
+    # Whether to skip the first arg of the param of the signature when computing the signature
+    skip_first_param: bool
+    if b.is_classmethod:
+        # If we called this as a class method
+        typevars = match_type(typing.Type[b._owner_origin], b.owner)
+        skip_first_param = True
+    elif b.instance:
+        # If we have called this as a method
+        typevars = match_type(b._owner_origin, b.instance)
+        skip_first_param = True
+    else:
+        # we are calling an instance method on the class and passing the instance as the first arg
+        typevars = match_type(typing.Type[b._owner_origin], b.owner)
+        skip_first_param = False
+        hints[first_arg_name] = b._owner_origin
+
+    # Then we want to replace all the typevar hints, with what we now know from the first arg
+    arg_hints: typing.List[typing.Type] = []
+
+    for arg_name, p in signature.parameters.items():
+        if skip_first_param:
+            skip_first_param = False
+            continue
+        if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            arg_hints.append(
+                replace_typevars(
+                    typevars, hints.get(arg_name, typing.cast(typing.Type, typing.Any))
+                )
+            )
+        else:
+            raise NotImplementedError(f"Does not support getting type of {signature}")
+    return typing.Callable[
+        arg_hints,
+        replace_typevars(
+            typevars, hints.get("return", typing.cast(typing.Type, typing.Any))
+        ),
+    ]
+
+
 def get_type(v: T) -> typing.Type[T]:
     """
     Returns the type of the value with generic arguments preserved.
     """
+    if isinstance(v, Infer):
+        return get_function_type(v.fn)  # type: ignore
+    if isinstance(v, BoundInfer):
+        return get_bound_infer_type(v)  # type: ignore
     tp = typing_inspect.get_generic_type(v)
     # Special case, only support homogoneous tuple that are inferred to iterables
     if tp == tuple:
@@ -164,6 +221,7 @@ def get_type(v: T) -> typing.Type[T]:
     # Special case, also support function types.
     if tp == types.FunctionType:
         return get_function_type(v)  # type: ignore
+
     return tp
 
 
@@ -214,14 +272,12 @@ def get_inner_types(t: typing.Type) -> typing.Iterable[typing.Type]:
     Like `typing_inspect.get_args` but special cases callable, so it returns
     the return type, then all the arg types.
     """
-
-    if not typing_inspect.is_callable_type(t):
-        return typing_inspect.get_args(t)
-    if t == typing.Callable:
+    if t == typing.Callable:  # type: ignore
         return []
-
-    arg_types, return_type = typing_inspect.get_args(t)
-    return [return_type] + arg_types
+    if typing_inspect.get_origin(t) == collections.abc.Callable:
+        arg_types, return_type = typing_inspect.get_args(t)
+        return [return_type] + arg_types
+    return typing_inspect.get_args(t)
 
 
 def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
@@ -288,7 +344,7 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
         return typing.cast(T_type, typevars.get(hint, hint))
 
     # Special case empty callable, which raisees error on getting args
-    if hint == typing.Callable:
+    if hint == typing.Callable:  # type: ignore
         return hint
     if typing_inspect.is_callable_type(hint):
         arg_types, return_type = typing_inspect.get_args(hint)
@@ -315,7 +371,7 @@ def infer_return_type(
     instance: object,
     owner: typing.Optional[typing.Type],
     owner_origin: typing.Optional[typing.Type],
-    is_classmethod,
+    is_classmethod: bool,
     args: typing.Tuple[object, ...],
     kwargs: typing.Mapping[str, object],
 ) -> typing.Tuple[
@@ -345,7 +401,10 @@ def infer_return_type(
             first_arg_type = owner_origin  # type: ignore
         # we are calling an instance method on the class and passing the instance as the first arg
         else:
-            first_arg_type = owner_origin
+            # If the owner had type parameters set, we should use those to start computing variables
+            # i.e. Class[int].__add__
+            mappings.append(match_type(typing.Type[owner_origin], owner))
+            first_arg_type = owner_origin  # type: ignore
 
         if first_arg_name not in hints:
             hints[first_arg_name] = first_arg_type  # type: ignore
@@ -367,9 +426,7 @@ def infer_return_type(
 
     return_hint: typing.Type[T] = hints.pop("return")
 
-    mappings: typing.List[TypeVarMapping] = [
-        match_type(hints[name], arg) for name, arg in argument_items
-    ]
+    mappings += [match_type(hints[name], arg) for name, arg in argument_items]
     try:
         matches: TypeVarMapping = merge_typevars(*mappings)
     except ValueError:

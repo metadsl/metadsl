@@ -67,6 +67,17 @@ def test_generic_arg_call_on_class():
     )
 
 
+def test_generic_arg_call_on_class_generic_class():
+    c: _GenericClassMethod = _GenericClassMethod()
+    assert _GenericClassMethod[int].method(c) == (
+        _GenericClassMethod[T].method,
+        (c,),
+        {},
+        int,
+        {T: int},
+    )
+
+
 class _GenericClassCreate(GenericCheck, typing.Generic[T]):
     @i
     @classmethod
@@ -192,3 +203,28 @@ def test_fn_args_generic():
         typing.Callable[[int], str],
         {T: typing.Callable[[int], str]},
     )
+
+
+class C(typing.Generic[T]):
+    @i
+    def __add__(self, other: T) -> T:
+        ...
+
+    @i
+    @classmethod
+    def create(cls, arg: T) -> C[T]:
+        ...
+
+
+class TestGetType:
+    def test_bound_infer_method(self):
+
+        assert get_type(C[int]().__add__) == typing.Callable[[int], int]
+
+    def test_bound_infer_method_on_class(self):
+
+        assert get_type(C[int].__add__) == typing.Callable[[C[int], int], int]
+
+    def test_bound_infer_classmethod(self):
+
+        assert get_type(C[int].create) == typing.Callable[[int], C[int]]
