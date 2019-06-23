@@ -86,7 +86,7 @@ def generic_getattr(self, attr):
     Modified from
     https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L694-L699
     """
-    if "__origin__" in self.__dict__ and not typing._is_dunder(attr):  # type: ignore
+    if "__origin__" in self.__dict__:  # type: ignore
         # If the attribute is a descriptor, pass in the generic class
         property = self.__origin__.__getattribute__(self.__origin__, attr)
         if hasattr(property, "__get__"):
