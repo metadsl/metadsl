@@ -13,7 +13,7 @@ class _SomeExpression(Expression):
 class TestWildcard:
     def test_create_literal(self):
         w = create_wildcard(int)  # type: ignore
-        assert get_type(w) == PlaceholderExpression[int]
+        assert get_type(w) == PlaceholderExpression[int]  # type: ignore
 
     def test_create_expression(self):
         w = create_wildcard(_SomeExpression)

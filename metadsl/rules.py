@@ -56,8 +56,9 @@ def execute_rule(rule: Rule, expr: T) -> T:
         expr = replacement.result_whole
     return expr
 
+T_Rule = typing.TypeVar("T_Rule", bound=Rule)
 
-@dataclasses.dataclass
+@dataclasses.dataclass(init=False)
 class RulesRepeatSequence:
     """
     This takes in a list of rules and repeatedly applies them until no more match.
@@ -78,7 +79,7 @@ class RulesRepeatSequence:
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         return self._rule(expr)  # type: ignore
 
-    def append(self, rule: Rule) -> Rule:
+    def append(self, rule: T_Rule) -> T_Rule:
         self.rules += (rule,)
         self._update_rule()
         return rule
@@ -107,7 +108,7 @@ class RulesRepeatFold:
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         return self._rule(expr)  # type: ignore
 
-    def append(self, rule: Rule) -> Rule:
+    def append(self, rule: T_Rule) -> T_Rule:
         self.rules += (rule,)
         self._update_rule()
         return rule

@@ -327,10 +327,12 @@ def infer_return_type(
     hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
     signature = inspect.signature(fn)
 
+    mappings: typing.List[TypeVarMapping] = []
     # This case is triggered if we got here from a __get__ call
     # in a descriptor
     if owner:
         first_arg_name = next(iter(signature.parameters.keys()))
+        first_arg_type: typing.Type
         if is_classmethod:
             # If we called this as a class method, add the owner to
             # the args add the inferred type to the hints.
@@ -340,7 +342,7 @@ def infer_return_type(
             # If we have called this as a method, then add the instance
             # to the args and infer the type hint for this first arg
             args = (instance,) + args
-            first_arg_type = owner_origin
+            first_arg_type = owner_origin  # type: ignore
         # we are calling an instance method on the class and passing the instance as the first arg
         else:
             first_arg_type = owner_origin
@@ -405,7 +407,7 @@ class Infer(typing.Generic[T, U]):
 
     def __call__(self, *args, **kwargs) -> U:
         return self.wrapper(  # type: ignore
-            self, *infer_return_type(self.fn, None, None, None, None, args, kwargs)
+            self, *infer_return_type(self.fn, None, None, None, False, args, kwargs)
         )
 
     def __get__(self, instance, owner) -> BoundInfer[T, U]:

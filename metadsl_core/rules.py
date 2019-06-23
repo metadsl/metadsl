@@ -1,6 +1,7 @@
 from metadsl import RulesRepeatFold
 
-__all__ = ["rules"]
+__all__ = ["core_rules", "register"]
 
 
-rules = RulesRepeatFold()
+core_rules = RulesRepeatFold()
+register = core_rules.append
