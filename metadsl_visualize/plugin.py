@@ -13,4 +13,4 @@ def pytest_assertrepr_compare(op, left, right):
         visualize(right, d, seen)
         d.render(cleanup=True, view=True)
 
-        return [f"{left} != {right}"]
+        return [f"{left!r} != {right!r}"]
