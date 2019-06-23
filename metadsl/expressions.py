@@ -70,6 +70,10 @@ class Expression(GenericCheck):
             and self.typevars == value.typevars
         )
 
+    @property
+    def _replaced_fn(self) -> typing.Callable:
+        return replace_fn_typevars(self.function, self.typevars)
+
 
 T = typing.TypeVar("T")
 

@@ -19,7 +19,7 @@ def name(expr: object) -> str:
 
 @name.register
 def name_expr(expr: Expression) -> str:
-    return expr._function_str
+    return str(expr._replaced_fn)
 
 
 @functools.singledispatch
