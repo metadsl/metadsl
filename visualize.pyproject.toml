@@ -1,0 +1,24 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "metadsl_visualize"
+author = "Saul Shanabrook"
+author-email = "s.shanabrook@gmail.com"
+home-page = "https://github.com/Quansight-Labs/metadsl"
+requires = [
+    "metadsl",
+    "graphviz"
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.flit.entrypoints.pytest11]
+metadsl_visualize = "metadsl_visualize.plugin"

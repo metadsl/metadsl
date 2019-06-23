@@ -82,6 +82,7 @@ conda activate metadsl
 pip install flit
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
+flit -f visualize.pyproject.toml install --symlink
 ```
 
 ### Tests
