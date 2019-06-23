@@ -246,8 +246,10 @@ def merge_typevars(*typevars: TypeVarMapping) -> TypeVarMapping:
     that typevar is also set to the other's value
     """
     merged: TypeVarMapping = {}
-    for tvs in typevars:  # type: ignore
-        for tv, tp in tvs.items():
+    typevars_: typing.List[TypeVarMapping] = list(typevars)
+    while typevars_:
+        tvs: TypeVarMapping = typevars_.pop()
+        for tv, tp in tvs.items():  # type: ignore
             if tv not in merged:
                 merged[tv] = tp  # type: ignore
                 continue
@@ -261,6 +263,22 @@ def merge_typevars(*typevars: TypeVarMapping) -> TypeVarMapping:
             elif typing_inspect.is_typevar(tp):
                 merged[tp] = prev_tp  # type: ignore
             else:
+                # Try merging them and choosing replacing the hint with the
+                # merged values
+                try:
+                    merged[tv] = replace_typevars(  # type: ignore
+                        match_types(prev_tp, tp), prev_tp
+                    )
+                    continue
+                except TypeError:
+                    pass
+                try:
+                    merged[tv] = replace_typevars(  # type: ignore
+                        match_types(tp, prev_tp), tp
+                    )
+                    continue
+                except TypeError:
+                    pass
                 raise TypeError(f"Cannot merge {prev_tp} and {tp} for type var {tv}")
     return merged
 

@@ -205,10 +205,13 @@ def match_expression(
         # Any typevars in the template that are unbound should be matched with their
         # versions in the expr
 
-        fn_type_mappings: typing.List[TypeVarMapping] = [
-            match_types(tp, expr.typevars[tv])
-            for tv, tp in template.typevars.items()  # type: ignore
-        ]
+        try:
+            fn_type_mappings: typing.List[TypeVarMapping] = [
+                match_types(tp, expr.typevars[tv])
+                for tv, tp in template.typevars.items()  # type: ignore
+            ]
+        except TypeError:
+            raise NoMatch
 
         if set(expr.kwargs.keys()) != set(template.kwargs.keys()):
             raise TypeError("Wrong kwargs in match")

@@ -6,6 +6,7 @@ from .conversion import *
 from .either import *
 from .abstraction import *
 from .rules import core_rules
+from .maybe import *
 
 
 class Int(Expression):
@@ -31,7 +32,10 @@ class Str(Expression):
         ...
 
 
-class TestEither:
+IntStr = Either[Int, Str]
+
+
+class TestMatches:
     def test_matches(self):
         @Abstraction.from_fn
         def double_int(i: Int) -> Int:
@@ -40,11 +44,35 @@ class TestEither:
         str_to_int = Abstraction.from_fn(Int.from_str)
 
         assert execute_rule(
-            core_rules,
-            Either[Int, Str].left(Int.from_int(10)).match(double_int, str_to_int),
+            core_rules, IntStr.left(Int.from_int(10)).match(double_int, str_to_int)
         ) == Int.from_int(2) * Int.from_int(10)
 
         assert execute_rule(
-            core_rules,
-            Either[Int, Str].right(Str.from_str("10")).match(double_int, str_to_int),
+            core_rules, IntStr.right(Str.from_str("10")).match(double_int, str_to_int)
         ) == Int.from_str(Str.from_str("10"))
+
+
+@rule
+def convert_to_int(i: int) -> R[Maybe[Int]]:
+    return Converter[Int].convert(i), lambda: Maybe.just(Int.from_int(i))
+
+
+@rule
+def convert_to_str(s: str) -> R[Maybe[Str]]:
+    return Converter[Str].convert(s), lambda: Maybe.just(Str.from_str(s))
+
+
+convert_rules = RulesRepeatSequence(convert_to_str, convert_to_int, core_rules)
+execute_rules = lambda e: execute_rule(convert_rules, e)
+
+
+class TestConvert:
+    def test_convert_int(self):
+        assert execute_rules(Converter[IntStr].convert(123)) == Maybe.just(
+            IntStr.left(Int.from_int(123))
+        )
+
+    def test_convert_str(self):
+        assert execute_rules(Converter[IntStr].convert("hi")) == Maybe.just(
+            IntStr.right(Str.from_str("hi"))
+        )
