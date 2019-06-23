@@ -5,12 +5,13 @@ import typing
 
 from metadsl import *
 
-from .rules import rules
+from .rules import *
 
 __all__ = ["Abstraction"]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
+V = typing.TypeVar("V")
 
 
 @dataclasses.dataclass(eq=False)
@@ -47,11 +48,29 @@ class Abstraction(Expression, typing.Generic[T, U]):
     def create_variable(cls, variable: Variable) -> T:
         ...
 
+    @expression
+    def __add__(self, other: Abstraction[U, V]) -> Abstraction[T, V]:
+        """
+        Composes this function with another
+        """
+        ...
 
-rules.append(default_rule(Abstraction.from_fn))
+
+register(default_rule(Abstraction.from_fn))
 
 
-@rules.append
+@register
+@rule
+def compose(
+    a: typing.Callable[[T], U], b: typing.Callable[[U], V]
+) -> R[Abstraction[T, V]]:
+    return (
+        Abstraction.from_fn(a) + Abstraction.from_fn(b),
+        lambda: Abstraction[T, V].from_fn(lambda v: b(a(v))),
+    )
+
+
+@register
 @rule
 def beta_reduce(var: T, body: U, arg: T) -> R[U]:
     return (

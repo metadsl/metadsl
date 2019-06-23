@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typing
 
-from metadsl import Expression, expression, rule, R
+from metadsl import *
 from .abstraction import *
 from .rules import *
 
@@ -29,14 +29,34 @@ class Maybe(Expression, typing.Generic[T]):
     def match(self, nothing: U, just: Abstraction[T, U]) -> U:
         ...
 
+    @expression
+    def __or__(self, other: Maybe[T]) -> Maybe[T]:
+        """
+        Like the <|> function https://en.wikibooks.org/wiki/Haskell/Alternative_and_MonadPlus
+        """
+        ...
 
-@rules.append
+    @expression
+    def map(self, just: Abstraction[T, U]) -> Maybe[U]:
+        return self.match(
+            Maybe[U].nothing(),
+            just + Abstraction.from_fn(Maybe[U].just),  # type: ignore
+        )
+
+
+register(default_rule(Maybe.map))
+
+
+@register  # type: ignore
 @rule
-def maybe_match_nothing(nothing: U, just: Abstraction[T, U]) -> R[U]:
-    return Maybe[T].nothing().match(nothing, just), lambda: nothing
+def maybe_match(nothing: U, just: Abstraction[T, U], v: T) -> R[U]:
+    yield Maybe[T].nothing().match(nothing, just), nothing
+    yield Maybe.just(v).match(nothing, just), just(v)
 
 
-@rules.append
+@register
 @rule
-def maybe_match_just(nothing: U, just: Abstraction[T, U], v: T):
-    return Maybe.just(v).match(nothing, just), lambda: just(v)
+def maybe_or(x: T, v: Maybe[T]) -> R[Maybe[T]]:
+    yield Maybe[T].nothing() | Maybe[T].nothing(), Maybe[T].nothing()
+    yield Maybe.just(x) | v, Maybe.just(x)
+    yield v | Maybe.just(x), Maybe.just(x)

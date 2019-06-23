@@ -30,37 +30,27 @@ class Either(Expression, typing.Generic[T, U]):
         ...
 
 
-@rules.append
+@register  # type: ignore
 @rule
-def either_match_left(l: Abstraction[T, V], r: Abstraction[U, V], v: T) -> R[V]:
-    return Either[T, U].left(v).match(l, r), lambda: l(v)
+def either_match(l: Abstraction[T, V], r: Abstraction[U, V], t: T, u: U) -> R[V]:
+    yield Either[T, U].left(t).match(l, r), lambda: l(t)  # type: ignore
+    yield Either[T, U].right(u).match(l, r), lambda: r(u)  # type: ignore
 
 
-@rules.append
-@rule
-def either_match_right(l: Abstraction[T, V], r: Abstraction[U, V], v: U) -> R[V]:
-    return Either[T, U].right(v).match(l, r), lambda: r(v)
-
-
-@rules.append
+@register
 @rule
 def convert_to_either(x: object) -> R[Maybe[Either[T, U]]]:
-    def replacement() -> Maybe[Either[T, U]]:
-        convert_left: Maybe[T] = Converter[T].convert(x)
-        convert_right: Maybe[U] = Converter[U].convert(x)
+    """
+    Converting to an either should try converting to both types.
+    If either matches, then that should be the result. If neither
+    can be converted, then the result should be nothing.
+    """
 
-        no_conversion = Maybe[Either[T, U]].nothing()
+    convert_left = (
+        Converter[T]  # type: ignore
+        .convert(x)
+        .map(Abstraction.from_fn(Either[T, U].left))
+    )
+    convert_right = Converter[U].convert(x).map(Abstraction.from_fn(Either[T, U].right))
 
-        converted_left: Abstraction[T, Maybe[Either[T, U]]] = a(
-            lambda v: Maybe.just(Either[T, U].left(v))
-        )
-        converted_right: Abstraction[U, Maybe[Either[T, U]]] = a(
-            lambda v: Maybe.just(Either[T, U].right(v))
-        )
-        no_left_conversion: Maybe[Either[T, U]] = convert_right.match(
-            no_conversion, converted_right
-        )
-
-        return convert_left.match(no_left_conversion, converted_left)
-
-    return (Converter[Either[T, U]].convert(x), replacement)
+    return (Converter[Either[T, U]].convert(x), convert_left | convert_right)

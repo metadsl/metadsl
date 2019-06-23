@@ -1,25 +1,50 @@
-from metadsl import execute_rule
+from __future__ import annotations
+
+
+from metadsl import *
 from .conversion import *
-from .maybe import *
+from .either import *
+from .abstraction import *
+from .rules import core_rules
 
 
-class TestConvertIdentity:
-    def test_matches_type(self):
+class Int(Expression):
+    @expression
+    def __mul__(self, other: Int) -> Int:
+        ...
+
+    @expression
+    @classmethod
+    def from_str(cls, str: Str) -> Int:
+        ...
+
+    @expression
+    @classmethod
+    def from_int(cls, i: int) -> Int:
+        ...
+
+
+class Str(Expression):
+    @expression
+    @classmethod
+    def from_str(cls, s: str) -> Str:
+        ...
+
+
+class TestEither:
+    def test_matches(self):
+        @Abstraction.from_fn
+        def double_int(i: Int) -> Int:
+            return Int.from_int(2) * i
+
+        str_to_int = Abstraction.from_fn(Int.from_str)
+
         assert execute_rule(
-            convert_identity_rule, Converter[int].convert(1)
-        ) == Maybe.just(1)
+            core_rules,
+            Either[Int, Str].left(Int.from_int(10)).match(double_int, str_to_int),
+        ) == Int.from_int(2) * Int.from_int(10)
 
-    def test_doesnt_match_type(self):
-        assert list(convert_identity_rule(Converter[str].convert(1))) == []
-
-
-class TestConvertToMaybe:
-    def test_just(self):
         assert execute_rule(
-            convert_to_maybe, Converter[Maybe[int]].convert(1)
-        ) == Maybe.just(Converter[int].convert(1))
-
-    def test_nothing(self):
-        assert execute_rule(
-            convert_to_maybe, Converter[Maybe[int]].convert(None)
-        ) == Maybe.just(Maybe[int].nothing())
+            core_rules,
+            Either[Int, Str].right(Str.from_str("10")).match(double_int, str_to_int),
+        ) == Int.from_str(Str.from_str("10"))

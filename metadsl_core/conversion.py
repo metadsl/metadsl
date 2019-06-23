@@ -22,16 +22,16 @@ class Converter(Expression, typing.Generic[T]):
         ...
 
 
-@rules.append
+@register
 @rule
 def convert_identity_rule(value: T) -> R[Maybe[T]]:
     """
     When the value is an instance of the type being converted, we can convert it.
     """
-    return Converter[T].convert(value), lambda: Maybe.just(value)
+    return Converter[T].convert(value), Maybe.just(value)
 
 
-@rules.append
+@register
 @rule
 def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
     return (

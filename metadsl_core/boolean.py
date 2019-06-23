@@ -14,7 +14,7 @@ class Boolean(Expression):
         ...
 
 
-@rules.append
+@register
 @rule
 def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     """
@@ -23,4 +23,4 @@ def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     >>> list(convert_bool(Converter[Boolean].convert("not bool")))
     []
     """
-    return Converter[Boolean].convert(b), lambda: Maybe.just(Boolean.create(b))
+    return Converter[Boolean].convert(b), Maybe.just(Boolean.create(b))
