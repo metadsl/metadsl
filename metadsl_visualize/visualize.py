@@ -16,7 +16,10 @@ __all__ = ["visualize", "visualize_replacement", "interactive_execute"]
 
 @functools.singledispatch
 def name(expr: object) -> str:
-    return getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
+    n = getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
+    if "<" in n or ">" in n:
+        return f"#{id(expr)}"
+    return n
 
 
 @name.register
