@@ -147,7 +147,9 @@ class MatchRule:
         # Call the function first to create a template with the wildcards
         result = self.matchfunction(*self.wildcards)
         self.results = (
-            result if inspect.isgeneratorfunction(self.matchfunction) else [result]
+            list(result)
+            if inspect.isgeneratorfunction(self.matchfunction)
+            else [result]
         )
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
