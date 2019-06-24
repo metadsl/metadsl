@@ -59,6 +59,18 @@ class Abstraction(Expression, typing.Generic[T, U]):
 register(default_rule(Abstraction.from_fn))
 
 
+@dataclasses.dataclass
+class Compose:
+    f: typing.Callable
+    g: typing.Callable
+
+    def __call__(self, *args, **kwargs):
+        return self.f(self.g(*args, **kwargs))
+
+    def __str__(self):
+        return f"{self.f} ∘ {self.g}"
+
+
 @register
 @rule
 def compose(
@@ -66,7 +78,7 @@ def compose(
 ) -> R[Abstraction[T, V]]:
     return (
         Abstraction.from_fn(a) + Abstraction.from_fn(b),
-        lambda: Abstraction[T, V].from_fn(lambda v: b(a(v))),
+        lambda: Abstraction[T, V].from_fn(Compose(b, a)),
     )
 
 

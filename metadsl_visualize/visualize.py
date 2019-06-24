@@ -4,40 +4,50 @@ https://raw.githubusercontent.com/Quansight-Labs/uarray/1f9e031d929d502f7b415798
 """
 import functools
 import typing
+import black
+import ipywidgets
 
 import graphviz
 
 from metadsl import *
 
-__all__ = ["visualize"]
+__all__ = ["visualize", "visualize_replacement", "interactive_execute"]
 
 
 @functools.singledispatch
 def name(expr: object) -> str:
-    return str(expr)
+    return getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
 
 
 @name.register
 def name_expr(expr: Expression) -> str:
-    return str(expr._replaced_fn)
+    return black.format_str(str(expr._replaced_fn), line_length=20)
+
+
+TABLE_OPTIONS = """
+BORDER="0"
+CELLBORDER="1"
+CELLSPACING="0"
+"""
 
 
 @functools.singledispatch
 def description(expr: object) -> str:
-    n = name(expr)
+    n = name(expr).replace("\n", '<BR ALIGN="LEFT"/>')
     n_ports = len(children_nodes(expr))
+
     if n_ports == 0:
         return f"""<
-            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+            <TABLE {TABLE_OPTIONS}>
             <TR>
-                <TD>{n}</TD>
+                <TD ALIGN="LEFT">{n}</TD>
             </TR>
             </TABLE>
         >"""
     return f"""<
-        <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+        <TABLE {TABLE_OPTIONS}>
         <TR>
-            <TD COLSPAN="{n_ports}">{n}</TD>
+            <TD COLSPAN="{n_ports}" ALIGN="LEFT">{n}</TD>
         </TR>
         <TR>
         {' '.join(f'<TD PORT="{i}"></TD>' for i in range(n_ports))}
@@ -45,6 +55,16 @@ def description(expr: object) -> str:
         </TABLE>
     >"""
 
+
+# TODO:
+
+# Add way of stepping through replacements with ipywidgets
+# Pass in `trace` method to execute
+# Creates widget, with slider to step through
+# Have toggles for whether to show whole graph and for whether to show types.
+
+
+# Figure out how to open this up while testing?
 
 # @description.register
 # def _expression_description(expr: Expression) -> str:
@@ -194,32 +214,61 @@ def visualize(expr: object, dot: graphviz.Digraph, seen: typing.Set[int]) -> int
 #     return expr_id
 
 
-# def visualize_highlight(
-#     expr, highlight_expr, dot: graphviz.Digraph, seen: typing.Set[str]
-# ) -> str:
-#     expr_id = id_(expr)
-#     if expr_id in seen:
-#         return expr_id
-#     if expr_id == id_(highlight_expr):
-#         with dot.subgraph(name="cluster_0") as dot:
-#             ret = visualize(expr, dot, seen)
-#             dot.attr(label="replaced")
-#             dot.attr(color="red")
-#             return ret
-#     else:
-#         seen.add(expr_id)
-#         dot.attr("node", **attributes(expr))
-#         dot.node(expr_id, description(expr))
-#         for i, child in enumerate(children_nodes(expr)):
-#             child_id = visualize_highlight(child, highlight_expr, dot, seen)
-#             dot.edge(f"{expr_id}:{i}", child_id)
-#         return expr_id
+def visualize_replacement(replacement: Replacement,) -> int:
+    dot = graphviz.Digraph()
+    dot.attr(fontsize="9")
+    dot.attr(fontname="Courier")
+    dot.attr(compound="true")
+    seen: typing.Set[int] = set()
+
+    result = replacement.result
+    result_id = id_(result)
+    with dot.subgraph(name="clusteri") as sub:
+        initial_id = visualize(replacement.initial, sub, seen)
+        sub.attr(style="dashed")
+
+    def inner(expr, dot=dot) -> int:
+        expr_id = id_(expr)
+        if expr_id in seen:
+            return expr_id
+        if expr_id == result_id:
+            with dot.subgraph(name="clusterr") as sub:
+                visualize(expr, sub, seen)
+                sub.attr(style="bold")
+            dot.edge(
+                str(initial_id),
+                str(result_id),
+                ltail="clusteri",
+                lhead="clusterr",
+                minlen="5",
+                label=str(replacement.rule),
+                constraint="false",
+            )
+            return result_id
+        else:
+            seen.add(expr_id)
+            dot.attr("node", **attributes(expr))
+            dot.node(str(expr_id), description(expr))
+            for i, child in enumerate(children_nodes(expr)):
+                child_id = inner(child)
+                dot.edge(f"{expr_id}:{i}", str(child_id))
+            return expr_id
+
+    inner(replacement.result_whole)
+    return dot
 
 
-# def visualize_diff(expr, highlight_expr):
-#     d = graphviz.Digraph()
-#     visualize_highlight(expr, highlight_expr, d, set())
-#     return d
+def interactive_execute(replacements):
+    from IPython.display import display
+
+    replacements = list(replacements)
+    a = ipywidgets.IntSlider(description="i", min=0, max=len(replacements) - 1)
+
+    def f(i):
+        display(visualize_replacement(replacements[i]))
+
+    out = ipywidgets.interactive_output(f, {"i": a})
+    return ipywidgets.VBox([a, out])
 
 
 # def visualize_progress(expr, clear=True, max_n=1000):
@@ -231,7 +280,7 @@ def visualize(expr: object, dot: graphviz.Digraph, seen: typing.Set[int]) -> int
 
 
 # try:
-#     from IPython.display import display, SVG, clear_output
+#     , SVG, clear_output
 
 #     svg_formatter = get_ipython().display_formatter.formatters[  # type: ignore
 #         "image/svg+xml"

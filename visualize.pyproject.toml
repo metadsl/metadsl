@@ -9,7 +9,8 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "metadsl",
-    "graphviz"
+    "graphviz",
+    "ipywidgets"
 ]
 requires-python = ">=3.7"
 classifiers = [

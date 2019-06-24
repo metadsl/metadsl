@@ -60,6 +60,9 @@ class DefaultRule:
     inner_fn: typing.Callable = dataclasses.field(init=False, repr=False)
     exposed_fn: typing.Callable = dataclasses.field(init=False, repr=False)
 
+    def __str__(self):
+        return f"{self.inner_fn.__module__}.{self.inner_fn.__qualname__}"
+
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
         self.exposed_fn = self.fn.__exposed__  # type: ignore
@@ -131,19 +134,21 @@ class MatchRule:
     # the wildcards that are present in the template
     wildcards: typing.List[Expression] = dataclasses.field(init=False)
 
-    results: typing.Iterable[R_single] = dataclasses.field(init=False)
+    results: R = dataclasses.field(init=False)
+
+    def __str__(self):
+        return f"{self.matchfunction.__module__}.{self.matchfunction.__qualname__}"
 
     def __post_init__(self):
         functools.update_wrapper(self, self.matchfunction)
         # Create one wildcard` per argument
         self.wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
 
-        # If the match function is not a generator, turn it into one
-        if not inspect.isgeneratorfunction(self.matchfunction):
-            old_match_function = self.matchfunction
-            self.matchfunction = lambda *args: (old_match_function(*args),)
         # Call the function first to create a template with the wildcards
-        self.results = list(self.matchfunction(*self.wildcards))
+        result = self.matchfunction(*self.wildcards)
+        self.results = (
+            result if inspect.isgeneratorfunction(self.matchfunction) else [result]
+        )
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for i, result in enumerate(self.results):
@@ -159,7 +164,11 @@ class MatchRule:
                 wildcards_to_nodes.get(wildcard, wildcard)
                 for wildcard in self.wildcards
             ]
-            _, expression_thunk = list(self.matchfunction(*args))[i]
+            _, expression_thunk = (
+                list(self.matchfunction(*args))[i]
+                if inspect.isgeneratorfunction(self.matchfunction)
+                else self.matchfunction(*args)
+            )
             try:
                 result_expr: object = (
                     expression_thunk()

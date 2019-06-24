@@ -83,6 +83,9 @@ pip install flit
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink
+
+# optional
+jupyter labextension install @jupyter-widgets/jupyterlab-manager@0.38.0
 ```
 
 ### Tests
@@ -107,9 +110,3 @@ pytest docs/*.ipynb --nbval
 ```bash
 sphinx-autobuild docs docs/_build/html/
 ```
-
----
-
-Switch to Expression syntax. everything is expression with \_function and \_arguments
-
-Use generic types for generic types, only allow these options on expression

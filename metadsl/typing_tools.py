@@ -328,6 +328,13 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         return {}
 
     if not issubclass(t, hint):
+        # If we are trying to match with a callable hint and the type we passed in is a callable
+        # then just pretend its valid but we dont know its type variables
+        if typing_inspect.get_origin(hint) == collections.abc.Callable and hasattr(
+            t, "__call__"
+        ):
+            return {}
+
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return merge_typevars(
         *(
@@ -493,7 +500,7 @@ class Infer(typing.Generic[T, U]):
         )
 
     def __str__(self):
-        return getattr(self.fn, "__qualname__", str(self.fn))
+        return getattr(self.fn, "__name__", str(self.fn))
 
 
 @dataclasses.dataclass
