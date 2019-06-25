@@ -11,7 +11,7 @@ import graphviz
 
 from metadsl import *
 
-__all__ = ["visualize", "visualize_replacement", "interactive_execute"]
+__all__ = ["set_rule"]
 
 
 @functools.singledispatch
@@ -202,6 +202,12 @@ def visualize(expr: object, dot: graphviz.Digraph, seen: typing.Set[int]) -> int
     return expr_id
 
 
+def visualize_expr(expr):
+    d = graphviz.Digraph()
+    visualize(expr, d, set())
+    return d
+
+
 # def visualize_ops(expr, dot: graphviz.Digraph, seen: typing.Set[str]) -> str:
 #     if isinstance(expr, Box):
 #         expr = expr.value
@@ -217,10 +223,8 @@ def visualize(expr: object, dot: graphviz.Digraph, seen: typing.Set[int]) -> int
 #     return expr_id
 
 
-def visualize_replacement(replacement: Replacement,) -> int:
+def visualize_replacement(replacement: Replacement):
     dot = graphviz.Digraph()
-    dot.attr(fontsize="9")
-    dot.attr(fontname="Courier")
     dot.attr(compound="true")
     seen: typing.Set[int] = set()
 
@@ -244,7 +248,6 @@ def visualize_replacement(replacement: Replacement,) -> int:
                 ltail="clusteri",
                 lhead="clusterr",
                 minlen="5",
-                label=str(replacement.rule),
                 constraint="false",
             )
             return result_id
@@ -258,17 +261,31 @@ def visualize_replacement(replacement: Replacement,) -> int:
             return expr_id
 
     inner(replacement.result_whole)
-    return dot
+    return replacement.rule, dot
 
 
-def interactive_execute(replacements):
+DEFAULT_RULE = None
+
+
+def set_rule(rule: Rule):
+    global DEFAULT_RULE
+    DEFAULT_RULE = rule
+
+
+def interactive_execute(rule: Rule, expr: object):
     from IPython.display import display
 
-    replacements = list(replacements)
-    a = ipywidgets.IntSlider(description="i", min=0, max=len(replacements) - 1)
+    d = graphviz.Digraph()
+    visualize(expr, d, set())
+    labels, visualizations = zip(
+        ("Original", visualize_expr(expr)), *(map(visualize_replacement, rule(expr)))
+    )
+
+    a = ipywidgets.IntSlider(min=0, max=len(labels) - 1)
 
     def f(i):
-        display(visualize_replacement(replacements[i]))
+        print(labels[i])
+        display(visualizations[i])
 
     out = ipywidgets.interactive_output(f, {"i": a})
     return ipywidgets.VBox([a, out])
@@ -282,39 +299,12 @@ def interactive_execute(replacements):
 #     raise NotImplementedError
 
 
-# try:
-#     , SVG, clear_output
+def expr_ipython_display(self):
+    from IPython.display import display
 
-#     svg_formatter = get_ipython().display_formatter.formatters[  # type: ignore
-#         "image/svg+xml"
-#     ]
-# except Exception:
-#     pass
-# else:
+    assert DEFAULT_RULE
+    return display(interactive_execute(DEFAULT_RULE, self))
 
-#     def svg(expr):
-#         d = graphviz.Digraph()
-#         visualize(expr, d, set())
-#         return d._repr_svg_()
 
-#     def display_ops(expr):
-#         d = graphviz.Digraph()
-#         visualize_ops(expr, d, set())
-#         return d
+Expression._ipython_display_ = expr_ipython_display  # type: ignore
 
-#     def visualize_progress(expr, clear=True, max_n=1000):
-#         d = graphviz.Digraph()
-#         visualize(expr, d, set())
-#         display(SVG(d._repr_svg_()))
-
-#         e = copy(expr, {})
-#         for i, replaced in enumerate(replace_inplace_generator(e)):
-#             if i > max_n:
-#                 raise Exception(f"Over {max_n} replacements")
-#             new_svg = SVG(visualize_diff(e, replaced)._repr_svg_())
-#             if clear:
-#                 clear_output(wait=True)
-#             display(new_svg)
-
-#     svg_formatter.for_type(Box, svg)
-#     # svg_formatter.for_type(LazyNDArray, lambda a: svg(a.box))
