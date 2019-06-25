@@ -83,8 +83,12 @@ class DefaultRule:
         fn = self.fn
         # If this is a classmethod, pass in the origin class
         if isinstance(fn, BoundInfer) and fn.is_classmethod:
-            args = (typing.cast(object, fn._owner_origin),) + args
 
+            # TODO: Move this to the Expresion class
+            # This is getting the parent class with typevars replaced
+            args = (
+                typing.cast(object, replace_typevars(expr.typevars, fn._owner_origin)),
+            ) + args
         result = replace_typevars_expression(
             self.inner_fn(*args, **expr.kwargs), expr.typevars
         )
@@ -268,16 +272,18 @@ def match_expression(
             template_args = template.args
             expr_args = expr.args
 
-        type_mappings, expr_mappings = zip(
-            *(
-                match_expression(wildcards, arg_template, arg_value)
-                for arg_template, arg_value in zip(template_args, expr_args)
-            ),
-            *(
-                match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
-                for key in template.kwargs.keys()
-            ),
-        )
+        type_mappings, expr_mappings = list(
+            zip(
+                *(
+                    match_expression(wildcards, arg_template, arg_value)
+                    for arg_template, arg_value in zip(template_args, expr_args)
+                ),
+                *(
+                    match_expression(wildcards, template.kwargs[key], expr.kwargs[key])
+                    for key in template.kwargs.keys()
+                ),
+            )
+        ) or ((), ())
         try:
             merged_typevars: TypeVarMapping = merge_typevars(
                 *fn_type_mappings, *type_mappings

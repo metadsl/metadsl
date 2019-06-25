@@ -26,7 +26,7 @@ class TestMatches:
 
         assert execute_rule(
             core_rules, Maybe.just(Int.from_int(10)).match(Int.from_int(5), double_int)
-        ) == double_int(Int.from_int(10))
+        ) == Int.from_int(2) * Int.from_int(10)
         assert execute_rule(
             core_rules, Maybe[Int].nothing().match(Int.from_int(5), double_int)
         ) == Int.from_int(5)

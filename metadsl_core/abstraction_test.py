@@ -16,6 +16,7 @@ class TestAbstraction:
             Abstraction[typing.Any, int].from_fn(lambda i: i),
         )
         assert isinstance(a, Abstraction)
+        assert a._replaced_fn == Abstraction[typing.Any, int].create
         assert a.function == Abstraction.create.__exposed__  # type: ignore
         var, body = a.args
         assert var.function == Abstraction.create_variable.__exposed__  # type: ignore

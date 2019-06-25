@@ -364,7 +364,7 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
     # Special case empty callable, which raisees error on getting args
     if hint == typing.Callable:  # type: ignore
         return hint
-    if typing_inspect.is_callable_type(hint):
+    if typing_inspect.get_origin(hint) == collections.abc.Callable:
         arg_types, return_type = typing_inspect.get_args(hint)
         return typing.Callable[
             [replace_typevars(typevars, a) for a in arg_types],
@@ -574,6 +574,6 @@ def replace_fn_typevars(
 ) -> typing.Callable:
     if isinstance(fn, BoundInfer):
         return dataclasses.replace(  # type: ignore
-            fn, owner=replace_typevars(typevars, fn.owner)
+            fn, owner=replace_typevars(typevars, fn._owner_origin)
         )
     return fn
