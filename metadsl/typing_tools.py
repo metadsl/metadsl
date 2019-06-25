@@ -569,9 +569,7 @@ def match_functions(
     return match_types(fn_with_typevars.owner, fn.owner)
 
 
-def replace_fn_typevars(
-    fn: typing.Callable, typevars: TypeVarMapping
-) -> typing.Callable:
+def replace_fn_typevars(fn: T, typevars: TypeVarMapping) -> T:
     if isinstance(fn, BoundInfer):
         return dataclasses.replace(  # type: ignore
             fn, owner=replace_typevars(typevars, fn._owner_origin)
