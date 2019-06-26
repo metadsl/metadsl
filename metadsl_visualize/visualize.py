@@ -11,20 +11,23 @@ import graphviz
 
 from metadsl import *
 
-__all__ = ["set_rule"]
+__all__ = ["set_rule", "visualize_expr_display"]
+
+
+def filter_name(n):
+    return n.replace("<", "").replace(">", "")
 
 
 @functools.singledispatch
 def name(expr: object) -> str:
-    n = getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
-    if "<" in n or ">" in n:
-        return f"#{id(expr)}"
-    return n
+    # n = getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
+    return filter_name(str(expr))
 
 
 @name.register
 def name_expr(expr: Expression) -> str:
-    return black.format_str(str(expr._replaced_fn), line_length=20)
+    return filter_name(str(expr.function))
+    # return black.format_str(, line_length=20)
 
 
 TABLE_OPTIONS = """
@@ -208,6 +211,10 @@ def visualize_expr(expr):
     return d
 
 
+def visualize_expr_display(expr):
+    visualize_expr(expr).render(cleanup=True, view=True)
+
+
 # def visualize_ops(expr, dot: graphviz.Digraph, seen: typing.Set[str]) -> str:
 #     if isinstance(expr, Box):
 #         expr = expr.value
@@ -277,9 +284,18 @@ def interactive_execute(rule: Rule, expr: object):
 
     d = graphviz.Digraph()
     visualize(expr, d, set())
-    labels, visualizations = zip(
-        ("Original", visualize_expr(expr)), *(map(visualize_replacement, rule(expr)))
-    )
+    visualize_results: typing.List[typing.Tuple[str, object]] = []
+    rule_iter = iter(rule(expr))
+    while True:
+        try:
+            visualize_results.append(visualize_replacement(next(rule_iter)))
+        except StopIteration:
+            break
+        except Exception as e:
+            visualize_results.append(("Error executing rule:", e))
+            break
+
+    labels, visualizations = zip(("Original", visualize_expr(expr)), *visualize_results)
 
     a = ipywidgets.IntSlider(min=0, max=len(labels) - 1)
 
@@ -307,4 +323,3 @@ def expr_ipython_display(self):
 
 
 Expression._ipython_display_ = expr_ipython_display  # type: ignore
-

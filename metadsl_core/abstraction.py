@@ -56,7 +56,7 @@ class Abstraction(Expression, typing.Generic[T, U]):
         ...
 
 
-register(default_rule(Abstraction.from_fn))
+from_fn_rule = register(default_rule(Abstraction[T, U].from_fn))
 
 
 @register

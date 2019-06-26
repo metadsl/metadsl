@@ -50,6 +50,30 @@ class _List(Expression, typing.Generic[T]):
         ...
 
 
+U = typing.TypeVar("U")
+
+
+class Both(Expression, typing.Generic[T, U]):
+    @expression
+    @classmethod
+    def create(cls) -> Both[T, U]:
+        ...
+
+
+V = typing.TypeVar("V")
+
+
+class Abstraction(Expression, typing.Generic[T, U]):
+    @expression
+    @classmethod
+    def create(cls) -> Abstraction[T, U]:
+        ...
+
+    @expression
+    def __add__(self, other: Abstraction[U, V]) -> Abstraction[T, V]:
+        ...
+
+
 class TestRule:
     def test_add(self):
         expr = _from_int(1) + _from_int(2)
@@ -76,7 +100,7 @@ class TestRule:
 
         assert execute_rule(
             _concat_lists, _List.create(1, 2) + _List.create(3, 4)
-        ) == _List.create(1, 2, 3, 4)
+        ) == _List[int].create(1, 2, 3, 4)
 
     def test_variable_args_empty(self):
         @rule
@@ -105,7 +129,7 @@ class TestRule:
 
         assert execute_rule(
             _concat_lists_minus_end, _List.create(1, 2) + _List.create(3, 4)
-        ) == _List.create(1, 3)
+        ) == _List[int].create(1, 3)
 
         assert (
             execute_rule(_concat_lists_minus_end, _List.create(1) + _List.create(3))
@@ -130,7 +154,7 @@ class TestRule:
         assert execute_rule(
             _add_list_of_lists,
             _List.create(_List.create(1, 2)) + _List.create(_List.create(3, 4)),
-        ) == _List.create(_List.create(1, 2, 3, 4))
+        ) == _List.create(_List[int].create(1, 2, 3, 4))
         assert execute_rule(
             _add_list_of_lists,
             _List.create(_List[int].create()) + _List.create(_List[int].create()),
@@ -176,6 +200,54 @@ class TestRule:
         s = _from_str("str")
         assert execute_rule(_add_zero_rule, s + _from_int(0)) == s
         assert execute_rule(_add_zero_rule, _from_int(0) + s) == s
+
+    def test_two_params(self):
+        """
+        For this test, we want to make sure if we use the saem TypeVar instance in our match rule
+        that we did in our expresion, it can be seperated.
+        """
+
+        @expression
+        def combine_lists(l: _List[T], r: _List[U]) -> _List[Both[T, U]]:
+            ...
+
+        # Here we have `_List[T]` work for the type var `T` in the list
+        @rule
+        def combine_lists_rule() -> R[_List[Both[T, U]]]:
+            return (
+                combine_lists(_List[T].create(), _List[U].create()),
+                _List[Both[T, U]].create(),
+            )
+
+        assert (
+            execute_rule(
+                combine_lists_rule,
+                combine_lists(_List[int].create(), _List[float].create()),
+            )
+            == _List[Both[int, float]].create()
+        )
+
+    def test_two_different_params(self):
+        """
+        For this test, we want to make sure if we use the saem TypeVar instance in our match rule
+        that we did in our expresion, it can be seperated.
+        """
+
+        # Here we have `_List[T]` work for the type var `T` in the list
+        @rule
+        def add_abstractions_rule() -> R[Abstraction[T, V]]:
+            return (  # type: ignore
+                Abstraction[T, U].create() + Abstraction[U, V].create(),
+                Abstraction[T, V].create(),
+            )
+
+        assert (
+            execute_rule(
+                add_abstractions_rule,
+                Abstraction[int, float].create() + Abstraction[float, str].create(),
+            )
+            == Abstraction[int, str].create()
+        )
 
 
 class TestDefaultRule:
@@ -251,7 +323,7 @@ class TestDefaultRule:
         globals()["C"] = C
 
         expr = C[int].create_wrapper()
-        rule = default_rule(C.create_wrapper)
+        rule = default_rule(C[T].create_wrapper)
 
         assert execute_rule(rule, expr) == C[int].create()
 
@@ -277,6 +349,26 @@ class TestDefaultRule:
         assert execute_rule(rule, expr) == C.create(123)
 
         assert expr != C.create(123)
+
+    def test_classmethod_generic_arg_different_var(self):
+        class C(Expression, typing.Generic[T]):
+            @expression
+            @classmethod
+            def create(cls) -> C[T]:
+                ...
+
+            @expression
+            @classmethod
+            def create_wrapper(cls, v: V) -> C[V]:
+                return C[V].create()
+
+        globals()["C"] = C
+
+        expr = C.create_wrapper(123)
+        rule = default_rule(C.create_wrapper)
+        assert execute_rule(rule, expr) == C[int].create()
+
+        assert expr != C[int].create()
 
     def test_function_generic(self):
         @expression

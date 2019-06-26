@@ -101,16 +101,14 @@ def test_iterated():
                 create_iterated_placeholder,
                 (
                     PlaceholderExpression[typing.Iterable[int]](
-                        create_variadic_ints, (), {}, {}
+                        create_variadic_ints, (), {}
                     ),
                 ),
                 {},
-                {expressions_T: int},
             ),
             3,
             4,
         ),
-        {},
         {},
     )
 

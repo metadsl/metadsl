@@ -40,7 +40,6 @@ class Expression(GenericCheck):
     function: typing.Callable
     args: typing.Tuple[object, ...]
     kwargs: typing.Mapping[str, object]
-    typevars: TypeVarMapping
 
     def __str__(self):
         arg_strings = (str(arg) for arg in self.args)
@@ -54,10 +53,12 @@ class Expression(GenericCheck):
     @property
     def _type_str(self):
         t = get_type(self)
-        return getattr(t, "__qualname__", str(t))
+        return str(t)
 
     def __repr__(self):
-        return f"{self._type_str}({self._function_str}, {repr(self.args)}, {repr(self.kwargs)}, {repr(self.typevars)})"
+        return (
+            f"{self._type_str}({self.function}, {repr(self.args)}, {repr(self.kwargs)})"
+        )
 
     def __eq__(self, value) -> bool:
         if not isinstance(value, Expression):
@@ -67,12 +68,7 @@ class Expression(GenericCheck):
             self.function == value.function
             and self.args == value.args
             and self.kwargs == value.kwargs
-            and self.typevars == value.typevars
         )
-
-    @property
-    def _replaced_fn(self) -> typing.Callable:
-        return replace_fn_typevars(self.function, self.typevars)
 
 
 T = typing.TypeVar("T")
@@ -101,9 +97,9 @@ def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
 T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 
-def wrapper(fn, args, kwargs, return_type, typevars):
+def wrapper(fn, args, kwargs, return_type):
     expr_return_type = extract_expression_type(return_type)
-    return expr_return_type(fn, args, kwargs, typevars)
+    return expr_return_type(fn, args, kwargs)
 
 
 def expression(fn: T_callable) -> T_callable:
@@ -150,15 +146,7 @@ class ExpressionFolder:
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
             return fn(
-                (
-                    replace_fn_typevars(
-                        expr.function,
-                        {
-                            tv: replace_typevars(self.typevars, tp)
-                            for tv, tp in expr.typevars.items()  # type: ignore
-                        },
-                    )
-                )(
+                (replace_fn_typevars(expr.function, self.typevars))(
                     *(self(arg) for arg in expr.args),
                     **{k: self(v) for k, v in expr.kwargs},
                 )

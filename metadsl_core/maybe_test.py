@@ -18,7 +18,7 @@ class Int(Expression):
         ...
 
 
-class TestMatches:
+class TestMaybe:
     def test_matches(self):
         @Abstraction.from_fn
         def double_int(i: Int) -> Int:
@@ -30,3 +30,16 @@ class TestMatches:
         assert execute_rule(
             core_rules, Maybe[Int].nothing().match(Int.from_int(5), double_int)
         ) == Int.from_int(5)
+
+    def test_map(self):
+        @Abstraction.from_fn
+        def double_int(i: Int) -> Int:
+            return Int.from_int(2) * i
+
+        assert execute_rule(
+            core_rules, Maybe.just(Int.from_int(10)).map(double_int)
+        ) == Maybe[Int].just(Int.from_int(2) * Int.from_int(10))
+        assert (
+            execute_rule(core_rules, Maybe[Int].nothing().map(double_int))
+            == Maybe[Int].nothing()
+        )

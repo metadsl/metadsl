@@ -44,7 +44,7 @@ class Maybe(Expression, typing.Generic[T]):
         )
 
 
-register(default_rule(Maybe.map))
+register(default_rule(Maybe[T].map))
 
 
 @register  # type: ignore

@@ -58,14 +58,12 @@ def default_rule(fn: typing.Callable) -> Rule:
 class DefaultRule:
     fn: typing.Callable
     inner_fn: typing.Callable = dataclasses.field(init=False, repr=False)
-    exposed_fn: typing.Callable = dataclasses.field(init=False, repr=False)
 
     def __str__(self):
         return f"{self.inner_fn.__module__}.{self.inner_fn.__qualname__}"
 
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
-        self.exposed_fn = self.fn.__exposed__  # type: ignore
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         """
@@ -75,23 +73,31 @@ class DefaultRule:
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
-        if not isinstance(expr, Expression) or expr.function != self.exposed_fn:
+        if not isinstance(expr, Expression):
             return
 
-        args = expr.args
-
         fn = self.fn
-        # If this is a classmethod, pass in the origin class
-        if isinstance(fn, BoundInfer) and fn.is_classmethod:
 
-            # TODO: Move this to the Expresion class
-            # This is getting the parent class with typevars replaced
-            args = (
-                typing.cast(object, replace_typevars(expr.typevars, fn._owner_origin)),
-            ) + args
+        args = expr.args
+        if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
+            if fn.fn != expr.function.fn:
+                return
+            if fn.is_classmethod:
+                args = (typing.cast(object, fn.owner),) + args
+
+        elif fn != expr.function:
+            return
+        typevars: TypeVarMapping = infer_return_type(
+            expr.function.fn,  # type: ignore
+            getattr(expr.function, "owner", None),
+            getattr(expr.function, "is_classmethod", False),
+            expr.args,
+            expr.kwargs,
+        )[-1]
         result = replace_typevars_expression(
-            self.inner_fn(*args, **expr.kwargs), expr.typevars
+            self.inner_fn(*args, **expr.kwargs), typevars
         )
+
         yield Replacement(self, expr, result, result)
 
 
@@ -221,16 +227,15 @@ def match_expression(
             raise NoMatch
 
     if isinstance(expr, Expression):
-        if not isinstance(template, Expression) or template.function != expr.function:
+        if not isinstance(template, Expression):
             raise NoMatch
         # Any typevars in the template that are unbound should be matched with their
         # versions in the expr
 
         try:
-            fn_type_mappings: typing.List[TypeVarMapping] = [
-                match_types(tp, expr.typevars[tv])
-                for tv, tp in template.typevars.items()  # type: ignore
-            ]
+            fn_type_mapping: TypeVarMapping = match_functions(
+                template.function, expr.function
+            )
         except TypeError:
             raise NoMatch
 
@@ -292,7 +297,7 @@ def match_expression(
         ) or ((), ())
         try:
             merged_typevars: TypeVarMapping = merge_typevars(
-                *fn_type_mappings, *type_mappings
+                fn_type_mapping, *type_mappings
             )
         except TypeError:
             raise NoMatch
