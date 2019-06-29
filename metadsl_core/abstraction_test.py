@@ -1,12 +1,29 @@
+from __future__ import annotations
+
 import typing
 
-from metadsl import default_rule, execute_rule
+from metadsl import *
 from .rules import *
 from .abstraction import *
 from .abstraction import Variable, from_fn_rule
 
 
 T = typing.TypeVar("T")
+
+
+class I(Expression):
+    @expression
+    @classmethod
+    def create(cls, i: int) -> I:
+        ...
+
+    @expression
+    def inc(self) -> I:
+        ...
+
+    @expression
+    def dec(self) -> I:
+        ...
 
 
 class TestAbstraction:
@@ -37,3 +54,9 @@ class TestAbstraction:
             execute_rule(core_rules, Abstraction[T, T].from_fn(lambda i: i)("hi"))
             == "hi"
         )
+
+    def test_compose(self):
+        assert execute_rule(
+            core_rules,
+            (Abstraction.from_fn(I.inc) + Abstraction.from_fn(I.dec))(I.create(10)),
+        ) == I.inc(I.dec(I.create(10)))

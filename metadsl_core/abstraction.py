@@ -49,9 +49,10 @@ class Abstraction(Expression, typing.Generic[T, U]):
         ...
 
     @expression
-    def __add__(self, other: Abstraction[U, V]) -> Abstraction[T, V]:
+    def __add__(self, other: Abstraction[V, T]) -> Abstraction[V, U]:
         """
-        Composes this function with another
+        Composes this function with another.
+        (f + g)(x) == f(g(x))
         """
         ...
 
@@ -59,21 +60,36 @@ class Abstraction(Expression, typing.Generic[T, U]):
 from_fn_rule = register(default_rule(Abstraction[T, U].from_fn))
 
 
+def _replace(body: U, var: T, arg: T) -> U:
+    return ExpressionReplacer(UnhashableMapping(Item(var, arg)))(body)
+
+
 @register
 @rule
-def compose(
-    a: typing.Callable[[T], U], b: typing.Callable[[U], V]
-) -> R[Abstraction[T, V]]:
+def compose(vl: T, bl: U, vr: V, br: T) -> R[Abstraction[V, U]]:
+    # We want to define composition for the lambda calculus
+    # We start with our two functions, each with a variable and a body:
+    # f = 𝜆vl.bl
+    # g = 𝜆vr.br
+    # We want to compute their composition:
+    # 𝜆x.f(g(x))
+    # We can start by replacing function application with replacing all instances of the variable in the body
+    # == f(br[vr/x])
+    # == bl[vl/br[vr/x]]
+    # Now, what we want is to pull out the `x` replacement to the outside, so we can create another function from this
+    # Assuming no overlapping variables names in the scope, we should be able to do the replacements in sequence:
+    # == bl[vl/br][vr/x]
+    # == 𝜆vr.bl[vl/br]
+    # this checks out typing wise, which is nice!
+
     return (
-        Abstraction.from_fn(a) + Abstraction.from_fn(b),
-        lambda: Abstraction[T, V].from_fn(lambda v: b(a(v))),
+        Abstraction[T, U].create(vl, bl)  # type: ignore
+        + Abstraction[V, T].create(vr, br),
+        lambda: Abstraction.create(vr, _replace(bl, vl, br)),
     )
 
 
-@register
+@register  # type: ignore
 @rule
 def beta_reduce(var: T, body: U, arg: T) -> R[U]:
-    return (
-        Abstraction[T, U].create(var, body)(arg),
-        lambda: ExpressionReplacer(UnhashableMapping(Item(var, arg)))(body),
-    )
+    return (Abstraction[T, U].create(var, body)(arg), lambda: _replace(body, var, arg))

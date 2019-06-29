@@ -91,7 +91,7 @@ class TestRule:
     def test_variable_args(self):
         @rule
         def _concat_lists(
-            ls: typing.Iterable[T], rs: typing.Iterable[T]
+            ls: typing.Sequence[T], rs: typing.Sequence[T]
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls) + _List[T].create(*rs),
@@ -105,7 +105,7 @@ class TestRule:
     def test_variable_args_empty(self):
         @rule
         def _concat_lists(
-            ls: typing.Iterable[T], rs: typing.Iterable[T]
+            ls: typing.Sequence[T], rs: typing.Sequence[T]
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls) + _List[T].create(*rs),
@@ -120,7 +120,7 @@ class TestRule:
     def test_variable_args_right_side(self):
         @rule
         def _concat_lists_minus_end(
-            ls: typing.Iterable[T], rs: typing.Iterable[T], l: T, r: T
+            ls: typing.Sequence[T], rs: typing.Sequence[T], l: T, r: T
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls, l) + _List[T].create(*rs, r),
@@ -144,7 +144,7 @@ class TestRule:
         # Here we have `_List[T]` work for the type var `T` in the list
         @rule
         def _add_list_of_lists(
-            ls: typing.Iterable[T], rs: typing.Iterable[T]
+            ls: typing.Sequence[T], rs: typing.Sequence[T]
         ) -> R[_List[_List[T]]]:
             return (
                 _List.create(_List[T].create(*ls)) + _List.create(_List[T].create(*rs)),

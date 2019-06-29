@@ -87,7 +87,7 @@ def test_variadic():
 
 
 @expression
-def create_variadic_ints() -> typing.Iterable[int]:
+def create_variadic_ints() -> typing.Sequence[int]:
     ...
 
 
@@ -100,7 +100,7 @@ def test_iterated():
             IteratedPlaceholder[int](
                 create_iterated_placeholder,
                 (
-                    PlaceholderExpression[typing.Iterable[int]](
+                    PlaceholderExpression[typing.Sequence[int]](
                         create_variadic_ints, (), {}
                     ),
                 ),

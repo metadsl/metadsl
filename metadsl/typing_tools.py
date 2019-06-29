@@ -116,10 +116,11 @@ typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
 
 def get_origin(t: typing.Type) -> typing.Type:
     origin = typing_inspect.get_origin(t)
-    # Need workaround for iterables
+    # Need workaround for sequences
     # https://github.com/ilevkivskyi/typing_inspect/issues/36
-    if origin == collections.abc.Iterable:
-        return typing.Iterable
+    if origin == collections.abc.Sequence:
+        return typing.Sequence
+        
     return origin
 
 

@@ -117,7 +117,7 @@ class IteratedPlaceholder(Expression, ExpandedType, typing.Generic[T]):
 
 @expression
 def create_iterated_placeholder(
-    i: PlaceholderExpression[typing.Iterable[T]]
+    i: PlaceholderExpression[typing.Sequence[T]]
 ) -> IteratedPlaceholder[T]:
     """
     If a placeholder is of an iterable T, calling iter on it should return an iterable placeholder of the inner type.
@@ -140,9 +140,6 @@ class ExpressionFolder:
     typevars: TypeVarMapping = dataclasses.field(default_factory=dict)
 
     def __call__(self, expr: object) -> object:
-        """
-        Gives back an iterable of expression
-        """
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
             return fn(

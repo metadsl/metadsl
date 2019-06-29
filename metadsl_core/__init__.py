@@ -8,5 +8,8 @@ from .either import *
 from .maybe import *
 from .rules import *
 from .boolean import *
+from .pair import *
+from .vec import *
+from .integer import *
 
 __version__ = "0.0.0"
