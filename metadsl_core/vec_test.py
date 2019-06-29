@@ -8,6 +8,7 @@ from .abstraction import *
 from .rules import *
 from .maybe import *
 from .vec import *
+from .integer import *
 
 
 class Int(Expression):
@@ -41,7 +42,13 @@ convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *core_rules.rule
 e = lambda e: execute_rule(convert_rules, e)
 
 
-class TestConvert:
+class TestVec:
+    def test_getitem(self):
+        assert execute_core(Vec.create(10, 11)[Integer.from_int(1)]) == 11
+
+    def test_append(self):
+        assert execute_core(Vec.create(10).append(11)) == Vec.create(10, 11)
+
     def test_convert_empty(self):
         assert e(Converter[Vec[Int]].convert(())) == Maybe.just(Vec[Int].create())
 

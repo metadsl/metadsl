@@ -23,10 +23,6 @@ class Vec(Expression, typing.Generic[T]):
 
     @expression
     def __getitem__(self, index: Integer) -> T:
-        """
-        >>> execute_core(Vec.create(10, 11)[Integer.from_int(1)])
-        11
-        """
         ...
 
     @expression
@@ -40,10 +36,6 @@ class Vec(Expression, typing.Generic[T]):
 
     @expression
     def append(self, x: T) -> Vec[T]:
-        """
-        >>> execute_core(Vec.create(10).append(11)) == Vec.create(10, 11)
-        True
-        """
         ...
 
     @expression
@@ -74,7 +66,7 @@ def map(fn: Abstraction[T, U], xs: typing.Sequence[T]) -> R[Vec[U]]:
 @register
 @rule
 def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
-    return (Vec[T].create(*xs).append(x), lambda: Vec[T].create(*xs, x))
+    return (Vec[T].create(*xs).append(x), lambda: Vec.create(*xs, x))
 
 
 # def tuple_all(t: Vec[Maybe[T]]) -> Maybe[Vec[T]]:
