@@ -120,7 +120,7 @@ def get_origin(t: typing.Type) -> typing.Type:
     # https://github.com/ilevkivskyi/typing_inspect/issues/36
     if origin == collections.abc.Sequence:
         return typing.Sequence
-        
+
     return origin
 
 
@@ -576,6 +576,15 @@ def replace_fn_typevars(fn: T, typevars: TypeVarMapping) -> T:
         return dataclasses.replace(  # type: ignore
             fn, owner=replace_typevars(typevars, fn.owner)
         )
+    if isinstance(fn, types.FunctionType):
+        # Create new function by replacing typevars in existing function
+        new_fn = lambda *args, **kwargs: fn(*args, **kwargs)
+        functools.update_wrapper(new_fn, fn)
+        new_fn.__annotations__ = {
+            k: replace_typevars(typevars, v)
+            for k, v in typing.get_type_hints(fn).items()
+        }
+        return new_fn  # type: ignore
     return fn
 
 

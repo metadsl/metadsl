@@ -79,14 +79,6 @@ class DefaultRule:
         fn = self.fn
 
         args = expr.args
-        if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
-            if fn.fn != expr.function.fn:
-                return
-            if fn.is_classmethod:
-                args = (typing.cast(object, fn.owner),) + args
-
-        elif fn != expr.function:
-            return
         typevars: TypeVarMapping = infer_return_type(
             expr.function.fn,  # type: ignore
             getattr(expr.function, "owner", None),
@@ -94,6 +86,17 @@ class DefaultRule:
             expr.args,
             expr.kwargs,
         )[-1]
+        if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
+            if fn.fn != expr.function.fn:
+                return
+            if fn.is_classmethod:
+                args = (
+                    typing.cast(object, replace_typevars(typevars, fn.owner)),
+                ) + args
+
+        elif fn != expr.function:
+            return
+
         result = replace_typevars_expression(
             self.inner_fn(*args, **expr.kwargs), typevars
         )
