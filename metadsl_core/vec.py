@@ -51,7 +51,7 @@ class Vec(Expression, typing.Generic[T]):
         """
 
 
-@register
+@register  # type: ignore
 @rule
 def getitem(i: int, xs: typing.Sequence[T]) -> R[T]:
     return (Vec[T].create(*xs)[Integer.from_int(i)], lambda: xs[i])
@@ -60,7 +60,10 @@ def getitem(i: int, xs: typing.Sequence[T]) -> R[T]:
 @register
 @rule
 def map(fn: Abstraction[T, U], xs: typing.Sequence[T]) -> R[Vec[U]]:
-    return (Vec[T].create(*xs).map(fn), lambda: Vec[U].create(*(fn(x) for x in xs)))
+    return (
+        Vec[T].create(*xs).map(fn),  # type: ignore
+        lambda: (Vec.create(*(fn(x) for x in xs))) if xs else Vec[U].create(),
+    )
 
 
 @register
@@ -97,7 +100,7 @@ def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
 
 @register
 @rule
-def convert_tuple(xs: object) -> R[Maybe[Vec[T]]]:
+def convert_vec(xs: object) -> R[Maybe[Vec[T]]]:
     def replacement() -> Maybe[Vec[T]]:
         res = Maybe.just(Vec[T].create())
         # Only convert tuples
