@@ -7,7 +7,7 @@ from metadsl import *
 
 from .rules import *
 
-__all__ = ["Abstraction"]
+__all__ = ["Abstraction", "Variable"]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")

@@ -1,27 +1,30 @@
-from metadsl import execute_rule
 from .conversion import *
 from .maybe import *
+from .rules import *
 
 
 class TestConvertIdentity:
     def test_matches_type(self):
-        assert execute_rule(
-            convert_identity_rule, Converter[int].convert(1)
-        ) == Maybe.just(1)
+        assert execute_core(Converter[int].convert(1)) == Maybe.just(1)
 
     def test_doesnt_match_type(self):
         assert not list(convert_identity_rule(Converter[str].convert(1)))
 
+    def test_matches_convert(self):
+        assert execute_core(Converter[int].convert(Maybe.just(1))) == Maybe.just(1)
+        assert (
+            execute_core(Converter[int].convert(Maybe[int].nothing()))
+            == Maybe[int].nothing()
+        )
+
 
 class TestConvertToMaybe:
     def test_just(self):
-        result = execute_rule(convert_to_maybe, Converter[Maybe[int]].convert(1))
-
-        assert execute_rule(
-            convert_to_maybe, Converter[Maybe[int]].convert(1)
-        ) == Maybe.just(Converter[int].convert(1))
+        assert execute_core(Converter[Maybe[int]].convert(1)) == Maybe.just(
+            Maybe.just(1)
+        )
 
     def test_nothing(self):
-        assert execute_rule(
-            convert_to_maybe, Converter[Maybe[int]].convert(None)
-        ) == Maybe.just(Maybe[int].nothing())
+        assert execute_core(Converter[Maybe[int]].convert(None)) == Maybe.just(
+            Maybe[int].nothing()
+        )

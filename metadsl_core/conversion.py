@@ -28,7 +28,9 @@ def convert_identity_rule(value: T) -> R[Maybe[T]]:
     """
     When the value is an instance of the type being converted, we can convert it.
     """
-    return Converter[T].convert(value), Maybe.just(value)
+    yield Converter[T].convert(value), Maybe.just(value)
+    yield Converter[T].convert(Maybe.just(value)), Maybe.just(value)
+    yield Converter[T].convert(Maybe[T].nothing()), Maybe[T].nothing()
 
 
 @register

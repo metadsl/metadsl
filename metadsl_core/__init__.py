@@ -11,5 +11,6 @@ from .boolean import *
 from .pair import *
 from .vec import *
 from .integer import *
+from .numpy import *
 
 __version__ = "0.0.0"
