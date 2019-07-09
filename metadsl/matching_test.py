@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typing
 from .matching import *
-from .rules import execute_rule
+from .rules import *
 from .typing_tools import *
 from .expressions import *
 
@@ -249,6 +249,42 @@ class TestRule:
             == Abstraction[int, str].create()
         )
 
+    def test_literal_arg(self):
+        """
+        If we pass in a non expression arg, the rule shouldn't execute until it is really an instance
+        of that, not an instance of expression.
+        """
+
+        @expression
+        def add(i: int, j: int) -> int:
+            ...
+
+        @expression
+        def subtract(i: int, j: int) -> int:
+            ...
+
+        @rule  # type: ignore
+        def add_rule(i: int, j: int) -> R[int]:
+            return add(i, j), lambda: i + j
+
+        @rule  # type: ignore
+        def subtract_rule(i: int, j: int) -> R[int]:
+            return subtract(i, j), lambda: i - j
+
+        assert execute_rule(subtract_rule, subtract(add(1, 2), 3)) == subtract(
+            add(1, 2), 3
+        )
+
+        assert execute_rule(
+            RulesRepeatFold(add_rule), subtract(add(1, 2), 3)
+        ) == subtract(3, 3)
+        assert (
+            execute_rule(
+                RulesRepeatFold(add_rule, subtract_rule), subtract(add(1, 2), 3)
+            )
+            == 0
+        )
+
 
 class TestDefaultRule:
     def test_fn(self):
@@ -392,3 +428,33 @@ class TestDefaultRule:
         assert execute_rule(rule, identity_2(1)) == identity(1)
         assert execute_rule(rule, identity_2(_from_int(1))) == identity(_from_int(1))
 
+    def test_literal_arg(self):
+        """
+        If we pass in a non expression arg, the rule shouldn't execute until it is really an instance
+        of that, not an instance of expression.
+        """
+
+        @expression
+        def add(i: int, j: int) -> int:
+            return i + j
+
+        @expression
+        def subtract(i: int, j: int) -> int:
+            return i - j
+
+        add_rule = default_rule(add)
+        subtract_rule = default_rule(subtract)
+
+        assert execute_rule(subtract_rule, subtract(add(1, 2), 3)) == subtract(
+            add(1, 2), 3
+        )
+
+        assert execute_rule(
+            RulesRepeatFold(add_rule), subtract(add(1, 2), 3)
+        ) == subtract(3, 3)
+        assert (
+            execute_rule(
+                RulesRepeatFold(subtract_rule, add_rule), subtract(add(1, 2), 3)
+            )
+            == 0
+        )

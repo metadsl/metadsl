@@ -16,6 +16,7 @@ import dataclasses
 import functools
 import types
 import inspect
+import typing_inspect
 
 from .expressions import *
 from .dict_tools import *
@@ -79,11 +80,19 @@ class DefaultRule:
         fn = self.fn
 
         args = expr.args
+
+        # If any of the args are placeholders, don't match!
+        if any(
+            isinstance(arg, PlaceholderExpression)
+            for arg in args + tuple(expr.kwargs.values())
+        ):
+            return
+
         typevars: TypeVarMapping = infer_return_type(
             expr.function.fn,  # type: ignore
             getattr(expr.function, "owner", None),
             getattr(expr.function, "is_classmethod", False),
-            expr.args,
+            args,
             expr.kwargs,
         )[-1]
         if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
@@ -220,6 +229,16 @@ def match_expression(
     """
 
     if template in wildcards:
+        # If we are matching against a placeholder and the expression is not resolved to that placeholder, don't match.
+        if (
+            isinstance(template, PlaceholderExpression)
+            and isinstance(expr, Expression)
+            and not typing_inspect.is_typevar(
+                typing_inspect.get_args(typing_inspect.get_generic_type(template))[0]
+            )
+        ):
+            raise NoMatch
+
         # Match type of wildcard with type of expression
         try:
             return (
