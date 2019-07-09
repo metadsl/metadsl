@@ -45,8 +45,8 @@ class GenericCheckType(type):
         if sub == typing.Any:
             return False
 
-        # Needed when checking if T is instance of Expression
-        if isinstance(sub, typing.TypeVar):  # type: ignore
+        # Needed when checking if T or Union is instance of Expression
+        if isinstance(sub, typing.TypeVar) or sub == typing.Union:  # type: ignore
             return False
         return super().__subclasscheck__(sub)
 
@@ -111,7 +111,15 @@ def generic_subclasscheck(self, cls):
     return issubclass(self.__origin__, cls)
 
 
+# Allow isinstance and issubclass calls on special forms like union
+def special_form_subclasscheck(self, cls):
+    if self == cls:
+        return True
+    raise TypeError
+
+
 typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
+typing._SpecialForm.__subclasscheck__ = special_form_subclasscheck  # type: ignore
 
 
 def get_origin(t: typing.Type) -> typing.Type:
@@ -120,6 +128,9 @@ def get_origin(t: typing.Type) -> typing.Type:
     # https://github.com/ilevkivskyi/typing_inspect/issues/36
     if origin == collections.abc.Sequence:
         return typing.Sequence
+
+    if origin == tuple:
+        return typing.Tuple
 
     return origin
 
@@ -321,6 +332,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
     """
+    if hint == t:
+        return {}
+
     # If it is an instance of OfType[Type[T]], then we should consider it as T
     if isinstance(t, OfType):
         of_type, = typing_inspect.get_args(get_type(t))
@@ -345,6 +359,15 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
 
     if typing_inspect.is_typevar(t):
         return {}
+
+    if typing_inspect.is_union_type(hint):
+        # If this is a union, iterate through and use the first that is a subclass
+        for inner_type in typing_inspect.get_args(hint):
+            if issubclass(t, inner_type):
+                hint = inner_type
+                break
+        else:
+            raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
 
     if not issubclass(t, hint):
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
