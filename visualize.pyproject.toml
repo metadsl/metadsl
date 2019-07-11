@@ -10,6 +10,7 @@ home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "metadsl",
     "graphviz",
+    "black",
     "ipywidgets"
 ]
 requires-python = ">=3.7"
