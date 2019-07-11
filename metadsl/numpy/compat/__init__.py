@@ -16,7 +16,7 @@
 # 3. The C API
 # 4. Mutation operations (like setting a slice)
 
-# It should be just as accepting as the default NumPy API in the type of objects it takes. 
+# It should be just as accepting as the default NumPy API in the type of objects it takes.
 # """
 # import typing
 # import metadsl.numpy.wraps
@@ -44,7 +44,7 @@
 #         ...
 
 
-# # If arange is called with one positional argument, it is the stop, and you cannot set the start with a kward
+# If arange is called with one positional argument, it is the stop, and you cannot set the start with a kward
 # @typing.overload
 # def arange(stop, *, step=None, dtype=None) -> NDArray:
 #     ...
@@ -90,7 +90,6 @@
 #             ),
 #         )
 #     )
-
 
 
 #     # def __gt__(self, other) -> "NDArray":

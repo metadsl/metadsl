@@ -20,3 +20,4 @@ htmlcov
 .jupyter
 .cache
 .local
+.testmondata

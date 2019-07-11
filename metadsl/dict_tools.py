@@ -14,10 +14,13 @@ class Item(typing.Generic[T, V]):
     value: V
 
 
+@dataclasses.dataclass(init=False)
 class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
     """
     Like a dictionary, but can have unhashable keys.
     """
+
+    _items: typing.List[Item[T, V]]
 
     def __init__(self, *items: Item[T, V]):
         self._items = list(items)
@@ -42,7 +45,7 @@ class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
         for item in self._items:
             if item.key == key:
                 return item
-        raise KeyError
+        raise KeyError(f"Cannot find key {key} in {self}")
 
     def __iter__(self):
         for item in self._items:

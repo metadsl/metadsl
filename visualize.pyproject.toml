@@ -3,13 +3,14 @@ requires = ["flit"]
 build-backend = "flit.buildapi"
 
 [tool.flit.metadata]
-module = "metadsl"
+module = "metadsl_visualize"
 author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
-    "typing_extensions",
-    "typing_inspect"
+    "metadsl",
+    "graphviz",
+    "ipywidgets"
 ]
 requires-python = ">=3.7"
 classifiers = [
@@ -20,28 +21,5 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
-[tool.flit.metadata.requires-extra]
-test = [
-    "pytest",
-    "pytest-cov",
-    "pytest-mypy",
-    "pytest-randomly",
-    "pytest-xdist",
-    "pytest-testmon",
-    "mypy"
-]
-doc = [
-    "sphinx",
-    "sphinx-autodoc-typehints",
-    "sphinx_rtd_theme",
-    'recommonmark',
-    "nbsphinx",
-    "ipykernel",
-    "IPython",
-    "sphinx-autobuild"
-]
-dev = [
-    "jupyterlab",
-    "nbconvert",
-    "pudb"
-]
+[tool.flit.entrypoints.pytest11]
+metadsl_visualize = "metadsl_visualize.plugin"
