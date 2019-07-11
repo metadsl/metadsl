@@ -29,8 +29,8 @@ class Expression(GenericCheck):
 
     Calling the function, after replacing the typevars in it (if it is a bound method),
     with the args and kwargs should resualt in an equivalent expression:
-        
-        replace_fn_typevars(self.function, self.typevars)(*self.args, **self.kwargs) == self
+
+    replace_fn_typevars(self.function, self.typevars)(*self.args, **self.kwargs) == self
     
     The return type of the function, inferred by replacing the typevars in and with these args and kwargs,
     should match the type of the expression. If the return type of the function is not subclass of expression,

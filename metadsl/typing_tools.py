@@ -91,7 +91,11 @@ def generic_getattr(self, attr):
     """
     if "__origin__" in self.__dict__ and attr not in ("__wrapped__"):
         # If the attribute is a descriptor, pass in the generic class
-        property = self.__origin__.__getattribute__(self.__origin__, attr)
+        try:
+            property = self.__origin__.__getattribute__(self.__origin__, attr)
+        except:
+            return
+
         if hasattr(property, "__get__"):
             return property.__get__(None, self)
         # Otherwise, just resolve it normally
