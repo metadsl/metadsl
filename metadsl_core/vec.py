@@ -112,7 +112,7 @@ def convert_vec(xs: object) -> R[Maybe[Vec[T]]]:
             def fn(b: Pair[Vec[T], T]) -> Vec[T]:
                 return b.left().append(b.right())
 
-            res = (res & Converter[T].convert(x)).map(fn)
+            res = (res & Converter[T].convert(x)).map(fn)  # type: ignore
         return res
 
     return Converter[Vec[T]].convert(xs), replacement

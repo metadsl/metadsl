@@ -51,7 +51,7 @@ def unbox_integer(i: Integer) -> int:
     ...
 
 
-@register
+@register  # type: ignore
 @rule
 def unbox_integer_rule(i: int) -> R[int]:
     return unbox_integer(Integer.from_int(i)), i
@@ -99,7 +99,7 @@ def homo_tuple(*values: T) -> typing.Tuple[T, ...]:
 register(default_rule(homo_tuple))
 
 
-@register
+@register  # type: ignore
 @rule
 def unbox_idxs_rule(
     i: Integer, ints: typing.Sequence[Integer]
@@ -107,11 +107,11 @@ def unbox_idxs_rule(
     yield (unbox_idxs(Either[Integer, Vec[Integer]].left(i)), unbox_integer(i))
     yield (
         unbox_idxs(Either[Integer, Vec[Integer]].right(Vec.create(*ints))),
-        lambda: homo_tuple(*(unbox_integer(i_) for i_ in ints)),
+        lambda: homo_tuple(*(unbox_integer(i_) for i_ in ints)),  # type: ignore
     )
 
 
-@register
+@register  # type: ignore
 @rule
 def unbox_ndarray_getitem(
     a: numpy_api.NDArray, idx: Either[Integer, Vec[Integer]]

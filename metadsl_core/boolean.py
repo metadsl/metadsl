@@ -7,6 +7,9 @@ from .conversion import *
 from .maybe import *
 
 
+__all__ = ["Boolean"]
+
+
 class Boolean(Expression):
     @expression
     @classmethod

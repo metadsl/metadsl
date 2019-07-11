@@ -26,7 +26,7 @@ class Pair(Expression, typing.Generic[T, U]):
         ...
 
 
-@register
+@register  # type: ignore
 @rule
 def pair_left(l: T, r: U) -> R[T]:
     """
@@ -36,7 +36,7 @@ def pair_left(l: T, r: U) -> R[T]:
     return Pair.create(l, r).left(), l
 
 
-@register
+@register  # type: ignore
 @rule
 def pair_right(l: T, r: U) -> R[U]:
     """

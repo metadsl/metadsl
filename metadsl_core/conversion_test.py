@@ -8,7 +8,9 @@ class TestConvertIdentity:
         assert execute_core(Converter[int].convert(1)) == Maybe.just(1)
 
     def test_doesnt_match_type(self):
-        assert not list(convert_identity_rule(Converter[str].convert(1)))
+        assert not list(
+            convert_identity_rule(Converter[str].convert(1))  # type: ignore
+        )
 
     def test_matches_convert(self):
         assert execute_core(Converter[int].convert(Maybe.just(1))) == Maybe.just(1)

@@ -130,7 +130,7 @@ def get_origin(t: typing.Type) -> typing.Type:
         return typing.Sequence
 
     if origin == tuple:
-        return typing.Tuple
+        return typing.Tuple  # type: ignore
 
     return origin
 

@@ -21,9 +21,9 @@ provide a roadmap, and lay out the motivation for this library.
 .. toctree::
    :maxdepth: 3
 
-   Why
+   Motivation
    Simple Arrays
-   Lambda Calculus
    Concepts
    Roadmap
+   Contributing
    api/index
