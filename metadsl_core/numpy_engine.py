@@ -26,7 +26,7 @@ def unbox_ndarray(n: numpy_api.NDArray) -> numpy.ndarray:
     ...
 
 
-@register
+@register_unbox
 @rule
 def box_unbox_ndarray(n: numpy.ndarray) -> R[numpy.ndarray]:
     return unbox_ndarray(box_ndarray(n)), n
@@ -37,7 +37,7 @@ def unbox_ndarray_compat(n: numpy_api.NDArrayCompat) -> numpy.ndarray:
     ...
 
 
-@register
+@register_unbox
 @rule
 def box_unbox_ndarray_compat(n: numpy_api.NDArray) -> R[numpy.ndarray]:
     return (
@@ -51,7 +51,7 @@ def unbox_integer(i: Integer) -> int:
     ...
 
 
-@register  # type: ignore
+@register_unbox  # type: ignore
 @rule
 def unbox_integer_rule(i: int) -> R[int]:
     return unbox_integer(Integer.from_int(i)), i
@@ -62,13 +62,13 @@ def arange(stop: int) -> numpy.ndarray:
     return numpy.arange(stop)
 
 
-@register
+@register_unbox
 @rule
 def unbox_arange(i: Integer):
     return (unbox_ndarray(numpy_api.arange_(i)), arange(unbox_integer(i)))
 
 
-register(default_rule(arange))
+register_numpy_engine(default_rule(arange))
 # @expression
 # def arange_compat(stop: object) -> Maybe[numpy.ndarray]:
 #     return Converter[int].convert(stop).map(Abstraction.from_fn(arange))
@@ -81,7 +81,7 @@ def ndarray_getitem(
     return self[i]
 
 
-register(default_rule(ndarray_getitem))
+register_numpy_engine(default_rule(ndarray_getitem))
 
 
 @expression
@@ -99,7 +99,7 @@ def homo_tuple(*values: T) -> typing.Tuple[T, ...]:
 register(default_rule(homo_tuple))
 
 
-@register  # type: ignore
+@register_unbox  # type: ignore
 @rule
 def unbox_idxs_rule(
     i: Integer, ints: typing.Sequence[Integer]
@@ -111,7 +111,7 @@ def unbox_idxs_rule(
     )
 
 
-@register  # type: ignore
+@register_unbox  # type: ignore
 @rule
 def unbox_ndarray_getitem(
     a: numpy_api.NDArray, idx: Either[Integer, Vec[Integer]]

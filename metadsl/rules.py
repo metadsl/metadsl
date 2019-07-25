@@ -23,6 +23,7 @@ __all__ = [
     "RuleInOrder",
     "RuleFold",
     "RuleRepeat",
+    "CollapseReplacementsRule",
 ]
 
 T = typing.TypeVar("T")
@@ -56,7 +57,26 @@ def execute_rule(rule: Rule, expr: T) -> T:
         expr = replacement.result_whole
     return expr
 
+
 T_Rule = typing.TypeVar("T_Rule", bound=Rule)
+
+
+@dataclasses.dataclass
+class CollapseReplacementsRule:
+    """
+    Takes in an existing rule and collapses all replacements to just one, and renames it.
+    """
+
+    name: str
+    rule: Rule
+
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+        result = execute_rule(self.rule, expr)  # type: ignore
+        yield Replacement(rule=self, initial=expr, result=result, result_whole=result)
+
+    def __str__(self):
+        return self.name
+
 
 @dataclasses.dataclass(init=False)
 class RulesRepeatSequence:
@@ -128,7 +148,9 @@ class RuleInOrder:
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
-            yield from rule(expr)
+            for replacement in rule(expr):
+                expr = replacement.result_whole
+                yield replacement
 
 
 @dataclasses.dataclass

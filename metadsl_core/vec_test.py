@@ -37,7 +37,7 @@ def convert_to_str(i: int, s: str) -> R[Maybe[Str]]:
     yield Converter[Str].convert(i), Maybe[Str].nothing()
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *core_rules.rules)
+convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *all_rules.rules)
 
 e = lambda e: execute_rule(convert_rules, e)
 

@@ -35,10 +35,10 @@ class IntCompat(Expression):
         ...
 
 
-register(default_rule(IntCompat.__add__))
+register_convert(default_rule(IntCompat.__add__))
 
 
-@register
+@register_convert
 @rule
 def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
@@ -61,10 +61,10 @@ class TupleIntCompat(Expression):
         ...
 
 
-register(default_rule(TupleIntCompat.__getitem__))
+register_convert(default_rule(TupleIntCompat.__getitem__))
 
 
-@register
+@register_convert
 @rule
 def convert_to_vec_integer(i: Maybe[Vec[Integer]]) -> R[Maybe[Vec[Integer]]]:
     return Converter[Vec[Integer]].convert(TupleIntCompat.from_vec_integer(i)), i
@@ -96,10 +96,10 @@ class NDArrayCompat(Expression):
         ...
 
 
-register(default_rule(NDArrayCompat.__getitem__))
+register_convert(default_rule(NDArrayCompat.__getitem__))
 
 
-@register
+@register_convert
 @rule
 def convert_to_ndarray(i: Maybe[NDArray]) -> R[Maybe[NDArray]]:
     return Converter[NDArray].convert(NDArrayCompat.from_ndarray(i)), i
@@ -112,7 +112,7 @@ def arange(stop: object) -> NDArrayCompat:
     )
 
 
-register(default_rule(arange))
+register_convert(default_rule(arange))
 
 
 @expression

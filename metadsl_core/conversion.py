@@ -22,7 +22,7 @@ class Converter(Expression, typing.Generic[T]):
         ...
 
 
-@register
+@register_convert
 @rule
 def convert_identity_rule(value: T) -> R[Maybe[T]]:
     """
@@ -33,7 +33,7 @@ def convert_identity_rule(value: T) -> R[Maybe[T]]:
     yield Converter[T].convert(Maybe[T].nothing()), Maybe[T].nothing()
 
 
-@register
+@register_convert
 @rule
 def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
     return (

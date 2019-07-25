@@ -98,7 +98,7 @@ def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
 #     return t.fold(Maybe.just(Vec[T].create()), fn)
 
 
-@register
+@register_convert
 @rule
 def convert_vec(xs: object) -> R[Maybe[Vec[T]]]:
     def replacement() -> Maybe[Vec[T]]:
