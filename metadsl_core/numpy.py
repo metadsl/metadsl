@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy
 from metadsl import *
 
 from .vec import *
@@ -10,6 +11,7 @@ from .maybe import *
 from .abstraction import *
 from .pair import *
 from .either import *
+
 
 __all__ = ["arange", "IndxType", "NDArray"]
 
@@ -82,6 +84,21 @@ class NDArray(Expression):
     def __add__(self, other: NDArray) -> NDArray:
         ...
 
+    @expression
+    def to_ndarray(self) -> numpy.ndarray:
+        ...
+
+    @expression
+    @classmethod
+    def from_ndarray(self, n: numpy.ndarray) -> NDArray:
+        ...
+
+
+@register_unbox
+@rule
+def box_unbox_ndarray(n: numpy.ndarray) -> R[numpy.ndarray]:
+    return NDArray.from_ndarray(n).to_ndarray(), n
+
 
 class NDArrayCompat(Expression):
     @expression
@@ -105,6 +122,16 @@ class NDArrayCompat(Expression):
     @classmethod
     def from_ndarray(cls, n: Maybe[NDArray]) -> NDArrayCompat:
         ...
+
+    @expression
+    def to_ndarray(self) -> numpy.ndarray:
+        ...
+
+
+@register_unbox
+@rule
+def box_unbox_ndarray_compat(n: NDArray) -> R[numpy.ndarray]:
+    return (NDArrayCompat.from_ndarray(Maybe.just(n)).to_ndarray(), n.to_ndarray())
 
 
 @register_convert
