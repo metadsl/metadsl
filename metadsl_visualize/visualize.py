@@ -237,26 +237,26 @@ def visualize_replacement(replacement: Replacement):
 
     result = replacement.result
     result_id = id_(result)
-    with dot.subgraph(name="clusteri") as sub:
-        initial_id = visualize(replacement.initial, sub, seen)
-        sub.attr(style="dashed")
+    # with dot.subgraph(name="clusteri") as sub:
+    #     initial_id = visualize(replacement.initial, sub, seen)
+    #     sub.attr(style="dashed")
 
     def inner(expr, dot=dot) -> int:
         expr_id = id_(expr)
         if expr_id in seen:
             return expr_id
         if expr_id == result_id:
-            with dot.subgraph(name="clusterr") as sub:
-                visualize(expr, sub, seen)
-                sub.attr(style="bold")
-            dot.edge(
-                str(initial_id),
-                str(result_id),
-                ltail="clusteri",
-                lhead="clusterr",
-                minlen="5",
-                constraint="false",
-            )
+            # with dot.subgraph(name="clusterr") as sub:
+            visualize(expr, dot, seen)
+            # sub.attr(style="bold")
+            # dot.edge(
+            #     str(initial_id),
+            #     str(result_id),
+            #     ltail="clusteri",
+            #     lhead="clusterr",
+            #     minlen="5",
+            #     constraint="false",
+            # )
             return result_id
         else:
             seen.add(expr_id)
