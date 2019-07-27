@@ -85,6 +85,23 @@ register_numpy_engine(default_rule(ndarray_getitem))
 
 
 @expression
+def ndarray_add(
+    self: typing.Union[numpy.ndarray, numpy.int64],
+    other: typing.Union[numpy.ndarray, numpy.int64],
+) -> typing.Union[numpy.ndarray, numpy.int64]:
+    return self + other
+
+
+register_numpy_engine(default_rule(ndarray_add))
+
+
+@register_unbox  # type: ignore
+@rule
+def unbox_ndarray_add(a: numpy_api.NDArray, b: numpy_api.NDArray) -> R[numpy.ndarray]:
+    return unbox_ndarray(a + b), ndarray_add(unbox_ndarray(a), unbox_ndarray(b))
+
+
+@expression
 def unbox_idxs(
     idxs: Either[Integer, Vec[Integer]]
 ) -> typing.Union[int, typing.Tuple[int, ...]]:

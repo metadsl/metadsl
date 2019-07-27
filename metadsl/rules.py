@@ -71,7 +71,11 @@ class CollapseReplacementsRule:
     rule: Rule
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
-        result = execute_rule(self.rule, expr)  # type: ignore
+        result = None
+        for replacement in self.rule(expr):  # type: ignore
+            result = replacement.result_whole
+        if not result:
+            return
         yield Replacement(rule=self, initial=expr, result=result, result_whole=result)
 
     def __str__(self):

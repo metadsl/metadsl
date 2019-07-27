@@ -11,7 +11,7 @@ from .abstraction import *
 from .pair import *
 from .either import *
 
-__all__ = ["arange"]
+__all__ = ["arange", "IndxType", "NDArray"]
 
 
 class IntCompat(Expression):
@@ -70,9 +70,16 @@ def convert_to_vec_integer(i: Maybe[Vec[Integer]]) -> R[Maybe[Vec[Integer]]]:
     return Converter[Vec[Integer]].convert(TupleIntCompat.from_vec_integer(i)), i
 
 
+IndxType = Either[Integer, Vec[Integer]]
+
+
 class NDArray(Expression):
     @expression
-    def __getitem__(self, idxs: Either[Integer, Vec[Integer]]) -> NDArray:
+    def __getitem__(self, idxs: IndxType) -> NDArray:
+        ...
+
+    @expression
+    def __add__(self, other: NDArray) -> NDArray:
         ...
 
 
@@ -91,9 +98,23 @@ class NDArrayCompat(Expression):
         )
 
     @expression
+    def __add__(self, other: NDArrayCompat) -> NDArrayCompat:
+        ...
+
+    @expression
     @classmethod
     def from_ndarray(cls, n: Maybe[NDArray]) -> NDArrayCompat:
         ...
+
+
+@register_convert
+@rule
+def add_compat(l: NDArray, r: NDArray) -> R[NDArrayCompat]:
+    return (
+        NDArrayCompat.from_ndarray(Maybe.just(l))
+        + NDArrayCompat.from_ndarray(Maybe.just(r)),
+        NDArrayCompat.from_ndarray(Maybe.just(l + r)),
+    )
 
 
 register_convert(default_rule(NDArrayCompat.__getitem__))

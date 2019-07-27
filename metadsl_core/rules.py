@@ -33,6 +33,7 @@ register_numpy_engine = numpy_engine.append
 
 
 all_rules = RuleInOrder(
+    CollapseReplacementsRule("core", RulesRepeatSequence(core_rules)),
     CollapseReplacementsRule("convert", RulesRepeatSequence(core_rules, convert_rules)),
     CollapseReplacementsRule(
         "unbox", RulesRepeatSequence(core_rules, convert_rules, unbox_rules)
