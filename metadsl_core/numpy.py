@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy
 from metadsl import *
 
 from .vec import *
@@ -11,7 +12,8 @@ from .abstraction import *
 from .pair import *
 from .either import *
 
-__all__ = ["arange"]
+
+__all__ = ["arange", "IndxType", "NDArray"]
 
 
 class IntCompat(Expression):
@@ -35,10 +37,10 @@ class IntCompat(Expression):
         ...
 
 
-register(default_rule(IntCompat.__add__))
+register_convert(default_rule(IntCompat.__add__))
 
 
-@register
+@register_convert
 @rule
 def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
@@ -61,19 +63,41 @@ class TupleIntCompat(Expression):
         ...
 
 
-register(default_rule(TupleIntCompat.__getitem__))
+register_convert(default_rule(TupleIntCompat.__getitem__))
 
 
-@register
+@register_convert
 @rule
 def convert_to_vec_integer(i: Maybe[Vec[Integer]]) -> R[Maybe[Vec[Integer]]]:
     return Converter[Vec[Integer]].convert(TupleIntCompat.from_vec_integer(i)), i
 
 
+IndxType = Either[Integer, Vec[Integer]]
+
+
 class NDArray(Expression):
     @expression
-    def __getitem__(self, idxs: Either[Integer, Vec[Integer]]) -> NDArray:
+    def __getitem__(self, idxs: IndxType) -> NDArray:
         ...
+
+    @expression
+    def __add__(self, other: NDArray) -> NDArray:
+        ...
+
+    @expression
+    def to_ndarray(self) -> numpy.ndarray:
+        ...
+
+    @expression
+    @classmethod
+    def from_ndarray(self, n: numpy.ndarray) -> NDArray:
+        ...
+
+
+@register_unbox
+@rule
+def box_unbox_ndarray(n: numpy.ndarray) -> R[numpy.ndarray]:
+    return NDArray.from_ndarray(n).to_ndarray(), n
 
 
 class NDArrayCompat(Expression):
@@ -91,15 +115,39 @@ class NDArrayCompat(Expression):
         )
 
     @expression
+    def __add__(self, other: NDArrayCompat) -> NDArrayCompat:
+        ...
+
+    @expression
     @classmethod
     def from_ndarray(cls, n: Maybe[NDArray]) -> NDArrayCompat:
         ...
 
+    @expression
+    def to_ndarray(self) -> numpy.ndarray:
+        ...
 
-register(default_rule(NDArrayCompat.__getitem__))
+
+@register_unbox
+@rule
+def box_unbox_ndarray_compat(n: NDArray) -> R[numpy.ndarray]:
+    return (NDArrayCompat.from_ndarray(Maybe.just(n)).to_ndarray(), n.to_ndarray())
 
 
-@register
+@register_convert
+@rule
+def add_compat(l: NDArray, r: NDArray) -> R[NDArrayCompat]:
+    return (
+        NDArrayCompat.from_ndarray(Maybe.just(l))
+        + NDArrayCompat.from_ndarray(Maybe.just(r)),
+        NDArrayCompat.from_ndarray(Maybe.just(l + r)),
+    )
+
+
+register_convert(default_rule(NDArrayCompat.__getitem__))
+
+
+@register_convert
 @rule
 def convert_to_ndarray(i: Maybe[NDArray]) -> R[Maybe[NDArray]]:
     return Converter[NDArray].convert(NDArrayCompat.from_ndarray(i)), i
@@ -112,7 +160,7 @@ def arange(stop: object) -> NDArrayCompat:
     )
 
 
-register(default_rule(arange))
+register_convert(default_rule(arange))
 
 
 @expression

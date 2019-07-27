@@ -44,19 +44,19 @@ class TestAbstraction:
     def test_constant(self):
         assert (
             execute_rule(
-                core_rules, Abstraction[typing.Any, int].from_fn(lambda _: 10)("hi")
+                all_rules, Abstraction[typing.Any, int].from_fn(lambda _: 10)("hi")
             )
             == 10
         )
 
     def test_identity(self):
         assert (
-            execute_rule(core_rules, Abstraction[T, T].from_fn(lambda i: i)("hi"))
+            execute_rule(all_rules, Abstraction[T, T].from_fn(lambda i: i)("hi"))
             == "hi"
         )
 
     def test_compose(self):
         assert execute_rule(
-            core_rules,
+            all_rules,
             (Abstraction.from_fn(I.inc) + Abstraction.from_fn(I.dec))(I.create(10)),
         ) == I.inc(I.dec(I.create(10)))

@@ -37,7 +37,7 @@ def either_match(l: Abstraction[T, V], r: Abstraction[U, V], t: T, u: U) -> R[V]
     yield Either[T, U].right(u).match(l, r), lambda: r(u)  # type: ignore
 
 
-@register
+@register_convert
 @rule
 def convert_to_either(x: object) -> R[Maybe[Either[T, U]]]:
     """

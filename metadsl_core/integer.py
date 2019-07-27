@@ -23,7 +23,7 @@ class Integer(Expression):
         ...
 
 
-@register
+@register_convert
 @rule
 def convert_integer(i: int) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(i), lambda: Maybe.just(Integer.from_int(i))

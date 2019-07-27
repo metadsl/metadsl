@@ -5,7 +5,7 @@ from metadsl import *
 from .conversion import *
 from .either import *
 from .abstraction import *
-from .rules import core_rules
+from .rules import all_rules
 from .maybe import *
 
 
@@ -44,11 +44,11 @@ class TestMatches:
         str_to_int = Abstraction.from_fn(Int.from_str)
 
         assert execute_rule(
-            core_rules, IntStr.left(Int.from_int(10)).match(double_int, str_to_int)
+            all_rules, IntStr.left(Int.from_int(10)).match(double_int, str_to_int)
         ) == Int.from_int(2) * Int.from_int(10)
 
         assert execute_rule(
-            core_rules, IntStr.right(Str.from_str("10")).match(double_int, str_to_int)
+            all_rules, IntStr.right(Str.from_str("10")).match(double_int, str_to_int)
         ) == Int.from_str(Str.from_str("10"))
 
 
@@ -62,7 +62,7 @@ def convert_to_str(s: str) -> R[Maybe[Str]]:
     return Converter[Str].convert(s), lambda: Maybe.just(Str.from_str(s))
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *core_rules.rules)
+convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *all_rules.rules)
 
 execute_rules = lambda e: execute_rule(convert_rules, e)
 

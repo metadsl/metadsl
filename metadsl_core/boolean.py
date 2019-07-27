@@ -17,7 +17,7 @@ class Boolean(Expression):
         ...
 
 
-@register
+@register_convert
 @rule
 def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     """
