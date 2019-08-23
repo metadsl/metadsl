@@ -39,7 +39,7 @@ type Kind = {
   // label for for the function
   type: string;
   // names of the type parameters
-  params: Array<string>;
+  params?: Array<string>;
 };
 
 /**
@@ -57,9 +57,9 @@ type Kind = {
 type Function_<T extends string> = {
   function: string;
   // name of the type variables
-  type_params: Array<T>;
+  type_params?: Array<T>;
   // arguments
-  params: Array<{ name: string; type: Type<T> }>;
+  params: Array<[string, Type<T>]>;
   return: Type<T>;
 };
 
@@ -74,7 +74,7 @@ type TypeVariable<T extends string> = {
 };
 type TypeType<T extends string> = {
   type: string;
-  params: Array<Type<T>>;
+  params?: Array<Type<T>>;
 };
 
 /**
@@ -90,10 +90,7 @@ const Abstraction: Definitions = [
   {
     function: "Abstraction.create",
     type_params: ["ARG", "RET"],
-    params: [
-      { name: "var", type: { param: "ARG" } },
-      { name: "body", type: { param: "RET" } }
-    ],
+    params: [["var", { param: "ARG" }], ["body", { param: "RET" }]],
     return: {
       type: "Abstraction",
       params: [{ param: "ARG" }, { param: "RET" }]
@@ -103,17 +100,14 @@ const Abstraction: Definitions = [
     function: "Abstraction.__call__",
     type_params: ["ARG", "RET"],
     params: [
-      {
-        name: "self",
-        type: {
+      [
+        "self",
+        {
           type: "Abstraction",
           params: [{ param: "ARG" }, { param: "RET" }]
         }
-      },
-      {
-        name: "arg",
-        type: { param: "ARG" }
-      }
+      ],
+      ["arg", { param: "ARG" }]
     ],
     return: { param: "RET" }
   }
@@ -136,23 +130,35 @@ const Maybe: Definitions = [
   {
     function: "Maybe.just",
     type_params: ["T"],
-    params: [{ name: "value", type: { param: "T" } }],
+    params: [["value", { param: "T" }]],
     return: { type: "Maybe", params: [{ param: "T" }] }
   },
   {
     function: "Maybe.match",
     type_params: ["ARG", "RET"],
     params: [
-      { name: "self", type: { type: "Maybe", params: [{ param: "RET" }] } },
-      { name: "nothing", type: { param: "RET" } },
-      {
-        name: "just",
-        type: {
+      ["self", { type: "Maybe", params: [{ param: "RET" }] }],
+      ["nothing", { param: "RET" }],
+      [
+        "just",
+        {
           type: "Abstraction",
           params: [{ param: "ARG" }, { param: "RET" }]
         }
-      }
+      ]
     ],
     return: { param: "RET" }
+  }
+];
+
+const Nat: Definitions = [{ type: "Nat" }];
+
+const Vec: Definitions = [
+  { type: "Vec", params: ["T"] },
+  {
+    function: "Vec.__getitem__",
+    type_params: ["T"],
+    params: [["self", { param: "T" }], ["index", { type: "Nat" }]],
+    return: { param: "T" }
   }
 ];
