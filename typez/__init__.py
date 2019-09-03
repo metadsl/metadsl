@@ -3,7 +3,7 @@ Meta language for describing DSLs in JSON.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import *
 import json
 import jsonschema
@@ -29,7 +29,7 @@ class Typez:
     states: Optional[States] = None
 
     def __post_init__(self):
-        jsonschema.validate(self, typez_schema)
+        jsonschema.validate(asdict(self), typez_schema)
 
 
 Definitions = Dict[str, Union["Kind", "Function"]]
@@ -118,7 +118,7 @@ class TypezDisplay(IPython.core.display.DisplayObject):
         self._typez = typez
 
     def _repr_mimebundle_(self):
-        return {"application/json": self.typez}
+        return {"application/json": asdict(self.typez)}
 
     def display(self):
         self.display_id = IPython.core.display.display(self, display_id=True)
