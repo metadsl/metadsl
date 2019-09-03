@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import typing
 
 from metadsl import *
 from .rules import *
@@ -9,12 +9,24 @@ from .maybe import *
 
 __all__ = ["Boolean"]
 
+T = typing.TypeVar("T")
+
 
 class Boolean(Expression):
     @expression
     @classmethod
     def create(cls, b: bool) -> Boolean:
         ...
+
+    @expression
+    def if_(self, true: T, false: T) -> T:
+        ...
+
+
+@register  # type: ignore
+@rule
+def if_(b: bool, l: T, r: T) -> R[T]:
+    return Boolean.create(b).if_(l, r), lambda: l if b else r
 
 
 @register_convert

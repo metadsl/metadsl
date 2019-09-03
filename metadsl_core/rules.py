@@ -11,6 +11,7 @@ __all__ = [
     "register_convert",
     "register_unbox",
     "register_numpy_engine",
+    "register_post",
     "execute_core",
     "all_rules",
 ]
@@ -18,6 +19,11 @@ __all__ = [
 
 core_rules = RulesRepeatFold()
 register = core_rules.append
+
+# Rules that have to take place only after all other rules
+core_post_rules = RulesRepeatFold()
+register_post = core_post_rules.append
+
 
 # Conversions from untyped values to typed values
 convert_rules = RulesRepeatFold()
@@ -39,7 +45,8 @@ all_rules = RuleInOrder(
         "unbox", RulesRepeatSequence(core_rules, convert_rules, unbox_rules)
     ),
     CollapseReplacementsRule(
-        "execute", RulesRepeatSequence(core_rules, convert_rules, numpy_engine)
+        "execute",
+        RulesRepeatSequence(core_rules, convert_rules, numpy_engine, core_post_rules),
     ),
 )
 

@@ -6,6 +6,7 @@ from metadsl import *
 from .rules import *
 from .abstraction import *
 from .abstraction import Variable, from_fn_rule
+from .integer import *
 
 
 T = typing.TypeVar("T")
@@ -60,3 +61,22 @@ class TestAbstraction:
             all_rules,
             (Abstraction.from_fn(I.inc) + Abstraction.from_fn(I.dec))(I.create(10)),
         ) == I.inc(I.dec(I.create(10)))
+
+    def test_fix(self):
+        assert execute_core(factorial(zero)) == one
+        assert execute_core(factorial(one)) == one
+        assert execute_core(factorial(Integer.from_int(2))) == Integer.from_int(2)
+
+
+one = Integer.from_int(1)
+zero = Integer.from_int(0)
+
+
+@Abstraction.fix
+@Abstraction.from_fn
+def factorial(fact_fn: Abstraction[Integer, Integer]) -> Abstraction[Integer, Integer]:
+    @Abstraction.from_fn
+    def inner(n: Integer) -> Integer:
+        return n.eq(zero).if_(one, n * fact_fn(n - one))
+
+    return inner

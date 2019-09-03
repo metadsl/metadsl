@@ -56,8 +56,17 @@ class Abstraction(Expression, typing.Generic[T, U]):
         """
         ...
 
+    @staticmethod
+    @expression
+    def fix(fn: Abstraction[T, T]) -> T:
+        """
+        Fixed pointer operator, used to define recursive functions.
+        """
+        return fn(Abstraction.fix(fn))
+
 
 from_fn_rule = register(default_rule(Abstraction[T, U].from_fn))
+fix_rule = register_post(default_rule(Abstraction.fix))
 
 
 def _replace(body: U, var: T, arg: T) -> U:
