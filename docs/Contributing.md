@@ -14,6 +14,7 @@ Or get started with Conda/flit:
 conda create -n metadsl jupyterlab
 conda activate metadsl
 pip install flit
+flit -f typez.pyproject.toml install --symlink
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink

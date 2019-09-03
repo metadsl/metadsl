@@ -1,0 +1,12 @@
+{
+  "name": "typez",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "ts-json-schema-generator --path index.ts Typez > schema.json"
+  },
+  "devDependencies": {
+    "ts-json-schema-generator": "0.52.14"
+  }
+}

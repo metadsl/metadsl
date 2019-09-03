@@ -28,16 +28,29 @@
  */
 
 /**
+ * A combination of defintions, nodes, and states.
+ *
+ * The nodes should refer to types in the definitions, and  the states
+ * should refer to the nodes.
+ */
+export type Typez = {
+  definitions?: Definitions;
+  nodes?: Nodes;
+  states?: States;
+};
+
+/**
  * Top level definitions can either define type constructor or functions.
  */
-type Definitions = Array<Function_<any> | Kind>;
+type Definitions = {
+  // Mapping of names for each  kind/function to the definition
+  [name: string]: Kind | Function_;
+};
 
 /*
  * This is a "kind" because it is a type of a type, or a type constructor
  */
 type Kind = {
-  // label for for the function
-  type: string;
   // names of the type parameters
   params?: Array<string>;
 };
@@ -47,118 +60,161 @@ type Kind = {
  * is defined here as just a function, with the idea being that if it is named
  * like `<type name>.<method name>` and its first argument takes in the type,
  * then it is a method.
- *
- * We don't really need this T paramterization here, but it helps
- * us verify, with typescript, that the params can only use type params
- * defined in the type params, not other strings. I doubt it will translate
- * to JSON schema, but it's nice in here.
  */
 
-type Function_<T extends string> = {
-  function: string;
+type Function_ = {
   // name of the type variables
-  type_params?: Array<T>;
-  // arguments
-  params: Array<[string, Type<T>]>;
-  return: Type<T>;
+  type_params?: Array<string>;
+  // argument types
+  params: Array<[string, Type]>;
+  // return type
+  return_: Type;
 };
 
 /**
- * This is reference to an instantiated type, either one of the type variables
- * or a predifined type
+ * A type we use  to define a function.
  */
-type Type<T extends string> = TypeVariable<T> | TypeType<T>;
+type Type = TypeParameter | DeclaredType | ExternalType;
 
-type TypeVariable<T extends string> = {
-  param: T;
+type TypeParameter = {
+  param: string;
 };
-type TypeType<T extends string> = {
+
+type DeclaredType = {
   type: string;
-  params?: Array<Type<T>>;
+  params?: Array<Type>;
+};
+
+type ExternalType = {
+  type: string;
+  repr: string;
 };
 
 /**
- * Now that we defined our language, we can become writing types and functions in it!
- *
- * Let's start with the untyped lamba calculus.
+ * A mapping of node IDs to the functions
  */
-const Abstraction: Definitions = [
-  {
-    type: "Abstraction",
-    params: ["ARG", "RET"]
-  },
-  {
-    function: "Abstraction.create",
-    type_params: ["ARG", "RET"],
-    params: [["var", { param: "ARG" }], ["body", { param: "RET" }]],
-    return: {
-      type: "Abstraction",
-      params: [{ param: "ARG" }, { param: "RET" }]
-    }
-  },
-  {
-    function: "Abstraction.__call__",
-    type_params: ["ARG", "RET"],
-    params: [
-      [
-        "self",
-        {
-          type: "Abstraction",
-          params: [{ param: "ARG" }, { param: "RET" }]
-        }
-      ],
-      ["arg", { param: "ARG" }]
-    ],
-    return: { param: "RET" }
-  }
-];
+type Nodes = {
+  [id: string]: CallNode | PrimitiveNode;
+};
+
+type CallNode = {
+  function: string;
+  type_params?: Array<TypeInstance>;
+  // An array of the ids of the argument nodes
+  args?: Array<string>;
+  // A mapping of keyward name to node ID
+  kwargs?: { [name: string]: string };
+};
 
 /**
- * Using that, we can create a definition for a "Maybe" type...
+ * A primitive node that represents some type in  the host language
  */
-const Maybe: Definitions = [
-  {
-    type: "Maybe",
-    params: ["T"]
-  },
-  {
-    function: "Maybe.nothing",
-    type_params: ["T"],
-    params: [],
-    return: { type: "Maybe", params: [{ param: "T" }] }
-  },
-  {
-    function: "Maybe.just",
-    type_params: ["T"],
-    params: [["value", { param: "T" }]],
-    return: { type: "Maybe", params: [{ param: "T" }] }
-  },
-  {
-    function: "Maybe.match",
-    type_params: ["ARG", "RET"],
-    params: [
-      ["self", { type: "Maybe", params: [{ param: "RET" }] }],
-      ["nothing", { param: "RET" }],
-      [
-        "just",
-        {
-          type: "Abstraction",
-          params: [{ param: "ARG" }, { param: "RET" }]
-        }
-      ]
-    ],
-    return: { param: "RET" }
-  }
-];
+type PrimitiveNode = { type: string; repr: string };
 
-const Nat: Definitions = [{ type: "Nat" }];
+/**
+ * A type that is passed into a function to set one of its  type
+ */
+type TypeInstance = DeclaredTypeInstance | ExternalTypeInstance;
+type DeclaredTypeInstance = { type: string; params?: Array<TypeInstance> };
+type ExternalTypeInstance = {
+  repr: string;
+};
+/**
+ * A sequence of the states the expression is in.
+ */
+type States = Array<State>;
 
-const Vec: Definitions = [
-  { type: "Vec", params: ["T"] },
-  {
-    function: "Vec.__getitem__",
-    type_params: ["T"],
-    params: [["self", { param: "T" }], ["index", { type: "Nat" }]],
-    return: { param: "T" }
-  }
-];
+type State = {
+  // The node for this state
+  node: string;
+  // The name of the rule that was used to get to this state
+  rule: string;
+  // An optional label to be shown to the user, to highlight this state
+  label?: string;
+};
+
+// /**
+//  * Now that we defined our language, we can become writing types and functions in it!
+//  *
+//  * Let's start with the untyped lamba calculus.
+//  */
+// const Abstraction: Definitions = [
+//   {
+//     type: "Abstraction",
+//     params: ["ARG", "RET"]
+//   },
+//   {
+//     function: "Abstraction.create",
+//     type_params: ["ARG", "RET"],
+//     params: [["var", { param: "ARG" }], ["body", { param: "RET" }]],
+//     return: {
+//       type: "Abstraction",
+//       params: [{ param: "ARG" }, { param: "RET" }]
+//     }
+//   },
+//   {
+//     function: "Abstraction.__call__",
+//     type_params: ["ARG", "RET"],
+//     params: [
+//       [
+//         "self",
+//         {
+//           type: "Abstraction",
+//           params: [{ param: "ARG" }, { param: "RET" }]
+//         }
+//       ],
+//       ["arg", { param: "ARG" }]
+//     ],
+//     return: { param: "RET" }
+//   }
+// ];
+
+// /**
+//  * Using that, we can create a definition for a "Maybe" type...
+//  */
+// const Maybe: Definitions = [
+//   {
+//     type: "Maybe",
+//     params: ["T"]
+//   },
+//   {
+//     function: "Maybe.nothing",
+//     type_params: ["T"],
+//     params: [],
+//     return: { type: "Maybe", params: [{ param: "T" }] }
+//   },
+//   {
+//     function: "Maybe.just",
+//     type_params: ["T"],
+//     params: [["value", { param: "T" }]],
+//     return: { type: "Maybe", params: [{ param: "T" }] }
+//   },
+//   {
+//     function: "Maybe.match",
+//     type_params: ["ARG", "RET"],
+//     params: [
+//       ["self", { type: "Maybe", params: [{ param: "RET" }] }],
+//       ["nothing", { param: "RET" }],
+//       [
+//         "just",
+//         {
+//           type: "Abstraction",
+//           params: [{ param: "ARG" }, { param: "RET" }]
+//         }
+//       ]
+//     ],
+//     return: { param: "RET" }
+//   }
+// ];
+
+// const Nat: Definitions = [{ type: "Nat" }];
+
+// const Vec: Definitions = [
+//   { type: "Vec", params: ["T"] },
+//   {
+//     function: "Vec.__getitem__",
+//     type_params: ["T"],
+//     params: [["self", { param: "T" }], ["index", { type: "Nat" }]],
+//     return: { param: "T" }
+//   }
+// ];
