@@ -7,11 +7,14 @@ from dataclasses import dataclass
 from typing import *
 import json
 import jsonschema
+import pathlib
+import IPython.core.display
+
 
 __all__ = ["Typez"]
 __version__ = "0.0.0"
 
-with open("schema.json") as f:
+with open(pathlib.Path(__file__).parent / "schema.json") as f:
     typez_schema = json.load(f)
 
 # All of these defintions are copied from
@@ -29,7 +32,7 @@ class Typez:
         jsonschema.validate(self, typez_schema)
 
 
-Definitions = Dict[str, Union[Kind, Function]]
+Definitions = Dict[str, Union["Kind", "Function"]]
 
 
 @dataclass
@@ -44,7 +47,7 @@ class Function:
     type_params: Optional[List[str]] = None
 
 
-Type = Union[TypeParameter, DeclaredType, ExternalType]
+Type = Union["TypeParameter", "DeclaredType", "ExternalType"]
 
 
 @dataclass
@@ -64,7 +67,7 @@ class ExternalType:
     repr: str
 
 
-Nodes = Dict[str, Union[CallNode, PrimitiveNode]]
+Nodes = Dict[str, Union["CallNode", "PrimitiveNode"]]
 
 
 @dataclass
@@ -81,7 +84,7 @@ class PrimitiveNode:
     repr: str
 
 
-TypeInstance = Union[DeclaredTypeInstance, ExternalTypeInstance]
+TypeInstance = Union["DeclaredTypeInstance", "ExternalTypeInstance"]
 
 
 @dataclass
@@ -95,7 +98,7 @@ class ExternalTypeInstance:
     repr: str
 
 
-States = List[State]
+States = List["State"]
 
 
 @dataclass
@@ -103,3 +106,31 @@ class State:
     node: str
     rule: str
     label: Optional[str] = None
+
+
+class TypezDisplay(IPython.core.display.DisplayObject):
+    """
+    Modified from 
+    https://github.com/ipython/ipython/blob/91d36d325aff4990062901556aa9581d2b22c897/IPython/core/display.py#L764
+    """
+
+    def __init__(self, typez: Typez):
+        self._typez = typez
+
+    def _repr_mimebundle_(self):
+        return {"application/json": self.typez}
+
+    def display(self):
+        self.display_id = IPython.core.display.display(self, display_id=True)
+
+    def update(self):
+        IPython.core.display.display(self, display_id=self._display_id, update=True)
+
+    @property
+    def typez(self):
+        return self._typez
+
+    @typez.setter
+    def typez(self, value):
+        self._typez = value
+        self.update()
