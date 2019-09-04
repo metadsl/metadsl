@@ -6,6 +6,7 @@ typez object we can use to display as we go.
 from typez import *
 import metadsl
 import typing
+import inspect
 import dataclasses
 import typing_inspect
 
@@ -66,7 +67,7 @@ def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
         node = CallNode(
             type_params=typevars_to_typeparams(metadsl.get_fn_typevars(expr.function))
             or None,
-            function=function_repr(expr.function),
+            function=function_or_type_repr(expr.function),
             args=args or None,
             kwargs=kwargs or None,
         )
@@ -74,7 +75,7 @@ def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
         nodes[node_id] = node
         return node_id, nodes
 
-    type_ = str(type(expr))
+    type_ = function_or_type_repr(type(expr))
     # We try to use the has of an object, if we can,
     # otherwise, if its mutable and has no hash, we use its id
     try:
@@ -87,36 +88,39 @@ def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
 def typevars_to_typeparams(
     typevars: metadsl.TypeVarMapping
 ) -> typing.Dict[str, TypeInstance]:
-    return {str(name): type_to_typeinstnace(tp) for name, tp in typevars.items()}
+    return {
+        var.__name__: type_to_typeinstance(tp)  # type: ignore
+        for var, tp in typevars.items()
+    }
 
 
-def type_to_typeinstnace(tp: typing.Type) -> TypeInstance:
+def type_to_typeinstance(tp: typing.Type) -> TypeInstance:
     """
     Converts a python type to the type instance, by folding through it
     """
     if issubclass(tp, metadsl.Expression):
         return DeclaredTypeInstance(
-            type=expression_type_repr(typing_inspect.get_origin(tp)),
+            type=function_or_type_repr(typing_inspect.get_origin(tp) or tp),
             params=typevars_to_typeparams(
                 metadsl.match_types(metadsl.get_origin_type(tp), tp)
             )
             or None,
         )
-    return ExternalTypeInstance(repr=type_repr(tp))
+    return ExternalTypeInstance(repr=function_or_type_repr(tp))
 
 
-def expression_type_repr(tp: typing.Type[metadsl.Expression]) -> str:
-    return type_repr(tp)
+_builtins = inspect.getmodule(int)
 
 
-def type_repr(tp: typing.Type) -> str:
-    return repr(tp)
-
-
-def function_repr(fn: typing.Callable) -> str:
-    # n = getattr(expr, "__qualname__", getattr(expr, "__name__", str(expr)))
-    return filter_name(str(fn))
-
-
-def filter_name(n):
-    return n.replace("<", "").replace(">", "")
+def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
+    """
+    returns the name of the type or function prefixed by the module name if it isn't a builtin
+    """
+    module = inspect.getmodule(o)
+    name = o.__qualname__ or o.__name__
+    # This is true for objects in typing
+    if not name:
+        return repr(o)
+    if module == _builtins:
+        return name
+    return f"{module.__name__}.{name}"
