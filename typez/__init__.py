@@ -3,7 +3,8 @@ Meta language for describing DSLs in JSON.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
+import dataclasses
 from typing import *
 import json
 import jsonschema
@@ -11,7 +12,7 @@ import pathlib
 import IPython.core.display
 
 
-__all__ = ["Typez"]
+__all__ = ["Typez", "TypezDisplay"]
 __version__ = "0.0.0"
 
 with open(pathlib.Path(__file__).parent / "schema.json") as f:
@@ -28,8 +29,20 @@ class Typez:
     nodes: Optional[Nodes] = None
     states: Optional[States] = None
 
-    def __post_init__(self):
-        jsonschema.validate(asdict(self), typez_schema)
+    def asdict(self):
+        """
+        Turns this into a dict, removing keys with null values and
+        validating it against the schema.
+        """
+        dict_ = dataclasses.asdict(
+            self,
+            dict_factory=lambda entries: {k: v for k, v in entries if v is not None},
+        )
+        jsonschema.validate(dict_, typez_schema)
+        return dict_
+
+    def _repr_mimebundle_(self, include=None, exclude=None):
+        return {"application/json": self.asdict()}
 
 
 Definitions = Dict[str, Union["Kind", "Function"]]
@@ -108,29 +121,28 @@ class State:
     label: Optional[str] = None
 
 
-class TypezDisplay(IPython.core.display.DisplayObject):
+@dataclass
+class TypezDisplay:
     """
-    Modified from 
-    https://github.com/ipython/ipython/blob/91d36d325aff4990062901556aa9581d2b22c897/IPython/core/display.py#L764
+    A display object for typez objects. If you set the `typez` property after calling `display` it will update
+    the existing display.
     """
 
-    def __init__(self, typez: Typez):
-        self._typez = typez
+    typez: Typez
+    _typez: Typez = dataclasses.field(init=False, repr=False)
+    _handle: Optional[IPython.core.display.DisplayHandle] = dataclasses.field(
+        default=None, init=False, repr=False
+    )
 
-    def _repr_mimebundle_(self):
-        return {"application/json": asdict(self.typez)}
+    def _ipython_display_(self):
+        self._handle = IPython.core.display.display(self.typez, display_id=True)
 
-    def display(self):
-        self.display_id = IPython.core.display.display(self, display_id=True)
-
-    def update(self):
-        IPython.core.display.display(self, display_id=self._display_id, update=True)
-
-    @property
+    @property  # type: ignore
     def typez(self):
         return self._typez
 
     @typez.setter
-    def typez(self, value):
+    def typez(self, value: Typez):
         self._typez = value
-        self.update()
+        if self._handle:
+            self._handle.update(self.typez)
