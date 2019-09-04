@@ -12,7 +12,25 @@ import pathlib
 import IPython.core.display
 
 
-__all__ = ["Typez", "TypezDisplay"]
+__all__ = [
+    "Typez",
+    "Definitions",
+    "Kind",
+    "Function",
+    "Type",
+    "TypeParameter",
+    "DeclaredType",
+    "ExternalType",
+    "Nodes",
+    "CallNode",
+    "PrimitiveNode",
+    "TypeInstance",
+    "DeclaredTypeInstance",
+    "ExternalTypeInstance",
+    "States",
+    "State",
+    "TypezDisplay",
+]
 __version__ = "0.0.0"
 
 with open(pathlib.Path(__file__).parent / "schema.json") as f:
@@ -23,7 +41,7 @@ with open(pathlib.Path(__file__).parent / "schema.json") as f:
 # kept synchronized
 
 
-@dataclass
+@dataclass(frozen=True)
 class Typez:
     definitions: Optional[Definitions] = None
     nodes: Optional[Nodes] = None
@@ -48,12 +66,12 @@ class Typez:
 Definitions = Dict[str, Union["Kind", "Function"]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Kind:
     params: Optional[List[str]] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class Function:
     params: List[Tuple[str, Type]]
     return_: Type
@@ -63,18 +81,18 @@ class Function:
 Type = Union["TypeParameter", "DeclaredType", "ExternalType"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class TypeParameter:
     param: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class DeclaredType:
     type: str
-    params: Optional[List[Type]] = None
+    params: Optional[Dict[str, Type]] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExternalType:
     type: str
     repr: str
@@ -83,15 +101,28 @@ class ExternalType:
 Nodes = Dict[str, Union["CallNode", "PrimitiveNode"]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CallNode:
     function: str
-    type_params: Optional[List[TypeInstance]] = None
+    type_params: Optional[Dict[str, TypeInstance]] = None
     args: Optional[List[str]] = None
     kwargs: Optional[Dict[str, str]] = None
 
+    def __post_init__(self):
+        """
+        Make the args and kwargs hashable for easy hasing of the node
+        to compute its id
+        """
+        # Use settattr because it is frozen
+        if self.type_params is not None:
+            object.__setattr__(self, "type_params", Hashabledict(self.type_params))
+        if self.kwargs is not None:
+            object.__setattr__(self, "kwargs", Hashabledict(self.kwargs))
+        if self.args is not None:
+            object.__setattr__(self, "args", Hashablelist(self.args))
 
-@dataclass
+
+@dataclass(frozen=True)
 class PrimitiveNode:
     type: str
     repr: str
@@ -100,21 +131,28 @@ class PrimitiveNode:
 TypeInstance = Union["DeclaredTypeInstance", "ExternalTypeInstance"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class DeclaredTypeInstance:
     type: str
-    params: Optional[List[TypeInstance]] = None
+    params: Optional[Dict[str, TypeInstance]] = None
+
+    def __post_init__(self):
+        if self.params is not None:
+            object.__setattr__(self, "params", Hashabledict(self.params))
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExternalTypeInstance:
     repr: str
 
 
-States = List["State"]
+@dataclass(frozen=True)
+class States:
+    initial: str
+    states: Optional[List["State"]] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class State:
     node: str
     rule: str
@@ -146,3 +184,20 @@ class TypezDisplay:
         self._typez = value
         if self._handle:
             self._handle.update(self.typez)
+
+
+class Hashabledict(dict):
+    """
+    Dict that hashses to its key, value pairs.
+
+    https://stackoverflow.com/a/16162138/907060
+    """
+
+    def __hash__(self):
+        return hash(frozenset(self.items()))
+
+
+class Hashablelist(list):
+    def __hash__(self):
+        return hash(frozenset(self))
+

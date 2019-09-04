@@ -40,6 +40,16 @@ You can also test that the documentation notebooks run correctly, but this
 pytest docs/*.ipynb --nbval
 ```
 
+### Debugging
+
+If you have a notebook that isn't working, one way to debug it is to convert it to a Python
+script, and then run that python script with `pudb`.
+
+```bash
+jupyter nbconvert --to script Notebook.ipynb
+python -m pudb Notebook.py
+```
+
 ### Docs
 
 ```bash

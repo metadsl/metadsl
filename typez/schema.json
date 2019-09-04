@@ -40,27 +40,23 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "param"
-                              ],
+                              "required": ["param"],
                               "type": "object"
                             },
                             {
                               "additionalProperties": false,
                               "properties": {
                                 "params": {
-                                  "items": {
-                                    "$ref": "#/definitions/alias-index.ts-2322-2428-index.ts-0-5759"
+                                  "additionalProperties": {
+                                    "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
                                   },
-                                  "type": "array"
+                                  "type": "object"
                                 },
                                 "type": {
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "type"
-                              ],
+                              "required": ["type"],
                               "type": "object"
                             },
                             {
@@ -73,10 +69,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "type",
-                                "repr"
-                              ],
+                              "required": ["type", "repr"],
                               "type": "object"
                             }
                           ],
@@ -98,27 +91,23 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "param"
-                        ],
+                        "required": ["param"],
                         "type": "object"
                       },
                       {
                         "additionalProperties": false,
                         "properties": {
                           "params": {
-                            "items": {
-                              "$ref": "#/definitions/alias-index.ts-2322-2428-index.ts-0-5759"
+                            "additionalProperties": {
+                              "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
                             },
-                            "type": "array"
+                            "type": "object"
                           },
                           "type": {
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "type"
-                        ],
+                        "required": ["type"],
                         "type": "object"
                       },
                       {
@@ -131,10 +120,7 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "type",
-                          "repr"
-                        ],
+                        "required": ["type", "repr"],
                         "type": "object"
                       }
                     ],
@@ -147,10 +133,7 @@
                     "type": "array"
                   }
                 },
-                "required": [
-                  "params",
-                  "return_"
-                ],
+                "required": ["params", "return_"],
                 "type": "object"
               }
             ]
@@ -180,24 +163,22 @@
                     "type": "object"
                   },
                   "type_params": {
-                    "items": {
+                    "additionalProperties": {
                       "anyOf": [
                         {
                           "additionalProperties": false,
                           "properties": {
                             "params": {
-                              "items": {
-                                "$ref": "#/definitions/alias-index.ts-3068-3207-index.ts-0-5759"
+                              "additionalProperties": {
+                                "$ref": "#/definitions/alias-index.ts-3205-3344-index.ts-0-6006"
                               },
-                              "type": "array"
+                              "type": "object"
                             },
                             "type": {
                               "type": "string"
                             }
                           },
-                          "required": [
-                            "type"
-                          ],
+                          "required": ["type"],
                           "type": "object"
                         },
                         {
@@ -207,20 +188,16 @@
                               "type": "string"
                             }
                           },
-                          "required": [
-                            "repr"
-                          ],
+                          "required": ["repr"],
                           "type": "object"
                         }
                       ],
                       "description": "A type that is passed into a function to set one of its  type"
                     },
-                    "type": "array"
+                    "type": "object"
                   }
                 },
-                "required": [
-                  "function"
-                ],
+                "required": ["function"],
                 "type": "object"
               },
               {
@@ -234,10 +211,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "type",
-                  "repr"
-                ],
+                "required": ["type", "repr"],
                 "type": "object"
               }
             ]
@@ -246,32 +220,39 @@
           "type": "object"
         },
         "states": {
+          "additionalProperties": false,
           "description": "A sequence of the states the expression is in.",
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "node": {
-                "type": "string"
-              },
-              "rule": {
-                "type": "string"
-              }
+          "properties": {
+            "initial": {
+              "type": "string"
             },
-            "required": [
-              "node",
-              "rule"
-            ],
-            "type": "object"
+            "states": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "node": {
+                    "type": "string"
+                  },
+                  "rule": {
+                    "type": "string"
+                  }
+                },
+                "required": ["node", "rule"],
+                "type": "object"
+              },
+              "type": "array"
+            }
           },
-          "type": "array"
+          "required": ["initial"],
+          "type": "object"
         }
       },
       "type": "object"
     },
-    "alias-index.ts-2322-2428-index.ts-0-5759": {
+    "alias-index.ts-2385-2491-index.ts-0-6006": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -280,27 +261,23 @@
               "type": "string"
             }
           },
-          "required": [
-            "param"
-          ],
+          "required": ["param"],
           "type": "object"
         },
         {
           "additionalProperties": false,
           "properties": {
             "params": {
-              "items": {
-                "$ref": "#/definitions/alias-index.ts-2322-2428-index.ts-0-5759"
+              "additionalProperties": {
+                "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
               },
-              "type": "array"
+              "type": "object"
             },
             "type": {
               "type": "string"
             }
           },
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "type": "object"
         },
         {
@@ -313,33 +290,28 @@
               "type": "string"
             }
           },
-          "required": [
-            "type",
-            "repr"
-          ],
+          "required": ["type", "repr"],
           "type": "object"
         }
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-index.ts-3068-3207-index.ts-0-5759": {
+    "alias-index.ts-3205-3344-index.ts-0-6006": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
-              "items": {
-                "$ref": "#/definitions/alias-index.ts-3068-3207-index.ts-0-5759"
+              "additionalProperties": {
+                "$ref": "#/definitions/alias-index.ts-3205-3344-index.ts-0-6006"
               },
-              "type": "array"
+              "type": "object"
             },
             "type": {
               "type": "string"
             }
           },
-          "required": [
-            "type"
-          ],
+          "required": ["type"],
           "type": "object"
         },
         {
@@ -349,9 +321,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "repr"
-          ],
+          "required": ["repr"],
           "type": "object"
         }
       ],

@@ -9,6 +9,7 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "jsonschema",
+    "IPython"
 ]
 requires-python = ">=3.7"
 classifiers = [

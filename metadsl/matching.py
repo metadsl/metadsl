@@ -110,7 +110,7 @@ class DefaultRule:
             self.inner_fn(*args, **expr.kwargs), typevars
         )
 
-        yield Replacement(self, expr, result, result)
+        yield Replacement(str(self), result)
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -202,7 +202,7 @@ class MatchRule:
             except NoMatch:
                 continue
             result_expr = replace_typevars_expression(result_expr, typevars)
-            yield Replacement(self, expr, result_expr, result_expr)
+            yield Replacement(str(self), result_expr)
             return
 
 
@@ -348,4 +348,3 @@ def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
     if r == 0:
         return tuple([*t[:l], t[l:]])
     return tuple([*t[:l], t[l:-r], *t[-r:]])
-

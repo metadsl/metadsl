@@ -617,5 +617,5 @@ def replace_fn_typevars(fn: T, typevars: TypeVarMapping) -> T:
 
 def get_fn_typevars(fn: object) -> TypeVarMapping:
     if isinstance(fn, BoundInfer):
-        return match_type(get_origin_type(fn.owner), fn.owner)
+        return match_types(get_origin_type(fn.owner), fn.owner)
     return {}

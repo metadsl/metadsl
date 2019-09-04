@@ -27,6 +27,8 @@
  * with https://github.com/vega/ts-json-schema-generator/
  */
 
+//  TODO: Mapke typevars keyword mapping instead of arguments
+
 /**
  * A combination of defintions, nodes, and states.
  *
@@ -82,7 +84,8 @@ type TypeParameter = {
 
 type DeclaredType = {
   type: string;
-  params?: Array<Type>;
+  // mapping of type param names to their types
+  params?: { [name: string]: Type };
 };
 
 type ExternalType = {
@@ -99,7 +102,7 @@ type Nodes = {
 
 type CallNode = {
   function: string;
-  type_params?: Array<TypeInstance>;
+  type_params?: { [name: string]: TypeInstance };
   // An array of the ids of the argument nodes
   args?: Array<string>;
   // A mapping of keyward name to node ID
@@ -115,14 +118,22 @@ type PrimitiveNode = { type: string; repr: string };
  * A type that is passed into a function to set one of its  type
  */
 type TypeInstance = DeclaredTypeInstance | ExternalTypeInstance;
-type DeclaredTypeInstance = { type: string; params?: Array<TypeInstance> };
+type DeclaredTypeInstance = {
+  type: string;
+  params?: { [name: string]: TypeInstance };
+};
 type ExternalTypeInstance = {
   repr: string;
 };
 /**
  * A sequence of the states the expression is in.
  */
-type States = Array<State>;
+type States = {
+  // the initial node
+  initial: string;
+  // An array of subsequent states
+  states?: Array<State>;
+};
 
 type State = {
   // The node for this state

@@ -35,14 +35,12 @@ class Replacement(typing.Generic[T]):
     Replacement is a record of a replacement that happened.
     """
 
-    # The rule that was executed
-    rule: Rule
-    # The initial expression passed into the rule
-    initial: object
-    # The resulting expression from the rule
-    result: object
-    # The resulting full expression, will contain `result`
-    result_whole: T
+    # The name of the rule that was executed
+    rule: str
+    # The resulting full expression
+    result: T
+    # An optional label for this replacement
+    label: typing.Optional[str] = None
 
 
 # takes in an expression object and returns a number of replacements executed on the expression
@@ -54,7 +52,7 @@ def execute_rule(rule: Rule, expr: T) -> T:
     Call a replacement rule many times, returning the last result whole.
     """
     for replacement in rule(expr):
-        expr = replacement.result_whole
+        expr = replacement.result
     return expr
 
 
@@ -64,19 +62,24 @@ T_Rule = typing.TypeVar("T_Rule", bound=Rule)
 @dataclasses.dataclass
 class CollapseReplacementsRule:
     """
-    Takes in an existing rule and collapses all replacements to just one, and renames it.
+    Takes in an existing rule and gives the last state a label.
     """
 
-    name: str
+    label: str
     rule: Rule
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
-        result = None
+        last_replacement = None
         for replacement in self.rule(expr):  # type: ignore
-            result = replacement.result_whole
-        if not result:
-            return
-        yield Replacement(rule=self, initial=expr, result=result, result_whole=result)
+            if last_replacement:
+                yield last_replacement
+            last_replacement = replacement
+        if last_replacement:
+            yield Replacement(
+                rule=last_replacement.rule,
+                result=last_replacement.result,
+                label=self.label,
+            )
 
     def __str__(self):
         return self.name
@@ -153,7 +156,7 @@ class RuleInOrder:
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
             for replacement in rule(expr):
-                expr = replacement.result_whole
+                expr = replacement.result
                 yield replacement
 
 
@@ -216,8 +219,8 @@ class RuleFold:
             if replacement:
                 return dataclasses.replace(
                     replacement,
-                    result_whole=replace_expression_arg(
-                        expr, i, replacement.result_whole
+                    result=replace_expression_arg(
+                        expr, i, replacement.result
                     ),
                 )
         for key, arg in expr.kwargs.items():
@@ -225,8 +228,8 @@ class RuleFold:
             if replacement:
                 return dataclasses.replace(
                     replacement,
-                    result_whole=replace_expression_kwarg(
-                        expr, key, replacement.result_whole
+                    result=replace_expression_kwarg(
+                        expr, key, replacement.result
                     ),
                 )
         return None
@@ -251,7 +254,7 @@ class RuleRepeat:
                 yield replacement
             if not replaced:
                 return
-            expr = replacement.result_whole
+            expr = replacement.result
         raise RuntimeError(
             f"Exceeded maximum number of repitions, rule: {self.rule}, expr: {expr}"  # type: ignore
         )
