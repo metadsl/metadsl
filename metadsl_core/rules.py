@@ -12,8 +12,6 @@ __all__ = [
     "register_unbox",
     "register_numpy_engine",
     "register_post",
-    "execute_core",
-    "all_rules",
 ]
 
 
@@ -50,5 +48,5 @@ all_rules = RuleInOrder(
     ),
 )
 
-execute_core = lambda e: execute_rule(all_rules, e)
-
+# Set to use core rules by default
+execute.default_rule = all_rules

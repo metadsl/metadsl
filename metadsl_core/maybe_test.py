@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from metadsl import *
 from .abstraction import *
-from .rules import all_rules
 from .maybe import *
 
 
@@ -24,11 +23,11 @@ class TestMaybe:
         def double_int(i: Int) -> Int:
             return Int.from_int(2) * i
 
-        assert execute_rule(
-            all_rules, Maybe.just(Int.from_int(10)).match(Int.from_int(5), double_int)
+        assert execute(
+            Maybe.just(Int.from_int(10)).match(Int.from_int(5), double_int)
         ) == Int.from_int(2) * Int.from_int(10)
-        assert execute_rule(
-            all_rules, Maybe[Int].nothing().match(Int.from_int(5), double_int)
+        assert execute(
+            Maybe[Int].nothing().match(Int.from_int(5), double_int)
         ) == Int.from_int(5)
 
     def test_map(self):
@@ -36,10 +35,7 @@ class TestMaybe:
         def double_int(i: Int) -> Int:
             return Int.from_int(2) * i
 
-        assert execute_rule(
-            all_rules, Maybe.just(Int.from_int(10)).map(double_int)
-        ) == Maybe[Int].just(Int.from_int(2) * Int.from_int(10))
-        assert (
-            execute_rule(all_rules, Maybe[Int].nothing().map(double_int))
-            == Maybe[Int].nothing()
+        assert execute(Maybe.just(Int.from_int(10)).map(double_int)) == Maybe[Int].just(
+            Int.from_int(2) * Int.from_int(10)
         )
+        assert execute(Maybe[Int].nothing().map(double_int)) == Maybe[Int].nothing()

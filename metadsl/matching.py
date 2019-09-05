@@ -24,6 +24,8 @@ from .typing_tools import *
 from .rules import Rule, Replacement
 
 
+__all__ = ["R", "NoMatch", "rule", "default_rule", "create_wildcard"]
+
 T = typing.TypeVar("T", bound=Expression)
 
 R_single = typing.Tuple[T, typing.Union[typing.Callable[[], T], T]]

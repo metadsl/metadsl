@@ -65,7 +65,9 @@ def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
 
         # Set the node ID to be the hash of the node
         node = CallNode(
-            type_params=typevars_to_typeparams(metadsl.get_fn_typevars(expr.function))
+            type_params=typevars_to_typeparams(
+                metadsl.typing_tools.get_fn_typevars(expr.function)
+            )
             or None,
             function=function_or_type_repr(expr.function),
             args=args or None,
@@ -86,7 +88,7 @@ def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
 
 
 def typevars_to_typeparams(
-    typevars: metadsl.TypeVarMapping
+    typevars: metadsl.typing_tools.TypeVarMapping
 ) -> typing.Dict[str, TypeInstance]:
     return {
         var.__name__: type_to_typeinstance(tp)  # type: ignore
@@ -102,7 +104,9 @@ def type_to_typeinstance(tp: typing.Type) -> TypeInstance:
         return DeclaredTypeInstance(
             type=function_or_type_repr(typing_inspect.get_origin(tp) or tp),
             params=typevars_to_typeparams(
-                metadsl.match_types(metadsl.get_origin_type(tp), tp)
+                metadsl.typing_tools.match_types(
+                    metadsl.typing_tools.get_origin_type(tp), tp
+                )
             )
             or None,
         )

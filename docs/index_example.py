@@ -19,6 +19,6 @@ def add_zero(y: Number):
     yield y + Number.from_int(0), y
 
 
-assert metadsl.execute_rule(
-    add_zero, Number.from_int(0) + Number.from_int(10)
+assert metadsl.execute(
+    Number.from_int(0) + Number.from_int(10), add_zero
 ) == Number.from_int(10)

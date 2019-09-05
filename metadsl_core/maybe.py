@@ -40,11 +40,11 @@ class Maybe(Expression, typing.Generic[T]):
     @expression
     def __and__(self, other: Maybe[U]) -> Maybe[Pair[T, U]]:
         """
-        >>> execute_core(Maybe[int].nothing() & Maybe.just("")) == Maybe[Pair[int, str]].nothing()
+        >>> execute(Maybe[int].nothing() & Maybe.just("")) == Maybe[Pair[int, str]].nothing()
         True
-        >>> execute_core(Maybe.just(10) & Maybe[str].nothing()) == Maybe[Pair[int, str]].nothing()
+        >>> execute(Maybe.just(10) & Maybe[str].nothing()) == Maybe[Pair[int, str]].nothing()
         True
-        >>> execute_core(Maybe.just(10) & Maybe.just("")) == Maybe.just(Pair.create(10, ""))
+        >>> execute(Maybe.just(10) & Maybe.just("")) == Maybe.just(Pair.create(10, ""))
         True
         """
         ...

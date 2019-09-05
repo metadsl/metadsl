@@ -30,7 +30,7 @@ class Pair(Expression, typing.Generic[T, U]):
 @rule
 def pair_left(l: T, r: U) -> R[T]:
     """
-    >>> execute_core(Pair.create(10, 20).left())
+    >>> execute(Pair.create(10, 20).left())
     10
     """
     return Pair.create(l, r).left(), l
@@ -40,7 +40,7 @@ def pair_left(l: T, r: U) -> R[T]:
 @rule
 def pair_right(l: T, r: U) -> R[U]:
     """
-    >>> execute_core(Pair.create(10, 20).right())
+    >>> execute(Pair.create(10, 20).right())
     20
     """
     return Pair.create(l, r).right(), r

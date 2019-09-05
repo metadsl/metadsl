@@ -37,17 +37,19 @@ def convert_to_str(i: int, s: str) -> R[Maybe[Str]]:
     yield Converter[Str].convert(i), Maybe[Str].nothing()
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *all_rules.rules)
+convert_rules = RulesRepeatFold(  # type: ignore
+    convert_to_str, convert_to_int, execute.default_rule
+)
 
-e = lambda e: execute_rule(convert_rules, e)
+e = lambda e: execute(e, convert_rules)
 
 
 class TestVec:
     def test_getitem(self):
-        assert execute_core(Vec.create(10, 11)[Integer.from_int(1)]) == 11
+        assert execute(Vec.create(10, 11)[Integer.from_int(1)]) == 11
 
     def test_append(self):
-        assert execute_core(Vec.create(10).append(11)) == Vec.create(10, 11)
+        assert execute(Vec.create(10).append(11)) == Vec.create(10, 11)
 
     def test_convert_empty(self):
         assert e(Converter[Vec[Int]].convert(())) == Maybe.just(Vec[Int].create())

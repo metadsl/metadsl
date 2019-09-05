@@ -1,3 +1,4 @@
+from metadsl import execute
 from .conversion import *
 from .maybe import *
 from .rules import *
@@ -5,7 +6,7 @@ from .rules import *
 
 class TestConvertIdentity:
     def test_matches_type(self):
-        assert execute_core(Converter[int].convert(1)) == Maybe.just(1)
+        assert execute(Converter[int].convert(1)) == Maybe.just(1)
 
     def test_doesnt_match_type(self):
         assert not list(
@@ -13,20 +14,18 @@ class TestConvertIdentity:
         )
 
     def test_matches_convert(self):
-        assert execute_core(Converter[int].convert(Maybe.just(1))) == Maybe.just(1)
+        assert execute(Converter[int].convert(Maybe.just(1))) == Maybe.just(1)
         assert (
-            execute_core(Converter[int].convert(Maybe[int].nothing()))
+            execute(Converter[int].convert(Maybe[int].nothing()))
             == Maybe[int].nothing()
         )
 
 
 class TestConvertToMaybe:
     def test_just(self):
-        assert execute_core(Converter[Maybe[int]].convert(1)) == Maybe.just(
-            Maybe.just(1)
-        )
+        assert execute(Converter[Maybe[int]].convert(1)) == Maybe.just(Maybe.just(1))
 
     def test_nothing(self):
-        assert execute_core(Converter[Maybe[int]].convert(None)) == Maybe.just(
+        assert execute(Converter[Maybe[int]].convert(None)) == Maybe.just(
             Maybe[int].nothing()
         )

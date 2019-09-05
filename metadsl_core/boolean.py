@@ -33,7 +33,7 @@ def if_(b: bool, l: T, r: T) -> R[T]:
 @rule
 def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     """
-    >>> execute_rule(convert_bool, Converter[Boolean].convert(True)) ==  Maybe.just(Boolean.create(True))
+    >>> execute(Converter[Boolean].convert(True), convert_bool) ==  Maybe.just(Boolean.create(True))
     True
     >>> list(convert_bool(Converter[Boolean].convert("not bool")))
     []

@@ -15,6 +15,8 @@ from .vec import *
 
 __all__ = ["ndarray_getitem"]
 
+T = typing.TypeVar("T")
+
 
 @expression
 def unbox_integer(i: Integer) -> int:

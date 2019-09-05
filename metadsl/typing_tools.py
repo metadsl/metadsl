@@ -512,7 +512,7 @@ WrapperType = typing.Callable[
 @dataclasses.dataclass
 class Infer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
-    wrapper: WrapperType[T, U]
+    wrapper: WrapperType[T, U] = dataclasses.field(repr=False)
 
     def __post_init__(self):
         functools.update_wrapper(self, self.fn)
@@ -543,7 +543,7 @@ class Infer(typing.Generic[T, U]):
 @dataclasses.dataclass
 class BoundInfer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
-    wrapper: WrapperType[T, U]
+    wrapper: WrapperType[T, U] = dataclasses.field(repr=False)
     owner: typing.Type
     is_classmethod: bool
 

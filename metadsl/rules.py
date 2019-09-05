@@ -16,7 +16,7 @@ from .expressions import *
 
 __all__ = [
     "Rule",
-    "execute_rule",
+    "execute",
     "RulesRepeatSequence",
     "RulesRepeatFold",
     "RuleSequence",
@@ -47,13 +47,30 @@ class Replacement(typing.Generic[T]):
 Rule = typing.Callable[[T], typing.Iterable[Replacement[T]]]
 
 
-def execute_rule(rule: Rule, expr: T) -> T:
+@dataclasses.dataclass
+class Executor:
+    # Function that takes a rule and an expressiona and executes it
+    execute: typing.Callable[[T, Rule], T]
+    # rule that is used if none is passed in
+    default_rule: typing.Optional[Rule]
+
+    def __call__(self, expr: T, rule: typing.Optional[Rule] = None) -> T:
+        return self.execute(expr, rule or self.default_rule)  # type: ignore
+
+
+def _execute_all(expr: T, rule: Rule) -> T:
     """
     Call a replacement rule many times, returning the last result whole.
     """
     for replacement in rule(expr):
         expr = replacement.result
     return expr
+
+
+# Execute should be called on an expression to get the result
+# External modules can set a custom `execute` function or `default_rule`
+# to modify the behavior
+execute = Executor(_execute_all, None)
 
 
 T_Rule = typing.TypeVar("T_Rule", bound=Rule)
@@ -80,9 +97,6 @@ class CollapseReplacementsRule:
                 result=last_replacement.result,
                 label=self.label,
             )
-
-    def __str__(self):
-        return self.name
 
 
 @dataclasses.dataclass(init=False)
@@ -200,39 +214,33 @@ class RuleFold:
     rule: Rule
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
-        replacement = self.call_single(expr)
-        if replacement:
-            yield replacement
-
-    def call_single(self, expr: object) -> typing.Optional[Replacement]:
-        replacement: typing.Optional[Replacement]
+        replacement: typing.Optional[Replacement] = None
+        # First lets try calling the replacement rule on the top level
         for replacement in self.rule(expr):  # type: ignore
-            return replacement
-        if not isinstance(expr, Expression):
-            return None
+            yield replacement
+            # If we found a replacement there, we are all good, we can exit
+            return
 
-        # iterate through args and kwargs, trying to replace each of them
-        # If we do, then we want to expand the result_whole to be the current result
-        # surrounded by the expression at this level with that result replaced
+        if not isinstance(expr, Expression):
+            return
+
+        # Next, let's go through each arg and see if we can replace it
         for i, arg in enumerate(expr.args):
-            replacement = self.call_single(arg)
-            if replacement:
-                return dataclasses.replace(
+            for replacement in self(arg):
+                yield dataclasses.replace(
                     replacement,
-                    result=replace_expression_arg(
-                        expr, i, replacement.result
-                    ),
+                    result=replace_expression_arg(expr, i, replacement.result),
                 )
+                return
+
+        # Now we can do the same for the kwargs
         for key, arg in expr.kwargs.items():
-            replacement = self.call_single(arg)
-            if replacement:
-                return dataclasses.replace(
+            for replacement in self(arg):
+                yield dataclasses.replace(
                     replacement,
-                    result=replace_expression_kwarg(
-                        expr, key, replacement.result
-                    ),
+                    result=replace_expression_kwarg(expr, key, replacement.result),
                 )
-        return None
+                return
 
 
 @dataclasses.dataclass
