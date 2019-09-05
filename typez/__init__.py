@@ -10,7 +10,7 @@ import json
 import jsonschema
 import pathlib
 import IPython.core.display
-
+import graphviz
 
 __all__ = [
     "Typez",
@@ -42,6 +42,49 @@ with open(pathlib.Path(__file__).parent / "schema.json") as f:
 
 
 @dataclass(frozen=True)
+class TypezGraph:
+    initial: Optional[str]
+    states: List[GraphState]
+
+
+@dataclass(frozen=True)
+class GraphState:
+    graph: str
+    rule: str
+    label: Union[str, None]
+
+
+def render_graph(node_id: str, nodes: Nodes) -> str:
+    """
+    Renders a graphviz graph for a node and its descendents
+    """
+    d = graphviz.Digraph()
+    seen: Set[str] = set()
+
+    def process_node(id_: str):
+        if id_ in seen:
+            return
+        seen.add(id_)
+        node = nodes[id_]
+        # If this is a primitive node, we don't need to process anymore
+        if isinstance(node, PrimitiveNode):
+            d.node(id_, filter_str(node.repr))
+            return
+        # Otherwise, create the node then add its children
+        d.node(id_, filter_str(node.function))
+        for child in (node.args or []) + list((node.kwargs or {}).values()):
+            d.edge(id_, child)
+            process_node(child)
+
+    process_node(node_id)
+    return d.source
+
+
+def filter_str(n):
+    return n.replace("<", "").replace(">", "")
+
+
+@dataclass(frozen=True)
 class Typez:
     definitions: Optional[Definitions] = None
     nodes: Optional[Nodes] = None
@@ -60,7 +103,27 @@ class Typez:
         return dict_
 
     def _repr_mimebundle_(self, include=None, exclude=None):
-        return {"application/json": self.asdict()}
+        return {
+            "application/json": self.asdict(),
+            "application/x.typez.graph+json": dataclasses.asdict(self.as_graph()),
+        }
+
+    def as_graph(self) -> TypezGraph:
+        return TypezGraph(
+            initial=render_graph(self.states.initial, self.nodes or {})
+            if self.states
+            else None,
+            states=[
+                GraphState(
+                    graph=render_graph(state.node, self.nodes or {}),
+                    rule=state.rule,
+                    label=state.label,
+                )
+                for state in self.states.states or []
+            ]
+            if self.states
+            else [],
+        )
 
 
 Definitions = Dict[str, Union["Kind", "Function"]]
@@ -200,4 +263,3 @@ class Hashabledict(dict):
 class Hashablelist(list):
     def __hash__(self):
         return hash(frozenset(self))
-

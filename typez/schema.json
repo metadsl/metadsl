@@ -40,7 +40,9 @@
                                   "type": "string"
                                 }
                               },
-                              "required": ["param"],
+                              "required": [
+                                "param"
+                              ],
                               "type": "object"
                             },
                             {
@@ -48,7 +50,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
+                                    "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
                                   },
                                   "type": "object"
                                 },
@@ -56,7 +58,9 @@
                                   "type": "string"
                                 }
                               },
-                              "required": ["type"],
+                              "required": [
+                                "type"
+                              ],
                               "type": "object"
                             },
                             {
@@ -69,7 +73,10 @@
                                   "type": "string"
                                 }
                               },
-                              "required": ["type", "repr"],
+                              "required": [
+                                "type",
+                                "repr"
+                              ],
                               "type": "object"
                             }
                           ],
@@ -91,7 +98,9 @@
                             "type": "string"
                           }
                         },
-                        "required": ["param"],
+                        "required": [
+                          "param"
+                        ],
                         "type": "object"
                       },
                       {
@@ -99,7 +108,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
+                              "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
                             },
                             "type": "object"
                           },
@@ -107,7 +116,9 @@
                             "type": "string"
                           }
                         },
-                        "required": ["type"],
+                        "required": [
+                          "type"
+                        ],
                         "type": "object"
                       },
                       {
@@ -120,7 +131,10 @@
                             "type": "string"
                           }
                         },
-                        "required": ["type", "repr"],
+                        "required": [
+                          "type",
+                          "repr"
+                        ],
                         "type": "object"
                       }
                     ],
@@ -133,7 +147,10 @@
                     "type": "array"
                   }
                 },
-                "required": ["params", "return_"],
+                "required": [
+                  "params",
+                  "return_"
+                ],
                 "type": "object"
               }
             ]
@@ -170,7 +187,7 @@
                           "properties": {
                             "params": {
                               "additionalProperties": {
-                                "$ref": "#/definitions/alias-index.ts-3205-3344-index.ts-0-6006"
+                                "$ref": "#/definitions/alias-schema.ts-3205-3344-schema.ts-0-3897"
                               },
                               "type": "object"
                             },
@@ -178,7 +195,9 @@
                               "type": "string"
                             }
                           },
-                          "required": ["type"],
+                          "required": [
+                            "type"
+                          ],
                           "type": "object"
                         },
                         {
@@ -188,7 +207,9 @@
                               "type": "string"
                             }
                           },
-                          "required": ["repr"],
+                          "required": [
+                            "repr"
+                          ],
                           "type": "object"
                         }
                       ],
@@ -197,7 +218,9 @@
                     "type": "object"
                   }
                 },
-                "required": ["function"],
+                "required": [
+                  "function"
+                ],
                 "type": "object"
               },
               {
@@ -211,7 +234,10 @@
                     "type": "string"
                   }
                 },
-                "required": ["type", "repr"],
+                "required": [
+                  "type",
+                  "repr"
+                ],
                 "type": "object"
               }
             ]
@@ -240,19 +266,24 @@
                     "type": "string"
                   }
                 },
-                "required": ["node", "rule"],
+                "required": [
+                  "node",
+                  "rule"
+                ],
                 "type": "object"
               },
               "type": "array"
             }
           },
-          "required": ["initial"],
+          "required": [
+            "initial"
+          ],
           "type": "object"
         }
       },
       "type": "object"
     },
-    "alias-index.ts-2385-2491-index.ts-0-6006": {
+    "alias-schema.ts-2385-2491-schema.ts-0-3897": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -261,7 +292,9 @@
               "type": "string"
             }
           },
-          "required": ["param"],
+          "required": [
+            "param"
+          ],
           "type": "object"
         },
         {
@@ -269,7 +302,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-index.ts-2385-2491-index.ts-0-6006"
+                "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
               },
               "type": "object"
             },
@@ -277,7 +310,9 @@
               "type": "string"
             }
           },
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "type": "object"
         },
         {
@@ -290,20 +325,23 @@
               "type": "string"
             }
           },
-          "required": ["type", "repr"],
+          "required": [
+            "type",
+            "repr"
+          ],
           "type": "object"
         }
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-index.ts-3205-3344-index.ts-0-6006": {
+    "alias-schema.ts-3205-3344-schema.ts-0-3897": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-index.ts-3205-3344-index.ts-0-6006"
+                "$ref": "#/definitions/alias-schema.ts-3205-3344-schema.ts-0-3897"
               },
               "type": "object"
             },
@@ -311,7 +349,9 @@
               "type": "string"
             }
           },
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "type": "object"
         },
         {
@@ -321,7 +361,9 @@
               "type": "string"
             }
           },
-          "required": ["repr"],
+          "required": [
+            "repr"
+          ],
           "type": "object"
         }
       ],

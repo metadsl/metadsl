@@ -20,7 +20,7 @@ flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink
 
 # optional
-jupyter labextension install @jupyter-widgets/jupyterlab-manager@0.38.0
+jupyter labextension install ./typez
 ```
 
 ### Tests

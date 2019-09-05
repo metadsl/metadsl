@@ -1,12 +1,43 @@
 {
   "name": "typez",
   "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension"
+  ],
+  "jupyterlab": {
+    "mimeExtension": true
+  },
   "scripts": {
-    "build": "ts-json-schema-generator --path index.ts Typez > schema.json"
+    "clean": "rimraf tsconfig.tsbuildinfo index.js index.d.ts index.js.map schema.json",
+    "build": "tsc && yarn run build:schema",
+    "build:schema": "ts-json-schema-generator --skip-type-check -f tsconfig.json --path schema.ts Typez > schema.json",
+    "prepare": "yarn run clean && yarn run build",
+    "watch": "tsc -w",
+    "extension:install": "jupyter labextension install typez",
+    "extension:uninstall": "jupyter labextension uninstall  typez",
+    "extension:enable": "jupyter labextension enable typez",
+    "extension:disable": "jupyter labextension disable typez"
+  },
+  "dependencies": {
+    "@jupyterlab/apputils": "^1.1.0",
+    "@jupyterlab/rendermime-interfaces": "^1.4.0",
+    "@phosphor/widgets": "^1.9.0",
+    "d3-ease": "1.0.5",
+    "d3-graphviz": "2.6.1",
+    "d3-transition": "1.2.0",
+    "react": "~16.8.4"
   },
   "devDependencies": {
-    "ts-json-schema-generator": "0.52.14"
+    "@types/d3-ease": "1.0.8",
+    "@types/d3-graphviz": "2.6.2",
+    "@types/react": "~16.8.18",
+    "rimraf": "3.0.0",
+    "ts-json-schema-generator": "0.52.14",
+    "typescript": "3.6.2"
   }
 }
