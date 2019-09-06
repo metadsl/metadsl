@@ -59,6 +59,8 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
     Renders a graphviz graph for a node and its descendents
     """
     d = graphviz.Digraph()
+    d.attr("node", shape="plain")
+    d.attr("edge", penwidth="0.5", arrowsize="0.5")
     seen: Set[str] = set()
 
     def process_type_instance(id_: str, instance: TypeInstance):
