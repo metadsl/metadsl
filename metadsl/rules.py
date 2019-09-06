@@ -79,24 +79,21 @@ T_Rule = typing.TypeVar("T_Rule", bound=Rule)
 @dataclasses.dataclass
 class CollapseReplacementsRule:
     """
-    Takes in an existing rule and gives the last state a label.
+    Takes in an existing rule and adds a final state with a custom label.
     """
 
     label: str
     rule: Rule
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
-        last_replacement = None
+        replacement = None
         for replacement in self.rule(expr):  # type: ignore
-            if last_replacement:
-                yield last_replacement
-            last_replacement = replacement
-        if last_replacement:
-            yield Replacement(
-                rule=last_replacement.rule,
-                result=last_replacement.result,
-                label=self.label,
-            )
+            yield replacement
+        yield Replacement(
+            rule="",
+            result=replacement.result if replacement else expr,
+            label=self.label,
+        )
 
 
 @dataclasses.dataclass(init=False)
