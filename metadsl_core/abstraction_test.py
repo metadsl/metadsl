@@ -52,21 +52,22 @@ class TestAbstraction:
         ) == I.inc(I.dec(I.create(10)))
 
     def test_fix(self):
+        one = Integer.from_int(1)
+        zero = Integer.from_int(0)
+
+        @Abstraction.fix
+        @Abstraction.from_fn
+        def factorial(
+            fact_fn: Abstraction[Integer, Integer]
+        ) -> Abstraction[Integer, Integer]:
+            @Abstraction.from_fn
+            def inner(n: Integer) -> Integer:
+                return n.eq(zero).if_(one, n * fact_fn(n - one))
+
+            return inner
+
         assert execute(factorial(zero)) == one
         assert execute(factorial(one)) == one
         assert execute(factorial(Integer.from_int(2))) == Integer.from_int(2)
         assert execute(factorial(Integer.from_int(3))) == Integer.from_int(6)
 
-
-one = Integer.from_int(1)
-zero = Integer.from_int(0)
-
-
-@Abstraction.fix
-@Abstraction.from_fn
-def factorial(fact_fn: Abstraction[Integer, Integer]) -> Abstraction[Integer, Integer]:
-    @Abstraction.from_fn
-    def inner(n: Integer) -> Integer:
-        return n.eq(zero).if_(one, n * fact_fn(n - one))
-
-    return inner
