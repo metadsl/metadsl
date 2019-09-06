@@ -9,6 +9,7 @@ import typing
 import inspect
 import dataclasses
 import typing_inspect
+import warnings
 
 __all__ = ["convert_rule", "TypezRule"]
 
@@ -120,6 +121,13 @@ def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     """
     returns the name of the type or function prefixed by the module name if it isn't a builtin
     """
+    if isinstance(o, typing.TypeVar):  # type: ignore
+        warnings.warn(
+            "Unresolved typevar in type argument, this means the typing is broken",
+            RuntimeWarning,
+        )
+        return repr(o)
+
     # This is true for `typing.Any`
     if isinstance(o, typing._SpecialForm):
         return repr(o)
