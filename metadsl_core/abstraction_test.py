@@ -44,7 +44,7 @@ class TestAbstraction:
         assert execute(Abstraction[typing.Any, int].from_fn(lambda _: 10)("hi")) == 10
 
     def test_identity(self):
-        assert execute(Abstraction[T, T].from_fn(lambda i: i)("hi")) == "hi"
+        assert execute(Abstraction[str, str].from_fn(lambda i: i)("hi")) == "hi"
 
     def test_compose(self):
         assert execute(
@@ -55,6 +55,7 @@ class TestAbstraction:
         assert execute(factorial(zero)) == one
         assert execute(factorial(one)) == one
         assert execute(factorial(Integer.from_int(2))) == Integer.from_int(2)
+        assert execute(factorial(Integer.from_int(3))) == Integer.from_int(6)
 
 
 one = Integer.from_int(1)

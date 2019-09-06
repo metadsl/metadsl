@@ -184,11 +184,8 @@ class RuleSequence:
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
-            replaced = False
             for replacement in rule(expr):
-                replaced = True
                 yield replacement
-            if replaced:
                 return
 
 
