@@ -139,6 +139,7 @@ class Function:
     params: List[Tuple[str, Type]]
     return_: Type
     type_params: Optional[List[str]] = None
+    rest_param: Optional[Tuple[str, Type]] = None
 
 
 Type = Union["TypeParameter", "DeclaredType", "ExternalType"]

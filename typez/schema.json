@@ -50,7 +50,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
+                                    "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
                                   },
                                   "type": "object"
                                 },
@@ -89,6 +89,74 @@
                     },
                     "type": "array"
                   },
+                  "rest_param": {
+                    "anyOf": [
+                      {
+                        "items": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "param": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "param"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "params": {
+                                    "additionalProperties": {
+                                      "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
+                                    },
+                                    "type": "object"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "repr": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "repr"
+                                ],
+                                "type": "object"
+                              }
+                            ],
+                            "description": "A type we use  to define a function."
+                          }
+                        ],
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "return_": {
                     "anyOf": [
                       {
@@ -108,7 +176,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
+                              "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
                             },
                             "type": "object"
                           },
@@ -187,7 +255,7 @@
                           "properties": {
                             "params": {
                               "additionalProperties": {
-                                "$ref": "#/definitions/alias-schema.ts-3205-3344-schema.ts-0-3897"
+                                "$ref": "#/definitions/alias-schema.ts-3315-3454-schema.ts-0-4007"
                               },
                               "type": "object"
                             },
@@ -283,7 +351,7 @@
       },
       "type": "object"
     },
-    "alias-schema.ts-2385-2491-schema.ts-0-3897": {
+    "alias-schema.ts-2495-2601-schema.ts-0-4007": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -302,7 +370,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-2385-2491-schema.ts-0-3897"
+                "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
               },
               "type": "object"
             },
@@ -334,14 +402,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-schema.ts-3205-3344-schema.ts-0-3897": {
+    "alias-schema.ts-3315-3454-schema.ts-0-4007": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-3205-3344-schema.ts-0-3897"
+                "$ref": "#/definitions/alias-schema.ts-3315-3454-schema.ts-0-4007"
               },
               "type": "object"
             },

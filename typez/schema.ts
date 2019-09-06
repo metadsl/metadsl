@@ -69,6 +69,8 @@ type Function_ = {
   type_params?: Array<string>;
   // argument types
   params: Array<[string, Type]>;
+  // variable argument type, if null then variable args are not allowed
+  rest_param?: [string, Type] | null;
   // return type
   return_: Type;
 };
