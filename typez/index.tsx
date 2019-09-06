@@ -24,11 +24,32 @@ type TypezGraph = {
   }>;
 };
 
-export function SelectState({
-  graph,
+export function ShowLabels({
+  shown,
   onChange
 }: {
+  shown: boolean;
+  onChange: (show: boolean) => void;
+}) {
+  return (
+    <label>
+      <b>Only show labeled</b>
+      <input
+        type="checkbox"
+        checked={shown}
+        onChange={e => onChange(e.target.checked)}
+      />
+    </label>
+  );
+}
+
+export function SelectState({
+  graph,
+  onChange,
+  showLabels
+}: {
   graph: TypezGraph;
+  showLabels: boolean;
   onChange: (node: string) => void;
 }) {
   const [selected, setSelected] = React.useState<number>(-1);
@@ -52,20 +73,31 @@ export function SelectState({
           <b>Initial</b>
         </label>
       </div>
-      {graph.states.map(({ rule, label }, idx) => (
-        <div key={idx.toString()}>
-          <label>
-            <input
-              type="radio"
-              value={idx.toString()}
-              checked={idx === selected}
-              onChange={e => (e.target.value ? setSelected(idx) : null)}
-            />
-            {label ? <b>{label} </b> : ""}
-            <code>{rule}</code>
-          </label>
-        </div>
-      ))}
+      {graph.states.map(({ rule, label }, idx) => {
+        if (showLabels && !label) {
+          return;
+        }
+        return (
+          <div key={idx.toString()}>
+            <label>
+              <input
+                type="radio"
+                value={idx.toString()}
+                checked={idx === selected}
+                onChange={e => (e.target.value ? setSelected(idx) : null)}
+              />
+              {showLabels ? (
+                <b>{label}</b>
+              ) : (
+                <>
+                  {label ? <b>{label} </b> : ""}
+                  <code>{rule}</code>
+                </>
+              )}
+            </label>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -102,10 +134,13 @@ export function GraphvizComponent({ dot }: { dot: string }) {
 
 export function GraphComponent({ graph }: { graph: TypezGraph }) {
   const [dot, setDot] = React.useState<string>(graph.initial);
-
+  const [shown, setShown] = React.useState<boolean>(true);
   return (
     <div style={{ display: "flex" }}>
-      <SelectState graph={graph} onChange={setDot} />
+      <div>
+        <ShowLabels shown={shown} onChange={setShown} />
+        <SelectState showLabels={shown} graph={graph} onChange={setDot} />
+      </div>
       <GraphvizComponent dot={dot} />
     </div>
   );
