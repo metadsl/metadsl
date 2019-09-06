@@ -120,6 +120,10 @@ def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     """
     returns the name of the type or function prefixed by the module name if it isn't a builtin
     """
+    # This is true for `typing.Any`
+    if isinstance(o, typing._SpecialForm):
+        return repr(o)
+
     module = inspect.getmodule(o)
     name = o.__qualname__ or o.__name__
     # This is true for objects in typing
