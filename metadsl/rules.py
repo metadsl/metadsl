@@ -89,11 +89,8 @@ class CollapseReplacementsRule:
         replacement = None
         for replacement in self.rule(expr):  # type: ignore
             yield replacement
-        yield Replacement(
-            rule="",
-            result=replacement.result if replacement else expr,
-            label=self.label,
-        )
+        if replacement:
+            yield Replacement(rule="", result=replacement.result, label=self.label)
 
 
 @dataclasses.dataclass(init=False)
