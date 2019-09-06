@@ -61,6 +61,17 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
     d = graphviz.Digraph()
     seen: Set[str] = set()
 
+    def process_type_instance(id_: str, instance: TypeInstance):
+        if isinstance(instance, ExternalTypeInstance):
+            d.node(id_, filter_str(instance.repr))
+            return
+        d.node(id_, filter_str(instance.type))
+        for i, kv in enumerate((instance.params or {}).items()):
+            child_id = f"{id_}.{i}"
+            k, v = kv
+            process_type_instance(child_id, v)
+            d.edge(id_, child_id, label=filter_str(k))
+
     def process_node(id_: str):
         if id_ in seen:
             return
@@ -75,6 +86,12 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
         for child in (node.args or []) + list((node.kwargs or {}).values()):
             d.edge(id_, child)
             process_node(child)
+        # Then add the type params for this node
+        for i, kv in enumerate((node.type_params or {}).items()):
+            k, v = kv
+            type_id = f"{id_}.{i}"
+            process_type_instance(type_id, v)
+            d.edge(id_, type_id, label=filter_str(k))
 
     process_node(node_id)
     return d.source
