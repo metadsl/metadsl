@@ -60,20 +60,18 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     def from_fn_recursive(
         cls, fn: typing.Callable[[FunctionOne[T, U], T], U]
     ) -> FunctionOne[T, U]:
+        @Abstraction.fix
+        @Abstraction.from_fn
         def inner(inner_abst: Abstraction[T, U]) -> Abstraction[T, U]:
             inner_fn = cls.create(fn.__name__, inner_abst)
 
+            @Abstraction.from_fn
             def inner_inner(arg1: T) -> U:
                 return fn(inner_fn, arg1)
 
-            return Abstraction[T, U].from_fn(inner_inner)
+            return inner_inner
 
-        return cls.create(
-            fn.__name__,
-            Abstraction.fix(
-                Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(inner)
-            ),
-        )
+        return cls.create(fn.__name__, inner)
 
     @expression
     def __call__(self, arg: T) -> U:
@@ -104,6 +102,30 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
             return Abstraction.from_fn(inner_inner)
 
         return cls.create(fn.__name__, Abstraction.from_fn(inner))
+
+    @expression
+    @classmethod
+    def from_fn_recursive(
+        cls, fn: typing.Callable[[FunctionTwo[T, U, V], T, U], V]
+    ) -> FunctionTwo[T, U, V]:
+        @Abstraction.fix
+        @Abstraction.from_fn
+        def inner(
+            inner_abst: Abstraction[T, Abstraction[U, V]]
+        ) -> Abstraction[T, Abstraction[U, V]]:
+            inner_fn = cls.create(fn.__name__, inner_abst)
+
+            @Abstraction.from_fn
+            def inner_inner(arg1: T) -> Abstraction[U, V]:
+                @Abstraction.from_fn
+                def inner_inner_inner(arg2: U) -> V:
+                    return fn(inner_fn, arg1, arg2)
+
+                return inner_inner_inner
+
+            return inner_inner
+
+        return cls.create(fn.__name__, inner)
 
     @expression
     def __call__(self, arg1: T, arg2: U) -> V:
@@ -144,6 +166,34 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
         return cls.create(fn.__name__, inner)
 
     @expression
+    @classmethod
+    def from_fn_recursive(
+        cls, fn: typing.Callable[[FunctionThree[T, U, V, X], T, U, V], X]
+    ) -> FunctionThree[T, U, V, X]:
+        @Abstraction.fix
+        @Abstraction.from_fn
+        def inner(
+            inner_abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]
+        ) -> Abstraction[T, Abstraction[U, Abstraction[V, X]]]:
+            inner_fn = cls.create(fn.__name__, inner_abst)
+
+            @Abstraction.from_fn
+            def inner_inner(arg1: T) -> Abstraction[U, Abstraction[V, X]]:
+                @Abstraction.from_fn
+                def inner_inner_inner(arg2: U) -> Abstraction[V, X]:
+                    @Abstraction.from_fn
+                    def inner_inner_inner_inner(arg3: V) -> X:
+                        return fn(inner_fn, arg1, arg2, arg3)
+
+                    return inner_inner_inner_inner
+
+                return inner_inner_inner
+
+            return inner_inner
+
+        return cls.create(fn.__name__, inner)
+
+    @expression
     def __call__(self, arg1: T, arg2: U, arg3: V) -> X:
         ...
 
@@ -165,6 +215,8 @@ register_pre(default_rule(FunctionTwo[T, U, V].from_fn))
 register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
 
 register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
+register_pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
+register_pre(default_rule(FunctionThree[T, U, V, X].from_fn_recursive))
 
 
 @register  # type: ignore

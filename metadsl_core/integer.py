@@ -31,6 +31,22 @@ class Integer(Expression):
     def eq(self, other: Integer) -> Boolean:
         ...
 
+    @expression
+    def __lt__(self, other: Integer) -> Boolean:
+        ...
+
+    @expression
+    def __le__(self, other: Integer) -> Boolean:
+        ...
+
+    @expression
+    def __gt__(self, other: Integer) -> Boolean:
+        ...
+
+    @expression
+    def __ge__(self, other: Integer) -> Boolean:
+        ...
+
 
 @register
 @rule
@@ -42,8 +58,14 @@ def integer_math(l: int, r: int) -> R[Integer]:
 
 @register
 @rule
-def integer_eq(l: int, r: int) -> R[Boolean]:
-    return Integer.from_int(l).eq(Integer.from_int(r)), lambda: Boolean.create(l == r)
+def integer_comparison(l: int, r: int) -> R[Boolean]:
+    li = Integer.from_int(l)
+    ri = Integer.from_int(r)
+    yield li.eq(ri), lambda: Boolean.create(l == r)
+    yield li < (ri), lambda: Boolean.create(l < r)
+    yield li <= (ri), lambda: Boolean.create(l <= r)
+    yield li > (ri), lambda: Boolean.create(l > r)
+    yield li >= (ri), lambda: Boolean.create(l >= r)
 
 
 @register_convert
