@@ -24,6 +24,7 @@ __all__ = [
     "Nodes",
     "CallNode",
     "PrimitiveNode",
+    "SHOW_TYPES",
     "TypeInstance",
     "DeclaredTypeInstance",
     "ExternalTypeInstance",
@@ -52,6 +53,9 @@ class GraphState:
     graph: str
     rule: str
     label: Union[str, None]
+
+
+SHOW_TYPES = False
 
 
 def render_graph(node_id: str, nodes: Nodes) -> str:
@@ -88,6 +92,8 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
         for child in (node.args or []) + list((node.kwargs or {}).values()):
             d.edge(id_, child)
             process_node(child)
+        if not SHOW_TYPES:
+            return
         # Then add the type params for this node
         for i, kv in enumerate((node.type_params or {}).items()):
             k, v = kv
