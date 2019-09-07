@@ -12,14 +12,20 @@ __all__ = [
     "register_unbox",
     "register_numpy_engine",
     "register_post",
+    "register_pre",
 ]
 
 
 core_rules = RulesRepeatFold()
 register = core_rules.append
 
+
+# Rules that have to take place before any other rules
+core_pre_rules = RulesRepeatFold()
+register_pre = core_pre_rules.append
+
 # Rules that have to take place only after all other rules
-core_post_rules = RulesRepeatFold()
+core_post_rules = RulesSequenceFold()
 register_post = core_post_rules.append
 
 
@@ -36,17 +42,28 @@ numpy_engine = RulesRepeatFold()
 register_numpy_engine = numpy_engine.append
 
 
-all_rules = RuleInOrder(
-    CollapseReplacementsRule("core", RulesRepeatSequence(core_rules)),
-    CollapseReplacementsRule("convert", RulesRepeatSequence(core_rules, convert_rules)),
-    CollapseReplacementsRule(
-        "unbox", RulesRepeatSequence(core_rules, convert_rules, unbox_rules)
+all_rules = RulesRepeatSequence(
+    RuleInOrder(
+        CollapseReplacementsRule(
+            "core", RulesRepeatSequence(core_pre_rules, core_rules)
+        ),
+        CollapseReplacementsRule(
+            "convert", RulesRepeatSequence(core_pre_rules, core_rules, convert_rules)
+        ),
+        CollapseReplacementsRule(
+            "unbox",
+            RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, unbox_rules),
+        ),
+        CollapseReplacementsRule(
+            "execute",
+            RulesRepeatSequence(
+                core_pre_rules, core_rules, convert_rules, unbox_rules, numpy_engine
+            ),
+        ),
     ),
-    CollapseReplacementsRule(
-        "execute",
-        RulesRepeatSequence(core_rules, convert_rules, numpy_engine, core_post_rules),
-    ),
+    core_post_rules,
 )
+
 
 # Set to use core rules by default
 execute.default_rule = all_rules

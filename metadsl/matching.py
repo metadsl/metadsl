@@ -107,10 +107,8 @@ class DefaultRule:
 
         elif fn != expr.function:
             return
-
-        result = replace_typevars_expression(
-            self.inner_fn(*args, **expr.kwargs), typevars
-        )
+        new_expr = self.inner_fn(*args, **expr.kwargs)
+        result = replace_typevars_expression(new_expr, typevars)
 
         yield Replacement(str(self), result)
 
@@ -215,8 +213,9 @@ def replace_typevars_expression(expression: object, typevars: TypeVarMapping) ->
     return ExpressionFolder(
         # Also replace the typevars in the expressions, so that
         # bound functions that are values are replaced
-        # Used in either replacement rule
-        lambda e: replace_fn_typevars(e, typevars),
+        lambda e: replace_fn_typevars(
+            e, typevars, lambda e: replace_typevars_expression(e, typevars)
+        ),
         typevars=typevars,
     )(expression)
 

@@ -598,14 +598,21 @@ def match_functions(
     raise TypeError(f"{fn_with_typevars} != {fn}")
 
 
-def replace_fn_typevars(fn: T, typevars: TypeVarMapping) -> T:
+def replace_fn_typevars(
+    fn: T,
+    typevars: TypeVarMapping,
+    inner_mapping: typing.Callable[[T], T] = lambda a: a,
+) -> T:
+    """
+    Replaces all type
+    """
     if isinstance(fn, BoundInfer):
         return dataclasses.replace(  # type: ignore
             fn, owner=replace_typevars(typevars, fn.owner)
         )
     if isinstance(fn, types.FunctionType):
         # Create new function by replacing typevars in existing function
-        new_fn = lambda *args, **kwargs: fn(*args, **kwargs)
+        new_fn = lambda *args, **kwargs: inner_mapping(fn(*args, **kwargs))
         functools.update_wrapper(new_fn, fn)
         new_fn.__annotations__ = {
             k: replace_typevars(typevars, v)

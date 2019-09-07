@@ -65,7 +65,12 @@ class Abstraction(Expression, typing.Generic[T, U]):
         return fn(Abstraction.fix(fn))
 
 
-from_fn_rule = register(default_rule(Abstraction[T, U].from_fn))
+# Run the `from_fn` before any other rules, so that variables
+# are all created before any are replaced
+# This  is needed if a variable is caught in an inner scope of a local function
+from_fn_rule = register_pre(default_rule(Abstraction[T, U].from_fn))
+# Run  the fixed point  operator  rule after all others, so that
+# it is only expanded if we need it.
 fix_rule = register_post(default_rule(Abstraction.fix))
 
 

@@ -19,6 +19,7 @@ __all__ = [
     "execute",
     "RulesRepeatSequence",
     "RulesRepeatFold",
+    "RulesSequenceFold",
     "RuleSequence",
     "RuleInOrder",
     "RuleFold",
@@ -121,6 +122,30 @@ class RulesRepeatSequence:
 
 
 @dataclasses.dataclass(init=False)
+class RulesSequenceFold:
+
+    rules: typing.Tuple[Rule, ...]
+    _rule: Rule
+
+    def __init__(self, *rules: Rule):
+        self.rules = rules
+        self._update_rule()
+
+    def _update_rule(self):
+        execute_all = RuleSequence(self.rules)
+        execute_fold = RuleFold(execute_all)
+        self._rule = execute_fold
+
+    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+        return self._rule(expr)  # type: ignore
+
+    def append(self, rule: T_Rule) -> T_Rule:
+        self.rules += (rule,)
+        self._update_rule()
+        return rule
+
+
+@dataclasses.dataclass(init=False)
 class RulesRepeatFold:
     """
     This takes in a list of rules and repeatedly applies them recursively to the
@@ -178,8 +203,10 @@ class RuleSequence:
 
     def __call__(self, expr: object) -> typing.Iterable[Replacement]:
         for rule in self.rules:
+            replacement = None
             for replacement in rule(expr):
                 yield replacement
+            if replacement:
                 return
 
 

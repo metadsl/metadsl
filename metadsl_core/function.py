@@ -40,6 +40,10 @@ class FunctionZero(Expression, typing.Generic[T]):
     def create(cls, name: str, val: T) -> FunctionZero[T]:
         ...
 
+    @expression
+    def value(self) -> T:
+        ...
+
 
 class FunctionOne(Expression, typing.Generic[T, U]):
     """
@@ -80,6 +84,10 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     def create(cls, name: str, val: Abstraction[T, U]) -> FunctionOne[T, U]:
         ...
 
+    @expression
+    def abstraction(self) -> Abstraction[T, U]:
+        ...
+
 
 class FunctionTwo(Expression, typing.Generic[T, U, V]):
     """
@@ -89,15 +97,13 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     @expression
     @classmethod
     def from_fn(cls, fn: typing.Callable[[T, U], V]) -> FunctionTwo[T, U, V]:
-        @Abstraction.from_fn
         def inner(arg1: T) -> Abstraction[U, V]:
-            @Abstraction.from_fn
             def inner_inner(arg2: U) -> V:
                 return fn(arg1, arg2)
 
-            return inner_inner
+            return Abstraction.from_fn(inner_inner)
 
-        return cls.create(fn.__name__, inner)
+        return cls.create(fn.__name__, Abstraction.from_fn(inner))
 
     @expression
     def __call__(self, arg1: T, arg2: U) -> V:
@@ -108,6 +114,10 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     def create(
         cls, name: str, val: Abstraction[T, Abstraction[U, V]]
     ) -> FunctionTwo[T, U, V]:
+        ...
+
+    @expression
+    def abstraction(self) -> Abstraction[T, Abstraction[U, V]]:
         ...
 
 
@@ -144,36 +154,66 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
     ) -> FunctionThree[T, U, V, X]:
         ...
 
-
-register(default_rule(FunctionZero[T].from_fn))
-register(default_rule(FunctionOne[T, U].from_fn))
-register(default_rule(FunctionTwo[T, U, V].from_fn))
-register(default_rule(FunctionThree[T, U, V, X].from_fn))
-
-register(default_rule(FunctionOne[T, U].from_fn_recursive))
+    @expression
+    def abstraction(self) -> Abstraction[T, Abstraction[U, Abstraction[V, X]]]:
+        ...
 
 
-@register  # type: ignore
-@rule
-def zero_call(_: str, t: T) -> R[T]:
-    return FunctionZero.create(_, t)(), t
+register_pre(default_rule(FunctionZero[T].from_fn))
+register_pre(default_rule(FunctionOne[T, U].from_fn))
+register_pre(default_rule(FunctionTwo[T, U, V].from_fn))
+register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
+
+register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
 
 
 @register  # type: ignore
 @rule
-def one_call(_: str, abst: Abstraction[T, U], t: T) -> R[U]:
-    return FunctionOne.create(_, abst)(t), abst(t)
+def zero_call(fn: FunctionZero[T]) -> R[T]:
+    return fn(), fn.value()
 
 
 @register  # type: ignore
 @rule
-def two_call(_: str, abst: Abstraction[T, Abstraction[U, V]], t: T, u: U) -> R[V]:
-    return FunctionTwo.create(_, abst)(t, u), abst(t)(u)
+def one_call(fn: FunctionOne[T, U], t: T) -> R[U]:
+    return fn(t), fn.abstraction()(t)
 
 
 @register  # type: ignore
 @rule
-def three_call(
-    _: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]], t: T, u: U, v: V
-) -> R[X]:
-    return FunctionThree.create(_, abst)(t, u, v), abst(t)(u)(v)
+def two_call(fn: FunctionTwo[T, U, V], t: T, u: U) -> R[V]:
+    return fn(t, u), fn.abstraction()(t)(u)
+
+
+@register  # type: ignore
+@rule
+def three_call(fn: FunctionThree[T, U, V, X], t: T, u: U, v: V) -> R[X]:
+    return fn(t, u, v), fn.abstraction()(t)(u)(v)
+
+
+@register  # type: ignore
+@rule
+def zero_value(_: str, t: T) -> R[T]:
+    return FunctionZero.create(_, t).value(), t
+
+
+@register  # type: ignore
+@rule
+def one_abstraction(_: str, abst: Abstraction[T, U]) -> R[Abstraction[T, U]]:
+    return FunctionOne.create(_, abst).abstraction(), abst
+
+
+@register  # type: ignore
+@rule
+def two_abstraction(
+    _: str, abst: Abstraction[T, Abstraction[U, V]]
+) -> R[Abstraction[T, Abstraction[U, V]]]:
+    return FunctionTwo.create(_, abst).abstraction(), abst
+
+
+@register  # type: ignore
+@rule
+def three_abstraction(
+    _: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]
+) -> R[Abstraction[T, Abstraction[U, Abstraction[V, X]]]]:
+    return FunctionThree.create(_, abst).abstraction(), abst
