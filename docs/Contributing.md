@@ -18,6 +18,7 @@ flit -f typez.pyproject.toml install --symlink
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink
+flit -f llvm.pyproject.toml install --symlink
 
 # optional
 jupyter labextension install ./typez
