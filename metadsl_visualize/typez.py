@@ -11,7 +11,7 @@ import dataclasses
 import typing_inspect
 import warnings
 
-__all__ = ["convert_rule", "TypezRule"]
+__all__ = ["convert_rule", "TypezRule", "SHOW_MODULE"]
 
 TypezRule = typing.Callable[[object], typing.Iterable[typing.Tuple[object, Typez]]]
 
@@ -117,6 +117,9 @@ def type_to_typeinstance(tp: typing.Type) -> TypeInstance:
 _builtins = inspect.getmodule(int)
 
 
+SHOW_MODULE = False
+
+
 def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     """
     returns the name of the type or function prefixed by the module name if it isn't a builtin
@@ -132,11 +135,13 @@ def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     if isinstance(o, typing._SpecialForm):
         return repr(o)
 
-    module = inspect.getmodule(o)
     name = o.__qualname__ or o.__name__
     # This is true for objects in typing
     if not name:
         return repr(o)
+    if not SHOW_MODULE:
+        return name
+    module = inspect.getmodule(o)
     if module == _builtins:
         return name
     return f"{module.__name__}.{name}"
