@@ -37,7 +37,10 @@ def monkeypatch():
 
 
 def _expression_ipython_display(self):
-    IPython.core.display.display(execute(self))
+    res = execute(self)
+    # Only display result if we get back a non expression object
+    if not isinstance(res, Expression):
+        IPython.core.display.display(res)
 
 
 monkeypatch()
