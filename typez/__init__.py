@@ -82,15 +82,18 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
         if id_ in seen:
             return
         seen.add(id_)
-        node = nodes[id_]
+        persistant_id, node = nodes[id_]
         # If this is a primitive node, we don't need to process anymore
         if isinstance(node, PrimitiveNode):
-            d.node(id_, filter_str(node.repr))
+            d.node(id_, filter_str(node.repr), id=persistant_id)
             return
         # Otherwise, create the node then add its children
-        d.node(id_, filter_str(node.function))
-        for child in (node.args or []) + list((node.kwargs or {}).values()):
-            d.edge(id_, child)
+        d.node(id_, filter_str(node.function), id=persistant_id)
+        for i, child in enumerate(node.args or []):
+            d.edge(id_, child, id=f"{persistant_id}.args[{i}]")
+            process_node(child)
+        for k, child in (node.kwargs or {}).items():
+            d.edge(id_, child, id=f"{persistant_id}.kwargs[{k}]")
             process_node(child)
         if not SHOW_TYPES:
             return
@@ -187,7 +190,10 @@ class ExternalType:
     repr: str
 
 
-Nodes = Dict[str, Union["CallNode", "PrimitiveNode"]]
+PersistantID = str
+
+# TODO: Rename to expression
+Nodes = Dict[str, Tuple[PersistantID, Union["CallNode", "PrimitiveNode"]]]
 
 
 @dataclass(frozen=True)

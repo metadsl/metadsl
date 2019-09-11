@@ -49,19 +49,23 @@ Rule = typing.Callable[[ExpressionReference], typing.Iterable[Replacement]]
 @dataclasses.dataclass
 class Executor:
     # Function that takes a rule and an expression and executes it
-    execute: typing.Callable[[T, Rule], T]
+    execute: typing.Callable[[ExpressionReference, Rule], object]
     # rule that is used if none is passed in
     default_rule: typing.Optional[Rule]
 
     def __call__(self, expr: T, rule: typing.Optional[Rule] = None) -> T:
-        return self.execute(expr, rule or self.default_rule)  # type: ignore
+        execute: typing.Callable[  # type: ignore
+            [ExpressionReference, Rule], object
+        ] = self.execute  # type: ignore
+        rule = rule or self.default_rule
+        assert rule
+        return typing.cast(T, execute(ExpressionReference.from_expression(expr), rule))
 
 
-def _execute_all(expr: T, rule: Rule) -> T:
+def _execute_all(ref: ExpressionReference, rule: Rule) -> object:
     """
     Call a replacement rule many times, returning the last result whole.
     """
-    ref = ExpressionReference.from_expression(expr)
     for replacement in rule(ref):
         pass
     return ref.to_expression()
@@ -237,7 +241,14 @@ class RuleFold:
 
         for child_ref in expr.child_references():
             for replacement in rule(child_ref):
+                # If we replaced at the top level, update our top level id
+                if child_ref == expr:
+                    expr.id_ = child_ref.id_
+                else:
+                    # Otherwise make sure to update all the hashes
+                    expr.replace(expr.to_expression())
                 yield replacement
+
                 # If we found a replacement there, we are all good, we can exit
                 return
 

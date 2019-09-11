@@ -13,7 +13,7 @@ import warnings
 
 __all__ = ["convert_rule", "TypezRule", "SHOW_MODULE"]
 
-TypezRule = typing.Callable[[object], typing.Iterable[typing.Tuple[object, Typez]]]
+TypezRule = typing.Callable[[metadsl.ExpressionReference], typing.Iterable[Typez]]
 
 
 def convert_rule(rule: metadsl.Rule) -> TypezRule:
@@ -24,68 +24,59 @@ def convert_rule(rule: metadsl.Rule) -> TypezRule:
 class _ConvertRule:
     rule: metadsl.Rule
 
-    def __call__(self, obj: object) -> typing.Iterable[typing.Tuple[object, Typez]]:
+    def __call__(self, ref: metadsl.ExpressionReference) -> typing.Iterable[Typez]:
         # First yield the initial object
-        initial_node_id, nodes = convert_to_nodes(obj)
-        yield (obj, Typez(states=States(initial=initial_node_id), nodes=nodes))
+        nodes = convert_to_nodes(ref)
+        initial_node_id = str(ref.hash)
+        yield Typez(states=States(initial=initial_node_id), nodes=nodes)
         # Then loop through each replacement and export each as a state
         # We make sure not to mutate any older values
         states: typing.List[State] = []
-        for replacement in self.rule(obj):  # type: ignore
-            node_id, new_nodes = convert_to_nodes(replacement.result)
+        rule: metadsl.Rule = self.rule  # type: ignore
+        for replacement in rule(ref):
+            new_nodes = convert_to_nodes(ref)
             # combine nodes
             nodes = {**nodes, **new_nodes}
             # Add a new state
             states = states + [
-                State(node=node_id, rule=replacement.rule, label=replacement.label)
+                State(
+                    node=str(ref.hash), rule=replacement.rule, label=replacement.label
+                )
             ]
             yield (
-                replacement.result,
                 Typez(
                     states=States(initial=initial_node_id, states=states), nodes=nodes
-                ),
+                )
             )
 
 
-def convert_to_nodes(expr: object) -> typing.Tuple[str, Nodes]:
+def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
     Converts an expression into a node mapping and also returns the ID for the top level node.
     """
-    if isinstance(expr, metadsl.Expression):
-        nodes: Nodes = {}
-        args: typing.List[str] = []
-        kwargs: typing.Dict[str, str] = {}
-        for arg in expr.args:
-            arg_id, arg_nodes = convert_to_nodes(arg)
-            args.append(arg_id)
-            nodes.update(arg_nodes)
-        for k, v in expr.kwargs.items():
-            kwarg_id, kwarg_nodes = convert_to_nodes(v)
-            kwargs[k] = kwarg_id
-            nodes.update(kwarg_nodes)
-
-        # Set the node ID to be the hash of the node
-        node = CallNode(
-            type_params=typevars_to_typeparams(
-                metadsl.typing_tools.get_fn_typevars(expr.function)
+    expressions = ref.expressions
+    nodes: Nodes = {}
+    for hash_ in expressions.bfs(ref.hash):
+        id_ = expressions.hashes[hash_]
+        _, normalized_expr = expressions.expressions[id_]
+        node: typing.Union[CallNode, PrimitiveNode]
+        if isinstance(normalized_expr, metadsl.NormalizedExpression):
+            node = CallNode(
+                type_params=typevars_to_typeparams(
+                    metadsl.typing_tools.get_fn_typevars(normalized_expr.function)
+                )
+                or None,
+                function=function_or_type_repr(normalized_expr.function),
+                args=[str(a) for a in normalized_expr.args] or None,
+                kwargs={k: str(v) for k, v in normalized_expr.kwargs.items()} or None,
             )
-            or None,
-            function=function_or_type_repr(expr.function),
-            args=args or None,
-            kwargs=kwargs or None,
-        )
-        node_id = str(hash(node))
-        nodes[node_id] = node
-        return node_id, nodes
-
-    type_ = function_or_type_repr(type(expr))
-    # We try to use the has of an object, if we can,
-    # otherwise, if its mutable and has no hash, we use its id
-    try:
-        node_id = str(hash((type_, expr)))
-    except TypeError:
-        node_id = str(hash((type_, id(expr))))
-    return (node_id, {node_id: PrimitiveNode(type=type_, repr=repr(expr))})
+        else:
+            value = normalized_expr.value
+            node = PrimitiveNode(
+                type=function_or_type_repr(type(value)), repr=repr(value)
+            )
+        nodes[str(hash_)] = [str(id_), node]  # type: ignore
+    return nodes
 
 
 def typevars_to_typeparams(

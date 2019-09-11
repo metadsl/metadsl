@@ -96,10 +96,16 @@ type ExternalType = {
 };
 
 /**
+ * This ID is used to keep track of nodes accross states. Different
+ * nodes may be related to each other, like one turned into the other,
+ * so we give them the same persistant ID to aid in visualization.
+ */
+type PersistantID = string;
+/**
  * A mapping of node IDs to the functions
  */
 type Nodes = {
-  [id: string]: CallNode | PrimitiveNode;
+  [id: string]: [PersistantID, CallNode | PrimitiveNode];
 };
 
 type CallNode = {

@@ -52,12 +52,13 @@ export function SelectState({
   showLabels: boolean;
   onChange: (node: string) => void;
 }) {
-  const [selected, setSelected] = React.useState<number>(-1);
+  // selected index, from bottom to top
+  const [selected, setSelected] = React.useState<number>(0);
   React.useEffect(() => {
-    if (selected === -1) {
+    if (selected === graph.states.length) {
       onChange(graph.initial);
     } else {
-      onChange(graph.states[selected].graph);
+      onChange(graph.states[graph.states.length - selected - 1].graph);
     }
   }, [graph, selected]);
   return (
@@ -67,8 +68,10 @@ export function SelectState({
           <input
             type="radio"
             value="-1"
-            checked={selected === -1}
-            onChange={e => (e.target.value ? setSelected(-1) : null)}
+            checked={selected === graph.states.length}
+            onChange={e =>
+              e.target.value ? setSelected(graph.states.length) : null
+            }
           />
           <b>Initial</b>
         </label>
@@ -83,8 +86,12 @@ export function SelectState({
               <input
                 type="radio"
                 value={idx.toString()}
-                checked={idx === selected}
-                onChange={e => (e.target.value ? setSelected(idx) : null)}
+                checked={idx + selected + 1 == graph.states.length}
+                onChange={e =>
+                  e.target.value
+                    ? setSelected(graph.states.length - idx - 1)
+                    : null
+                }
               />
               {showLabels ? (
                 <b>{label}</b>
@@ -106,7 +113,7 @@ const t = d3transiion
   .transition("main")
   .ease(d3ease.easeCubicOut)
   // .delay(100)
-  .duration(300);
+  .duration(500);
 export function GraphvizComponent({ dot }: { dot: string }) {
   const el = React.useRef<HTMLDivElement>(null);
   const [graph, setGraph] = React.useState<null | Graphviz<any, any, any, any>>(
@@ -114,7 +121,7 @@ export function GraphvizComponent({ dot }: { dot: string }) {
   );
 
   React.useEffect(() => {
-    setGraph(graphviz(el.current!));
+    setGraph(graphviz(el.current!, { keyMode: "id" }));
   }, [el.current]);
 
   React.useEffect(() => {

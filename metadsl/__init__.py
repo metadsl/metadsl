@@ -8,3 +8,4 @@ from .expressions import *
 from .matching import *
 from .rules import *
 from .dict_tools import *
+from .normalized import *

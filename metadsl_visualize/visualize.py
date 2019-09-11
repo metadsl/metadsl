@@ -12,7 +12,7 @@ __all__ = ["execute_and_visualize"]
 T = typing.TypeVar("T")
 
 
-def execute_and_visualize(expr: T, rule: Rule) -> T:
+def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
     """
     Returns the replaced version of this expression and also displays the execution trace.
     """
@@ -20,9 +20,9 @@ def execute_and_visualize(expr: T, rule: Rule) -> T:
     typez_display = typez.TypezDisplay(typez.Typez())
     IPython.core.display.display(typez_display)
     # Update the typez display as we execute the rules
-    for expr, typez_ in convert_rule(rule)(expr):  # type: ignore
+    for typez_ in convert_rule(rule)(ref):
         typez_display.typez = typez_
-    return expr
+    return ref.to_expression()
 
 
 def monkeypatch():
@@ -31,8 +31,7 @@ def monkeypatch():
     """
     Expression._ipython_display_ = _expression_ipython_display  # type: ignore
     # only change if we are in a kernel
-    # https://github.com/ipython/ipython/issues/11694#issuecomment-485802013
-    if getattr(IPython.get_ipython(), "kernel", None):
+    if IPython.get_ipython():
         execute.execute = execute_and_visualize  # type: ignore
 
 

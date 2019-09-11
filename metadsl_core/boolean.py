@@ -35,7 +35,7 @@ def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     """
     >>> execute(Converter[Boolean].convert(True), convert_bool) ==  Maybe.just(Boolean.create(True))
     True
-    >>> list(convert_bool(Converter[Boolean].convert("not bool")))
+    >>> list(convert_bool(ExpressionReference.from_expression(Converter[Boolean].convert("not bool"))))
     []
     """
     return Converter[Boolean].convert(b), Maybe.just(Boolean.create(b))

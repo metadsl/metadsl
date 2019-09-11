@@ -11,7 +11,7 @@ import itertools
 from .expressions import *
 
 
-__all__ = ["ExpressionReference"]
+__all__ = ["ExpressionReference", "NormalizedExpression", "NormalizedExpressionLiteral"]
 
 ID = typing.NewType("ID", int)
 Hash = typing.NewType("Hash", int)
@@ -35,19 +35,27 @@ class NormalizedExpressionLiteral:
 class NormalizedExpressions:
     # mapping of ID to either NormalizedExpression or literal values
     expressions: typing.Dict[
-        ID, typing.Union[NormalizedExpression, NormalizedExpressionLiteral]
+        ID,
+        typing.Tuple[
+            Hash, typing.Union[NormalizedExpression, NormalizedExpressionLiteral]
+        ],
     ] = dataclasses.field(default_factory=dict)
     # mapping of hashses to ids
     hashes: typing.Dict[Hash, ID] = dataclasses.field(default_factory=dict)
 
     def get(self, hash_: Hash) -> object:
-        ref = self.expressions[self.hashes[hash_]]
-        if isinstance(ref, NormalizedExpressionLiteral):
-            return ref.value
-        return ref.function(
-            *(self.get(a) for a in ref.args),
-            **{k: self.get(v) for k, v in ref.kwargs.items()}
-        )
+        mapping: typing.Dict[Hash, object] = {}
+        for child_hash in reversed(list(self.bfs(hash_))):
+            _, ref = self.expressions[self.hashes[child_hash]]
+            if isinstance(ref, NormalizedExpressionLiteral):
+                mapping[child_hash] = ref.value
+            else:
+                mapping[child_hash] = ref.function(
+                    *(mapping[a] for a in ref.args),
+                    **{k: mapping[v] for k, v in ref.kwargs.items()}
+                )
+
+        return mapping[hash_]
 
     def bfs(self, hash_: Hash) -> typing.Iterable[Hash]:
         """
@@ -60,7 +68,7 @@ class NormalizedExpressions:
             hash_ = to_see.pop(0)
             yield hash_
             seen.add(hash_)
-            ref = self.expressions[self.hashes[hash_]]
+            _, ref = self.expressions[self.hashes[hash_]]
             if isinstance(ref, NormalizedExpressionLiteral):
                 continue
 
@@ -74,7 +82,9 @@ class NormalizedExpressions:
         """
         normalized_expr: typing.Union[NormalizedExpression, NormalizedExpressionLiteral]
         if isinstance(expr, Expression):
-            prev_expr = self.expressions[self.hashes[prev_hash]] if prev_hash else None
+            prev_expr = (
+                self.expressions[self.hashes[prev_hash]][1] if prev_hash else None
+            )
             if (
                 prev_expr
                 and isinstance(prev_expr, NormalizedExpression)
@@ -121,11 +131,13 @@ class NormalizedExpressions:
         if hash_ in self.hashes:
             # alias the old hash to the new id if we had it
             if prev_hash:
-                self.hashes[prev_hash] = self.hashes[hash_]
+                new_id = self.hashes[hash_]
+                self.hashes[prev_hash] = new_id
+                self.expressions[new_id] = (hash_, self.expressions[new_id][1])
 
         # otherwise add this as a new expression, using hash as ID if a previous one hasn't been supplied.
         id_ = self.hashes[prev_hash] if prev_hash else ID(hash_)
-        self.expressions[id_] = expr
+        self.expressions[id_] = (hash_, expr)
         self.hashes[hash_] = id_
 
 
@@ -134,23 +146,29 @@ T = typing.TypeVar("T")
 
 @dataclasses.dataclass
 class ExpressionReference(typing.Generic[T]):
-    hash_: Hash
+    id_: ID
     expressions: NormalizedExpressions
 
     @classmethod
     def from_expression(cls, expr: T) -> ExpressionReference:
         expressions = NormalizedExpressions()
-        return cls(expressions.add(expr, None), expressions)
+        return cls(expressions.hashes[expressions.add(expr, None)], expressions)
 
     def replace(self, new_expr: T) -> None:
-        self.expressions.add(new_expr, self.hash_)
+        self.id_ = self.expressions.hashes[self.expressions.add(new_expr, self.hash)]
+
+    @property
+    def hash(self) -> Hash:
+        return self.expressions.expressions[self.id_][0]
 
     def to_expression(self) -> T:
-        return self.expressions.get(self.hash_)  # type: ignore
+        return typing.cast(T, self.expressions.get(self.hash))
 
     def child_references(self) -> typing.Iterable[ExpressionReference]:
         """
         returns a breadth first search of the graph starting a the root node
         """
-        for child_hash in self.expressions.bfs(self.hash_):
-            yield ExpressionReference(child_hash, self.expressions)
+        for child_hash in self.expressions.bfs(self.hash):
+            yield ExpressionReference(
+                self.expressions.hashes[child_hash], self.expressions
+            )

@@ -1,4 +1,4 @@
-from metadsl import execute
+from metadsl import execute, ExpressionReference
 from .conversion import *
 from .maybe import *
 from .rules import *
@@ -10,7 +10,9 @@ class TestConvertIdentity:
 
     def test_doesnt_match_type(self):
         assert not list(
-            convert_identity_rule(Converter[str].convert(1))  # type: ignore
+            convert_identity_rule(
+                ExpressionReference.from_expression(Converter[str].convert(1))
+            )
         )
 
     def test_matches_convert(self):

@@ -536,7 +536,7 @@ class Infer(typing.Generic[T, U]):
             fn, self.wrapper, owner, is_classmethod  # type: ignore
         )
 
-    def __str__(self):
+    def __repr__(self):
         return getattr(self.fn, "__name__", str(self.fn))
 
 
@@ -558,14 +558,10 @@ class BoundInfer(typing.Generic[T, U]):
             ],
         )
 
-    def __str__(self):
+    def __repr__(self):
         # Generic types are already formatted nicely
-        owner_str = (
-            str(self.owner)
-            if isinstance(self.owner, typing._GenericAlias)  # type: ignore
-            else getattr(self.owner, "__qualname__", str(self.owner))
-        )
-        return f"{owner_str}.{getattr(self.fn, '__name__', str(self.fn))}"
+        owner_str = self.owner.__name__
+        return f"{owner_str}.{self.fn.__name__}"
 
 
 def infer(

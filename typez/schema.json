@@ -50,7 +50,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
+                                    "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
                                   },
                                   "type": "object"
                                 },
@@ -115,7 +115,7 @@
                                 "properties": {
                                   "params": {
                                     "additionalProperties": {
-                                      "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
+                                      "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
                                     },
                                     "type": "object"
                                   },
@@ -176,7 +176,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
+                              "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
                             },
                             "type": "object"
                           },
@@ -228,87 +228,98 @@
         },
         "nodes": {
           "additionalProperties": {
-            "anyOf": [
+            "items": [
               {
-                "additionalProperties": false,
-                "properties": {
-                  "args": {
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "function": {
-                    "type": "string"
-                  },
-                  "kwargs": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "type": "object"
-                  },
-                  "type_params": {
-                    "additionalProperties": {
-                      "anyOf": [
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "params": {
-                              "additionalProperties": {
-                                "$ref": "#/definitions/alias-schema.ts-3315-3454-schema.ts-0-4007"
-                              },
-                              "type": "object"
-                            },
-                            "type": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "type"
-                          ],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "repr": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "repr"
-                          ],
-                          "type": "object"
-                        }
-                      ],
-                      "description": "A type that is passed into a function to set one of its  type"
-                    },
-                    "type": "object"
-                  }
-                },
-                "required": [
-                  "function"
-                ],
-                "type": "object"
+                "description": "This ID is used to keep track of nodes accross states. Different\nnodes may be related to each other, like one turned into the other,\nso we give them the same persistant ID to aid in visualization.",
+                "type": "string"
               },
               {
-                "additionalProperties": false,
-                "description": "A primitive node that represents some type in  the host language",
-                "properties": {
-                  "repr": {
-                    "type": "string"
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "args": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "kwargs": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "type_params": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "params": {
+                                  "additionalProperties": {
+                                    "$ref": "#/definitions/alias-schema.ts-3573-3712-schema.ts-0-4265"
+                                  },
+                                  "type": "object"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "repr": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "repr"
+                              ],
+                              "type": "object"
+                            }
+                          ],
+                          "description": "A type that is passed into a function to set one of its  type"
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "function"
+                    ],
+                    "type": "object"
                   },
-                  "type": {
-                    "type": "string"
+                  {
+                    "additionalProperties": false,
+                    "description": "A primitive node that represents some type in  the host language",
+                    "properties": {
+                      "repr": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "repr"
+                    ],
+                    "type": "object"
                   }
-                },
-                "required": [
-                  "type",
-                  "repr"
-                ],
-                "type": "object"
+                ]
               }
-            ]
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
           },
           "description": "A mapping of node IDs to the functions",
           "type": "object"
@@ -351,7 +362,7 @@
       },
       "type": "object"
     },
-    "alias-schema.ts-2495-2601-schema.ts-0-4007": {
+    "alias-schema.ts-2495-2601-schema.ts-0-4265": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -370,7 +381,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4007"
+                "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
               },
               "type": "object"
             },
@@ -402,14 +413,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-schema.ts-3315-3454-schema.ts-0-4007": {
+    "alias-schema.ts-3573-3712-schema.ts-0-4265": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-3315-3454-schema.ts-0-4007"
+                "$ref": "#/definitions/alias-schema.ts-3573-3712-schema.ts-0-4265"
               },
               "type": "object"
             },
