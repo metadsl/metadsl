@@ -20,6 +20,7 @@ import typing_inspect
 
 from .expressions import *
 from .dict_tools import *
+from .normalized import *
 from .typing_tools import *
 from .rules import Rule, Replacement
 
@@ -38,7 +39,7 @@ class NoMatch(Exception):
     pass
 
 
-def rule(fn: MatchFunctionType[T]) -> Rule[T]:
+def rule(fn: MatchFunctionType) -> Rule:
     """
     Creates a new rule given a callable that accepts wildcards and returns
     the match value and the replacement value.
@@ -68,7 +69,7 @@ class DefaultRule:
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
 
-    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
         """
         This rule should match whenever the expression is this function.
 
@@ -76,6 +77,7 @@ class DefaultRule:
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
+        expr = ref.to_expression()
         if not isinstance(expr, Expression):
             return
 
@@ -109,8 +111,8 @@ class DefaultRule:
             return
         new_expr = self.inner_fn(*args, **expr.kwargs)
         result = replace_typevars_expression(new_expr, typevars)
-
-        yield Replacement(str(self), result)
+        ref.replace(result)
+        yield Replacement(str(self))
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -174,7 +176,8 @@ class MatchRule:
             else [result]
         )
 
-    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
+        expr = ref.to_expression()
         for i, result in enumerate(self.results):
             template, _ = result
             try:
@@ -202,7 +205,8 @@ class MatchRule:
             except NoMatch:
                 continue
             result_expr = replace_typevars_expression(result_expr, typevars)
-            yield Replacement(str(self), result_expr)
+            ref.replace(result_expr)
+            yield Replacement(str(self))
             return
 
 

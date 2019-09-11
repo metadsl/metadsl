@@ -61,7 +61,7 @@ all_rules = RulesRepeatSequence(
             ),
         ),
     ),
-    core_post_rules,
+    # core_post_rules,
 )
 
 

@@ -16,13 +16,13 @@ __all__ = ["convert_rule", "TypezRule", "SHOW_MODULE"]
 TypezRule = typing.Callable[[object], typing.Iterable[typing.Tuple[object, Typez]]]
 
 
-def convert_rule(rule: metadsl.Rule[typing.Any]) -> TypezRule:
+def convert_rule(rule: metadsl.Rule) -> TypezRule:
     return _ConvertRule(rule)
 
 
 @dataclasses.dataclass
 class _ConvertRule:
-    rule: metadsl.Rule[typing.Any]
+    rule: metadsl.Rule
 
     def __call__(self, obj: object) -> typing.Iterable[typing.Tuple[object, Typez]]:
         # First yield the initial object

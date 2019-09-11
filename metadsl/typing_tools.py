@@ -509,7 +509,7 @@ WrapperType = typing.Callable[
 ]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(unsafe_hash=True)
 class Infer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
     wrapper: WrapperType[T, U] = dataclasses.field(repr=False)
@@ -540,7 +540,7 @@ class Infer(typing.Generic[T, U]):
         return getattr(self.fn, "__name__", str(self.fn))
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(unsafe_hash=True)
 class BoundInfer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
     wrapper: WrapperType[T, U] = dataclasses.field(repr=False)
