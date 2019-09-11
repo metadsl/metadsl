@@ -74,3 +74,26 @@ def test_subtree():
             == ref.expressions.hashes[final_hashes[i]]
         )
 
+
+@expression
+def e(a: typing.Any, b: typing.Any) -> typing.Any:
+    ...
+
+
+@expression
+def f(e: typing.Any) -> typing.Any:
+    ...
+
+
+@expression
+def g(e: typing.Any) -> typing.Any:
+    ...
+
+
+def test_graph_subtree():
+    """
+    Verify processed in correct order
+    """
+    orig = e(f(g(d())), d())
+    ref = ExpressionReference.from_expression(orig)
+    assert ref.to_expression() == orig

@@ -45,7 +45,7 @@ class NormalizedExpressions:
 
     def get(self, hash_: Hash) -> object:
         mapping: typing.Dict[Hash, object] = {}
-        for child_hash in reversed(list(self.bfs(hash_))):
+        for child_hash in self.child_first_traversal(hash_):
             _, ref = self.expressions[self.hashes[child_hash]]
             if isinstance(ref, NormalizedExpressionLiteral):
                 mapping[child_hash] = ref.value
@@ -57,24 +57,45 @@ class NormalizedExpressions:
 
         return mapping[hash_]
 
+    def child_first_traversal(self, hash_: Hash) -> typing.List[Hash]:
+        """
+        Returns a list of all descendents, with children always after their parents
+        """
+        processed: typing.List[Hash] = []
+        to_process: typing.List[Hash] = [hash_]
+        while to_process:
+            hash_ = to_process.pop(0)
+            if hash_ in processed:
+                processed.pop(processed.index(hash_))
+            processed.append(hash_)
+            _, ref = self.expressions[self.hashes[hash_]]
+
+            if isinstance(ref, NormalizedExpressionLiteral):
+                continue
+
+            for child_hash in list(ref.args) + list(ref.kwargs.values()):
+                to_process.append(child_hash)
+        return list(reversed(processed))
+
     def bfs(self, hash_: Hash) -> typing.Iterable[Hash]:
         """
         breadth first search
         """
-        seen: typing.Set[Hash] = set()
-        to_see: typing.List[Hash] = [hash_]
+        yield hash_
+        yeilded: typing.Set[Hash] = {hash_}
+        to_process: typing.List[Hash] = [hash_]
 
-        while to_see:
-            hash_ = to_see.pop(0)
-            yield hash_
-            seen.add(hash_)
+        while to_process:
+            hash_ = to_process.pop(0)
             _, ref = self.expressions[self.hashes[hash_]]
             if isinstance(ref, NormalizedExpressionLiteral):
                 continue
 
             for child_hash in list(ref.args) + list(ref.kwargs.values()):
-                if child_hash not in seen:
-                    to_see.append(child_hash)
+                if child_hash not in yeilded:
+                    yield child_hash
+                    yeilded.add(child_hash)
+                    to_process.append(child_hash)
 
     def add(self, expr: object, prev_hash: typing.Optional[Hash]) -> Hash:
         """
