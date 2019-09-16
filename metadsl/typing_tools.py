@@ -481,9 +481,12 @@ def infer_return_type(
     else:
         argument_items = list(arguments.items())
 
-    return_hint: typing.Type[T] = hints.pop("return")
+    return_hint: typing.Type[T] = hints.pop("return", typing.Any)  # type: ignore
 
-    mappings += [match_type(hints[name], arg) for name, arg in argument_items]
+    mappings += [
+        match_type(hints.get(name, typing.Any), arg)  # type: ignore
+        for name, arg in argument_items
+    ]
     try:
         matches: TypeVarMapping = merge_typevars(*mappings)
     except ValueError:
