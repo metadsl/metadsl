@@ -214,14 +214,19 @@ def replace_typevars_expression(expression: object, typevars: TypeVarMapping) ->
     """
     Replaces all typevars found in the classmethods of an expression.
     """
-    return ExpressionFolder(
-        # Also replace the typevars in the expressions, so that
-        # bound functions that are values are replaced
-        lambda e: replace_fn_typevars(
-            e, typevars, lambda e: replace_typevars_expression(e, typevars)
-        ),
-        typevars=typevars,
-    )(expression)
+    if isinstance(expression, Expression):
+        new_args = [replace_typevars_expression(a, typevars) for a in expression.args]
+        new_kwargs = {
+            k: replace_typevars_expression(v, typevars)
+            for k, v in expression.kwargs.items()
+        }
+        new_fn = replace_fn_typevars(expression.function, typevars)
+        return replace_typevars(typevars, typing_inspect.get_generic_type(expression))(
+            new_fn, new_args, new_kwargs
+        )
+    return replace_fn_typevars(
+        expression, typevars, lambda e: replace_typevars_expression(e, typevars)
+    )
 
 
 def match_expression(
