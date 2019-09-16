@@ -56,26 +56,26 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
     expressions = ref.expressions
     nodes: Nodes = {}
-    for hash_ in expressions.bfs(ref.hash):
-        id_ = expressions.hashes[hash_]
-        _, normalized_expr = expressions.expressions[id_]
+    for hash_, expr in expressions.expressions.items():
         node: typing.Union[CallNode, PrimitiveNode]
-        if isinstance(normalized_expr, metadsl.NormalizedExpression):
+        value = expr.value
+        if isinstance(value, metadsl.Expression):
+            children = expr.children
+            assert children
             node = CallNode(
                 type_params=typevars_to_typeparams(
-                    metadsl.typing_tools.get_fn_typevars(normalized_expr.function)
+                    metadsl.typing_tools.get_fn_typevars(value.function)
                 )
                 or None,
-                function=function_or_type_repr(normalized_expr.function),
-                args=[str(a) for a in normalized_expr.args] or None,
-                kwargs={k: str(v) for k, v in normalized_expr.kwargs.items()} or None,
+                function=function_or_type_repr(value.function),
+                args=[str(a) for a in children.args] or None,
+                kwargs={k: str(v) for k, v in children.kwargs.items()} or None,
             )
         else:
-            value = normalized_expr.value
             node = PrimitiveNode(
                 type=function_or_type_repr(type(value)), repr=repr(value)
             )
-        nodes[str(hash_)] = [str(id_), node]  # type: ignore
+        nodes[str(hash_)] = [str(expr.id), node]  # type: ignore
     return nodes
 
 

@@ -10,7 +10,9 @@ from .expressions_test import TEST_EXPRESSIONS
 
 @pytest.mark.parametrize("expr", TEST_EXPRESSIONS)
 def test_expression_reference_identity(expr):
-    assert ExpressionReference.from_expression(expr).to_expression() == expr
+    ref = ExpressionReference.from_expression(expr)
+    ref.verify_integrity()
+    assert ref.normalized_expression.value == expr
 
 
 @expression
@@ -35,44 +37,88 @@ def d() -> typing.Any:
 
 def test_replace():
     ref = ExpressionReference.from_expression(a(b(c())))
-    original_hash = ref.hash
-    original_hashes = list(ref.expressions.bfs(ref.hash))
+    ref.verify_integrity()
+    original_hashes, original_ids, original_expr = zip(
+        *(
+            (
+                child.hash,
+                child.normalized_expression.id,
+                child.normalized_expression.value,
+            )
+            for child in ref.children
+        )
+    )
+
+    assert original_expr == (a(b(c())), b(c()), c())
+
     ref.replace(a(b(d())))
-    final_hashes = list(ref.expressions.bfs(ref.hash))
+    ref.verify_integrity()
 
-    assert original_hash != ref.hash
+    new_hashes, new_ids, new_expr = zip(
+        *(
+            (
+                child.hash,
+                child.normalized_expression.id,
+                child.normalized_expression.value,
+            )
+            for child in ref.children
+        )
+    )
+
+    assert new_expr == (a(b(d())), b(d()), d())
+
     # None of the hashes should be the same
     for i in (0, 1, 2):
-        assert original_hashes[i] != final_hashes[i]
+        assert original_hashes[i] != new_hashes[i]
 
     # the ids should be the  same
     for i in (0, 1, 2):
-        assert (
-            ref.expressions.hashes[original_hashes[i]]
-            == ref.expressions.hashes[final_hashes[i]]
-        )
+        assert original_ids[i] == new_ids[i]
 
 
-def test_subtree():
+def test_replace_child():
     ref = ExpressionReference.from_expression(a(b(c())))
-    original_hashes = list(ref.expressions.bfs(ref.hash))
 
-    last_ref = list(ref.child_references())[-1]
-    last_ref.replace(d())
+    ref.verify_integrity()
 
-    ref.replace(ref.to_expression())
-    final_hashes = list(ref.expressions.bfs(ref.hash))
+    original_hashes, original_ids, original_expr = zip(
+        *(
+            (
+                child.hash,
+                child.normalized_expression.id,
+                child.normalized_expression.value,
+            )
+            for child in ref.children
+        )
+    )
+
+    assert original_expr == (a(b(c())), b(c()), c())
+    child_ref = list(ref.children)[-1]
+    child_ref.replace(d())
+    child_ref.verify_integrity()
+
+    ref.verify_integrity()
+
+    new_hashes, new_ids, new_expr = zip(
+        *(
+            (
+                child.hash,
+                child.normalized_expression.id,
+                child.normalized_expression.value,
+            )
+            for child in ref.children
+        )
+    )
+
+    assert new_expr == (a(b(d())), b(d()), d())
 
     # None of the hashes should be the same
     for i in (0, 1, 2):
-        assert original_hashes[i] != final_hashes[i]
+        assert original_hashes[i] != new_hashes[i]
 
     # the ids should be the  same
     for i in (0, 1, 2):
-        assert (
-            ref.expressions.hashes[original_hashes[i]]
-            == ref.expressions.hashes[final_hashes[i]]
-        )
+        assert original_ids[i] == new_ids[i]
 
 
 @expression
@@ -96,4 +142,16 @@ def test_graph_subtree():
     """
     orig = e(f(g(d())), d())
     ref = ExpressionReference.from_expression(orig)
-    assert ref.to_expression() == orig
+    ref.verify_integrity()
+    assert ref.normalized_expression.value == orig
+
+
+def test_doesnt_remember_replacements():
+    ref = ExpressionReference.from_expression(a(b(c())))
+    ref.verify_integrity()
+    ref.replace(a(b(d())))
+    ref.verify_integrity()
+    ref.replace(a(b(c())))
+    ref.verify_integrity()
+
+    assert ref.normalized_expression.value == a(b(c()))

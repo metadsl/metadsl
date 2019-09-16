@@ -7,159 +7,282 @@ from __future__ import annotations
 import dataclasses
 import typing
 import itertools
+import collections
 
 from .expressions import *
 
 
-__all__ = ["ExpressionReference", "NormalizedExpression", "NormalizedExpressionLiteral"]
+__all__ = [
+    "ExpressionReference",
+    "NormalizedExpression",
+    "NormalizedExpressions",
+    "Parent",
+    "Children",
+    "Hash",
+    "ID",
+]
 
 ID = typing.NewType("ID", int)
 Hash = typing.NewType("Hash", int)
 
-HashID = typing.Tuple[Hash, ID]
+
+@dataclasses.dataclass(frozen=True)
+class Parent:
+    hash: Hash
+    key: typing.Union[str, int]
+
+
+@dataclasses.dataclass
+class Children:
+    args: typing.List[Hash]
+    kwargs: typing.Dict[str, Hash]
+
+    def references(self) -> typing.Iterable[typing.Tuple[typing.Union[str, int], Hash]]:
+        return itertools.chain(enumerate(self.args), self.kwargs.items())
 
 
 @dataclasses.dataclass
 class NormalizedExpression:
-    function: typing.Callable
-    args: typing.Tuple[Hash, ...]
-    kwargs: typing.Dict[str, Hash]
-
-
-@dataclasses.dataclass
-class NormalizedExpressionLiteral:
+    children: typing.Optional[Children]
     value: object
+
+    prev_id: dataclasses.InitVar[typing.Optional[ID]]
+
+    id: ID = dataclasses.field(init=False)
+    hash: Hash = dataclasses.field(init=False)
+
+    parents: typing.Set[Parent] = dataclasses.field(default_factory=set)
+
+    def __post_init__(self, prev_id):
+        self.hash = self._compute_hash()
+        self.id = prev_id or ID(self.hash)
+
+    def _compute_hash(self) -> Hash:
+        if self.children:
+            assert isinstance(self.value, Expression)
+            return Hash(
+                hash(
+                    (
+                        self.value.function,
+                        tuple(self.children.args),
+                        frozenset(self.children.kwargs.items()),
+                    )
+                )
+            )
+        try:
+            return Hash(hash((type(self.value), self.value)))
+        except TypeError:
+            return Hash(hash((type(self.value), id(self.value))))
 
 
 @dataclasses.dataclass
 class NormalizedExpressions:
-    # mapping of ID to either NormalizedExpression or literal values
-    expressions: typing.Dict[
-        ID,
-        typing.Tuple[
-            Hash, typing.Union[NormalizedExpression, NormalizedExpressionLiteral]
-        ],
-    ] = dataclasses.field(default_factory=dict)
-    # mapping of hashses to ids
-    hashes: typing.Dict[Hash, ID] = dataclasses.field(default_factory=dict)
+    # Expressions, topologically sorted, with the root expression at the end.
 
-    def get(self, hash_: Hash) -> object:
-        mapping: typing.Dict[Hash, object] = {}
-        for child_hash in self.child_first_traversal(hash_):
-            _, ref = self.expressions[self.hashes[child_hash]]
-            if isinstance(ref, NormalizedExpressionLiteral):
-                mapping[child_hash] = ref.value
+    expressions: collections.OrderedDict[
+        Hash, NormalizedExpression
+    ] = dataclasses.field(default_factory=collections.OrderedDict)
+    ids: typing.Dict[ID, Hash] = dataclasses.field(default_factory=dict)
+
+    # THe first hash  added. Used when adding a new expression, so we can record the left
+    # most hash and delete  every hash before that
+    _first_hash: typing.Optional[Hash] = None
+
+    def add(
+        self,
+        expr: object,
+        prev: typing.Optional[
+            typing.Tuple[typing.Optional[Hash], NormalizedExpressions]
+        ] = None,
+    ) -> Hash:
+        """
+        Does a depth addition of the expression to the graph, keeping all the nodes
+        added in topological order, because the children will all be visisted after
+        the parent.
+        """
+
+        children: typing.Optional[Children]
+
+        prev_id: typing.Optional[ID]
+        prev_args: typing.Optional[typing.List[Hash]]
+        prev_kwargs: typing.Optional[typing.Dict[str, Hash]]
+        prev_expressions: typing.Optional[NormalizedExpressions]
+
+        if prev:
+            prev_hash, prev_expressions = prev
+            if prev_hash:
+                prev_ref = prev_expressions.expressions[prev_hash]
+                prev_id = prev_ref.id
+                if (
+                    isinstance(prev_ref.value, Expression)
+                    and isinstance(expr, Expression)
+                    and prev_ref.value.function == expr.function
+                ):
+                    assert prev_ref.children
+                    prev_args = prev_ref.children.args
+                    prev_kwargs = prev_ref.children.kwargs
+                else:
+                    prev_args = None
+                    prev_kwargs = None
             else:
-                mapping[child_hash] = ref.function(
-                    *(mapping[a] for a in ref.args),
-                    **{k: mapping[v] for k, v in ref.kwargs.items()}
-                )
+                prev_id = None
+                prev_args = None
+                prev_kwargs = None
+        else:
+            prev_expressions = None
+            prev_id = None
+            prev_args = None
+            prev_kwargs = None
 
-        return mapping[hash_]
-
-    def child_first_traversal(self, hash_: Hash) -> typing.List[Hash]:
-        """
-        Returns a list of all descendents, with children always after their parents
-        """
-        processed: typing.List[Hash] = []
-        to_process: typing.List[Hash] = [hash_]
-        while to_process:
-            hash_ = to_process.pop(0)
-            if hash_ in processed:
-                processed.pop(processed.index(hash_))
-            processed.append(hash_)
-            _, ref = self.expressions[self.hashes[hash_]]
-
-            if isinstance(ref, NormalizedExpressionLiteral):
-                continue
-
-            for child_hash in list(ref.args) + list(ref.kwargs.values()):
-                to_process.append(child_hash)
-        return list(reversed(processed))
-
-    def bfs(self, hash_: Hash) -> typing.Iterable[Hash]:
-        """
-        breadth first search
-        """
-        yield hash_
-        yeilded: typing.Set[Hash] = {hash_}
-        to_process: typing.List[Hash] = [hash_]
-
-        while to_process:
-            hash_ = to_process.pop(0)
-            _, ref = self.expressions[self.hashes[hash_]]
-            if isinstance(ref, NormalizedExpressionLiteral):
-                continue
-
-            for child_hash in list(ref.args) + list(ref.kwargs.values()):
-                if child_hash not in yeilded:
-                    yield child_hash
-                    yeilded.add(child_hash)
-                    to_process.append(child_hash)
-
-    def add(self, expr: object, prev_hash: typing.Optional[Hash]) -> Hash:
-        """
-        Add an expression, replacing the previous hash with it.
-        """
-        normalized_expr: typing.Union[NormalizedExpression, NormalizedExpressionLiteral]
         if isinstance(expr, Expression):
-            prev_expr = (
-                self.expressions[self.hashes[prev_hash]][1] if prev_hash else None
-            )
-            if (
-                prev_expr
-                and isinstance(prev_expr, NormalizedExpression)
-                and prev_expr.function == expr.function
-            ):
-                prev_args = prev_expr.args
-                prev_kwargs = prev_expr.kwargs
-            else:
-                prev_args = tuple()
-                prev_kwargs = {}
-
-            # get the new args and kwargs, passing in the IDs of the old ones if we have them
-            arg_hashes = tuple(
-                self.add(arg, prev_arg_hash)
-                for arg, prev_arg_hash in itertools.zip_longest(
-                    expr.args, prev_args, fillvalue=None
-                )
-            )
-            kwarg_hashes = {
-                k: self.add(v, prev_kwargs.get(k, None)) for k, v in expr.kwargs.items()
-            }
-            hash_ = Hash(
-                hash((expr.function, arg_hashes, frozenset(kwarg_hashes.items())))
-            )
-            normalized_expr = NormalizedExpression(
-                expr.function, arg_hashes, kwarg_hashes
+            children = Children(
+                [
+                    self.add(
+                        arg,
+                        (
+                            prev_args[i] if prev_args and i < len(prev_args) else None,
+                            prev_expressions,
+                        )
+                        if prev_expressions
+                        else None,
+                    )
+                    for i, arg in enumerate(expr.args)
+                ],
+                {
+                    k: self.add(
+                        v,
+                        (
+                            prev_kwargs.get(k, None) if prev_kwargs else None,
+                            prev_expressions,
+                        )
+                        if prev_expressions
+                        else None,
+                    )
+                    for k, v in expr.kwargs.items()
+                },
             )
         else:
-            try:
-                hash_ = Hash(hash((type(expr), expr)))
-            except TypeError:
-                hash_ = Hash(hash((type(expr), id(expr))))
-            normalized_expr = NormalizedExpressionLiteral(expr)
+            children = None
 
-        self._add_normalized_expr(normalized_expr, hash_, prev_hash)
-        return hash_
+        ref = NormalizedExpression(
+            children=children,
+            value=expr,
+            prev_id=prev_id if prev_id not in self.ids else None,
+        )
 
-    def _add_normalized_expr(
-        self,
-        expr: typing.Union[NormalizedExpression, NormalizedExpressionLiteral],
-        hash_: Hash,
-        prev_hash: typing.Optional[Hash],
-    ):
-        if hash_ in self.hashes:
-            # alias the old hash to the new id if we had it
-            if prev_hash:
-                new_id = self.hashes[hash_]
-                self.hashes[prev_hash] = new_id
-                self.expressions[new_id] = (hash_, self.expressions[new_id][1])
+        if children:
+            for key, child_hash in children.references():
+                self.expressions[child_hash].parents.add(Parent(ref.hash, key))
 
-        # otherwise add this as a new expression, using hash as ID if a previous one hasn't been supplied.
-        id_ = self.hashes[prev_hash] if prev_hash else ID(hash_)
-        self.expressions[id_] = (hash_, expr)
-        self.hashes[hash_] = id_
+        if not self._first_hash:
+            self._first_hash = ref.hash
+        if ref.hash not in self.expressions:
+            self.expressions[ref.hash] = ref
+            self.ids[ref.id] = ref.hash
+        return ref.hash
+
+    def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
+        new_expressions = NormalizedExpressions()
+        if not hash:
+            # If we didn't get a hash, we are replacing the root node
+            root_hash = next(iter(reversed(self.expressions)))
+            root_expr = expr
+        else:
+            # Otherwise, we are replacing a child node
+            # In which case, we update its parents, and get the root noode
+            for parent in self.expressions[hash].parents:
+                value = self.expressions[parent.hash].value
+                assert isinstance(value, Expression)
+                if isinstance(parent.key, str):
+                    value.kwargs[parent.key] = expr
+                else:
+                    value.args[parent.key] = expr
+
+            root_hash = self._get_root(hash)
+            root_expr = self.expressions[root_hash].value
+
+        new_expressions.add(root_expr, (root_hash, self))
+        self.expressions = new_expressions.expressions
+        self.ids = new_expressions.ids
+
+    def _get_root(self, hash: Hash) -> Hash:
+        parents = list(self.expressions[hash].parents)
+        if parents:
+            return self._get_root(parents[0].hash)
+        return hash
+
+    def _assert_expressions_topological_sorted(self) -> None:
+        """
+        All expressions should be after their children
+        """
+        for i, expr in enumerate(self.expressions.values()):
+            if not expr.children:
+                continue
+            for _, child_hash in expr.children.references():
+                # Children should be to the left of their parents
+                assert self._index_of_hash(child_hash) < i
+
+    def _index_of_hash(self, hash: Hash) -> int:
+
+        for i, hash_ in enumerate(self.expressions.keys()):
+            if hash_ == hash:
+                return i
+        raise RuntimeError()
+
+    def _all_children(self, hash: Hash) -> typing.Set[Hash]:
+        ref = self.expressions[hash]
+        s = {hash}
+        if not ref.children:
+            return s
+        for _, child_hash in ref.children.references():
+            s.update(self._all_children(child_hash))
+        return s
+
+    def _assert_parents_children_consistant(self) -> None:
+        """
+        Asserts that parents match the children.
+
+        For each expression, verifies that all children have this node as a parent, and all parents
+        have this node as a child.
+        """
+
+        for hash, ref in self.expressions.items():
+            for parent in ref.parents:
+                key = parent.key
+                parent_ref = self.expressions[parent.hash]
+                assert parent_ref.children
+                if isinstance(key, str):
+                    assert parent_ref.children.kwargs[key] == hash
+                else:
+                    assert parent_ref.children.args[key] == hash
+
+            if not ref.children:
+                continue
+            for key, child_hash in ref.children.references():
+                child_ref = self.expressions[child_hash]
+                assert Parent(key=key, hash=hash) in child_ref.parents
+
+    def _assert_hashes_accurate(self):
+        for hash, ref in self.expressions.items():
+            assert hash == ref._compute_hash()
+
+    def _assert_children_match_values(self):
+        for hash, ref in self.expressions.items():
+            value = ref.value
+            if not ref.children:
+                assert not isinstance(value, Expression)
+                continue
+            assert isinstance(value, Expression)
+
+            assert value.args == [self.expressions[h].value for h in ref.children.args]
+
+            assert value.kwargs == {
+                k: self.expressions[v].value for k, v in ref.children.kwargs.items()
+            }
+
+    def _assert_ids_match(self):
+        for id, hash in self.ids.items():
+            assert self.expressions[hash].id == id
 
 
 T = typing.TypeVar("T")
@@ -167,29 +290,71 @@ T = typing.TypeVar("T")
 
 @dataclasses.dataclass
 class ExpressionReference(typing.Generic[T]):
-    id_: ID
+    # Hash that we refer to. If it is None, then it is the last  expression by default
     expressions: NormalizedExpressions
+    _hash: typing.Optional[Hash] = dataclasses.field(default=None, repr=False)
+
+    @property
+    def hash(self) -> Hash:
+        return self._hash or self.root_hash
+
+    @property
+    def root_hash(self) -> Hash:
+        return next(iter(reversed(self.expressions.expressions)))
 
     @classmethod
     def from_expression(cls, expr: T) -> ExpressionReference:
         expressions = NormalizedExpressions()
-        return cls(expressions.hashes[expressions.add(expr, None)], expressions)
-
-    def replace(self, new_expr: T) -> None:
-        self.id_ = self.expressions.hashes[self.expressions.add(new_expr, self.hash)]
+        expressions.add(expr)
+        return cls(expressions)
 
     @property
-    def hash(self) -> Hash:
-        return self.expressions.expressions[self.id_][0]
+    def normalized_expression(self) -> NormalizedExpression:
+        return self.expressions.expressions[self.hash]
 
-    def to_expression(self) -> T:
-        return typing.cast(T, self.expressions.get(self.hash))
+    def replace(self, new_expr: T) -> None:
+        self.expressions.replace(self._hash, new_expr)
+        self._hash = None
 
-    def child_references(self) -> typing.Iterable[ExpressionReference]:
+        # Optional, this could be disabled to improve performance
+        # self.verify_integrity()
+
+    @property
+    def children(self) -> typing.Iterable[ExpressionReference]:
         """
-        returns a breadth first search of the graph starting a the root node
+        Returns all the children of the graph, starting from the root node
+        and ending in the leaf nodes.
         """
-        for child_hash in self.expressions.bfs(self.hash):
-            yield ExpressionReference(
-                self.expressions.hashes[child_hash], self.expressions
-            )
+        root_node = True
+        for k, v in reversed(self.expressions.expressions.items()):
+            yield ExpressionReference(self.expressions, None if root_node else k)
+            root_node = False
+
+    def verify_integrity(self) -> None:
+        """
+        Verifies a number of properties about the data  structures
+        """
+
+        expressions = self.expressions.expressions
+
+        assert self.hash in expressions
+
+        # Order
+        self.expressions._assert_expressions_topological_sorted()
+
+        all_children = self.expressions._all_children(self.root_hash)
+        all_keys = set(expressions.keys())
+        assert all_children == all_keys
+
+        # IDs
+        assert len(self.expressions.ids) == len(expressions)
+        self.expressions._assert_ids_match()
+
+        # Parents
+        self.expressions._assert_parents_children_consistant()
+
+        # Hashes
+        self.expressions._assert_hashes_accurate()
+
+        # Children
+        self.expressions._assert_children_match_values()

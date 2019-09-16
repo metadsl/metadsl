@@ -68,7 +68,7 @@ def _execute_all(ref: ExpressionReference, rule: Rule) -> object:
     """
     for replacement in rule(ref):
         pass
-    return ref.to_expression()
+    return ref.normalized_expression.value
 
 
 # Execute should be called on an expression to get the result
@@ -215,18 +215,6 @@ class RuleSequence:
                 return
 
 
-def replace_expression_arg(expr: Expression, idx: int, arg: object) -> Expression:
-    args = list(expr.args)
-    args[idx] = arg
-    return dataclasses.replace(expr, args=tuple(args))
-
-
-def replace_expression_kwarg(expr: Expression, key: str, arg: object) -> Expression:
-    kwargs = dict(expr.kwargs)
-    kwargs[key] = arg
-    return dataclasses.replace(expr, kwargs=kwargs)
-
-
 @dataclasses.dataclass
 class RuleFold:
     """
@@ -234,22 +222,13 @@ class RuleFold:
     and then recursing down into its leaves.
     """
 
-    _rule: Rule
+    rule: Rule
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Replacement]:
-        rule: Rule = self._rule  # type: ignore
-
-        for child_ref in expr.child_references():
+        rule: Rule = self.rule  # type: ignore
+        for child_ref in expr.children:
             for replacement in rule(child_ref):
-                # If we replaced at the top level, update our top level id
-                if child_ref == expr:
-                    expr.id_ = child_ref.id_
-                else:
-                    # Otherwise make sure to update all the hashes
-                    expr.replace(expr.to_expression())
                 yield replacement
-
-                # If we found a replacement there, we are all good, we can exit
                 return
 
 

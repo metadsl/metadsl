@@ -77,7 +77,7 @@ class DefaultRule:
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
-        expr = ref.to_expression()
+        expr = ref.normalized_expression.value
         if not isinstance(expr, Expression):
             return
 
@@ -88,27 +88,27 @@ class DefaultRule:
         # If any of the args are placeholders, don't match!
         if any(
             isinstance(arg, PlaceholderExpression)
-            for arg in args + tuple(expr.kwargs.values())
+            for arg in args + list(expr.kwargs.values())
         ):
-            return
+            return None
 
         typevars: TypeVarMapping = infer_return_type(
             expr.function.fn,  # type: ignore
             getattr(expr.function, "owner", None),
             getattr(expr.function, "is_classmethod", False),
-            args,
+            tuple(args),
             expr.kwargs,
         )[-1]
         if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
             if fn.fn != expr.function.fn:
-                return
+                return None
             if fn.is_classmethod:
-                args = (
-                    typing.cast(object, replace_typevars(typevars, fn.owner)),
-                ) + args
+                args = [
+                    typing.cast(object, replace_typevars(typevars, fn.owner))
+                ] + args
 
         elif fn != expr.function:
-            return
+            return None
         new_expr = self.inner_fn(*args, **expr.kwargs)
         result = replace_typevars_expression(new_expr, typevars)
         ref.replace(result)
@@ -177,7 +177,7 @@ class MatchRule:
         )
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
-        expr = ref.to_expression()
+        expr = ref.normalized_expression.value
         for i, result in enumerate(self.results):
             template, _ = result
             try:
@@ -297,7 +297,7 @@ def match_expression(
             template_args = template_args_
 
             expr_args = collapse_tuple(
-                expr.args,
+                tuple(expr.args),
                 template_index_iterated,
                 # The number we should preserve on the right, is the number of template
                 # args after index

@@ -1,8 +1,11 @@
 [run]
 branch = True
 source = 
+    typez
     metadsl
     metadsl_core
+    metadsl_visualize
+    metadsl_llvm
 [report]
 omit =
     *_test.py

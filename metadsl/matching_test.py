@@ -441,9 +441,7 @@ class TestDefaultRule:
         add_rule = default_rule(add)
         subtract_rule = default_rule(subtract)
 
-        assert execute(subtract(add(1, 2), 3), subtract_rule) == subtract(
-            add(1, 2), 3
-        )
+        assert execute(subtract(add(1, 2), 3), subtract_rule) == subtract(add(1, 2), 3)
 
         assert execute(subtract(add(1, 2), 3), RulesRepeatFold(add_rule)) == subtract(
             3, 3

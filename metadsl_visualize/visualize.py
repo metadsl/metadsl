@@ -22,7 +22,7 @@ def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
     # Update the typez display as we execute the rules
     for typez_ in convert_rule(rule)(ref):
         typez_display.typez = typez_
-    return ref.to_expression()
+    return ref.normalized_expression.value
 
 
 def monkeypatch():

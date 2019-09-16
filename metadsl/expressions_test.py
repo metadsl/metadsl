@@ -5,7 +5,6 @@ import typing_inspect
 import pytest
 
 from .expressions import *
-from .expressions import T as expressions_T
 
 T = typing.TypeVar("T")
 
@@ -83,7 +82,7 @@ def variadic(*args: int) -> Expression:
 
 
 def test_variadic():
-    assert variadic(1, 2).args == (1, 2)
+    assert variadic(1, 2).args == [1, 2]
 
 
 @expression
@@ -94,21 +93,21 @@ def create_variadic_ints() -> typing.Sequence[int]:
 def test_iterated():
     assert variadic(1, 2, *create_variadic_ints(), 3, 4) == Expression(
         variadic,
-        (
+        [
             1,
             2,
             IteratedPlaceholder[int](
                 create_iterated_placeholder,
-                (
+                [
                     PlaceholderExpression[typing.Sequence[int]](
-                        create_variadic_ints, (), {}
-                    ),
-                ),
+                        create_variadic_ints, [], {}
+                    )
+                ],
                 {},
             ),
             3,
             4,
-        ),
+        ],
         {},
     )
 
