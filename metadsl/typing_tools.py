@@ -35,6 +35,7 @@ U = typing.TypeVar("U")
 
 
 class GenericCheckType(type):
+    @functools.lru_cache()
     def __subclasscheck__(cls, sub):
         """
         Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
@@ -160,13 +161,15 @@ def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
     >>> get_function_type(no_arg_type)
     typing.Callable[[typing.Any, str], typing.Any]
     """
-    signature = inspect.signature(fn)
-    type_hints = typing.get_type_hints(fn)
+    signature = inspect_signature(fn)
+    type_hints = typing_get_type_hints(fn)
     arg_hints: typing.List[typing.Type] = []
 
     for arg_name, p in signature.parameters.items():
         if p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
-            arg_hints.append(type_hints.get(arg_name, typing.Any))
+            arg_hints.append(
+                type_hints.get(arg_name, typing.cast(typing.Type, typing.Any))
+            )
         else:
             raise NotImplementedError(f"Does not support getting type of {signature}")
     return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]
@@ -179,8 +182,8 @@ def get_bound_infer_type(b: BoundInfer) -> typing.Type[typing.Callable]:
     TODO: This logic is a combination of `get_function_type` and `infer_return_type`.
     We should eventually merge all of this into a consistant API so we don't have to duplicate this code. 
     """
-    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(b.fn)
-    signature = inspect.signature(b.fn)
+    hints = copy.copy(typing_get_type_hints(b.fn))
+    signature = inspect_signature(b.fn)
 
     # We want to get the original type hints for the first arg,
     # and match those against the first arg in the bound, so we get a typevar mapping
@@ -424,9 +427,19 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
     return get_origin(hint)[replaced_args]
 
 
+@functools.lru_cache()
+def inspect_signature(fn: typing.Callable) -> inspect.Signature:
+    return inspect.signature(fn)
+
+
+@functools.lru_cache()
+def typing_get_type_hints(fn: typing.Callable) -> typing.Dict[str, typing.Type]:
+    return typing.get_type_hints(fn)
+
+
 def get_arg_hints(fn: typing.Callable) -> typing.List[typing.Type]:
-    signature = inspect.signature(fn)
-    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
+    signature = inspect_signature(fn)
+    hints = typing_get_type_hints(fn)
     return [hints[param] for param in signature.parameters.keys()]
 
 
@@ -442,8 +455,8 @@ def infer_return_type(
     typing.Type[T],
     TypeVarMapping,
 ]:
-    hints: typing.Dict[str, typing.Type] = typing.get_type_hints(fn)
-    signature = inspect.signature(fn)
+    hints = copy.copy(typing_get_type_hints(fn))
+    signature = inspect_signature(fn)
 
     mappings: typing.List[TypeVarMapping] = []
     # This case is triggered if we got here from a __get__ call
@@ -615,7 +628,7 @@ def replace_fn_typevars(
         functools.update_wrapper(new_fn, fn)
         new_fn.__annotations__ = {
             k: replace_typevars(typevars, v)
-            for k, v in typing.get_type_hints(fn).items()
+            for k, v in typing_get_type_hints(fn).items()
         }
         return new_fn  # type: ignore
     return fn
