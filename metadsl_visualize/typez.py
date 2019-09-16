@@ -11,43 +11,44 @@ import dataclasses
 import typing_inspect
 import warnings
 
-__all__ = ["convert_rule", "TypezRule", "SHOW_MODULE"]
-
-TypezRule = typing.Callable[[metadsl.ExpressionReference], typing.Iterable[Typez]]
-
-
-def convert_rule(rule: metadsl.Rule) -> TypezRule:
-    return _ConvertRule(rule)
+__all__ = ["ExpressionDisplay", "SHOW_MODULE"]
 
 
 @dataclasses.dataclass
-class _ConvertRule:
-    rule: metadsl.Rule
+class ExpressionDisplay:
+    ref: metadsl.ExpressionReference
+    typez_display: TypezDisplay = dataclasses.field(
+        default_factory=lambda: TypezDisplay(Typez())
+    )
 
-    def __call__(self, ref: metadsl.ExpressionReference) -> typing.Iterable[Typez]:
-        # First yield the initial object
+    def __post_init__(self):
+        ref = self.ref
         nodes = convert_to_nodes(ref)
         initial_node_id = str(ref.hash)
-        yield Typez(states=States(initial=initial_node_id), nodes=nodes)
-        # Then loop through each replacement and export each as a state
-        # We make sure not to mutate any older values
-        states: typing.List[State] = []
-        rule: metadsl.Rule = self.rule  # type: ignore
-        for replacement in rule(ref):
-            new_nodes = convert_to_nodes(ref)
-            # combine nodes
-            nodes = {**nodes, **new_nodes}
-            # Add a new state
-            states = states + [
-                State(
-                    node=str(ref.hash), rule=replacement.rule, label=replacement.label
-                )
-            ]
-            yield (
-                Typez(
-                    states=States(initial=initial_node_id, states=states), nodes=nodes
-                )
-            )
+        self.typez_display.typez = Typez(
+            states=States(initial=initial_node_id), nodes=nodes
+        )
+
+    def update(self, rule: str, label: typing.Optional[str] = None):
+        new_nodes = convert_to_nodes(self.ref)
+        self.typez_display.typez = dataclasses.replace(
+            self.typez_display.typez,
+            nodes={**(self.typez_display.typez.nodes or {}), **new_nodes},
+            states=dataclasses.replace(
+                self.typez_display.typez.states,
+                states=[
+                    *(
+                        self.typez_display.typez.states.states or []
+                        if self.typez_display.typez.states
+                        else []
+                    ),
+                    State(node=str(self.ref.hash), rule=rule, label=label),
+                ],
+            ),
+        )
+
+    def _ipython_display_(self):
+        self.typez_display._ipython_display_()
 
 
 def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
