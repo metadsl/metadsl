@@ -92,7 +92,10 @@ class NormalizedExpressions:
         self,
         expr: object,
         prev: typing.Optional[
-            typing.Tuple[typing.Optional[Hash], NormalizedExpressions]
+            typing.Tuple[
+                typing.Optional[Hash],
+                collections.OrderedDict[Hash, NormalizedExpression],
+            ]
         ] = None,
     ) -> Hash:
         """
@@ -106,12 +109,14 @@ class NormalizedExpressions:
         prev_id: typing.Optional[ID]
         prev_args: typing.Optional[typing.List[Hash]]
         prev_kwargs: typing.Optional[typing.Dict[str, Hash]]
-        prev_expressions: typing.Optional[NormalizedExpressions]
+        prev_expressions: typing.Optional[
+            collections.OrderedDict[Hash, NormalizedExpression]
+        ]
 
         if prev:
             prev_hash, prev_expressions = prev
             if prev_hash:
-                prev_ref = prev_expressions.expressions[prev_hash]
+                prev_ref = prev_expressions[prev_hash]
                 prev_id = prev_ref.id
                 if (
                     isinstance(prev_ref.value, Expression)
@@ -201,7 +206,7 @@ class NormalizedExpressions:
             root_hash = self._get_root(hash)
             root_expr = self.expressions[root_hash].value
 
-        new_expressions.add(root_expr, (root_hash, self))
+        new_expressions.add(root_expr, (root_hash, self.expressions))
         self.expressions = new_expressions.expressions
         self.ids = new_expressions.ids
 
