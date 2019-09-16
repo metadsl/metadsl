@@ -146,6 +146,26 @@ def test_graph_subtree():
     assert ref.normalized_expression.value == orig
 
 
+def test_replace_subtree_same_id():
+    orig_expr = e(d(), d())
+    new_expr = e(c(), c())
+
+    ref = ExpressionReference.from_expression(e(orig_expr, d()))
+    for child in ref.children:
+        if child.normalized_expression.value == orig_expr:
+            orig_id = child.normalized_expression.id
+            break
+
+    ref.replace(e(new_expr, d()))
+
+    for child in ref.children:
+        if child.normalized_expression.value == new_expr:
+            new_id = child.normalized_expression.id
+            break
+
+    assert orig_id == new_id
+
+
 def test_doesnt_remember_replacements():
     ref = ExpressionReference.from_expression(a(b(c())))
     ref.verify_integrity()
