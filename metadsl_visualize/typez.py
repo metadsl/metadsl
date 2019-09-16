@@ -63,12 +63,13 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
         if isinstance(value, metadsl.Expression):
             children = expr.children
             assert children
+            func_str = function_or_type_repr(value.function)
             node = CallNode(
                 type_params=typevars_to_typeparams(
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
                 or None,
-                function=function_or_type_repr(value.function),
+                function=f"{func_str}: {value._type_str}" if SHOW_TYPES else func_str,
                 args=[str(a) for a in children.args] or None,
                 kwargs={k: str(v) for k, v in children.kwargs.items()} or None,
             )

@@ -34,6 +34,8 @@ __all__ = [
 ]
 __version__ = "0.0.0"
 
+SHOW_TYPES = False
+
 with open(pathlib.Path(__file__).parent / "schema.json") as f:
     typez_schema = json.load(f)
 
@@ -55,9 +57,6 @@ class GraphState:
     label: Union[str, None]
 
 
-SHOW_TYPES = False
-
-
 def render_graph(node_id: str, nodes: Nodes) -> str:
     """
     Renders a graphviz graph for a node and its descendents
@@ -69,14 +68,14 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
 
     def process_type_instance(id_: str, instance: TypeInstance):
         if isinstance(instance, ExternalTypeInstance):
-            d.node(id_, filter_str(instance.repr))
+            d.node(id_, filter_str(instance.repr), id=id_)
             return
         d.node(id_, filter_str(instance.type))
         for i, kv in enumerate((instance.params or {}).items()):
             child_id = f"{id_}.{i}"
             k, v = kv
             process_type_instance(child_id, v)
-            d.edge(id_, child_id, label=filter_str(k))
+            d.edge(id_, child_id, label=filter_str(k), id=f"{id_}.{i}")
 
     def process_node(id_: str):
         if id_ in seen:
@@ -102,7 +101,7 @@ def render_graph(node_id: str, nodes: Nodes) -> str:
             k, v = kv
             type_id = f"{id_}.{i}"
             process_type_instance(type_id, v)
-            d.edge(id_, type_id, label=filter_str(k))
+            d.edge(id_, type_id, label=filter_str(k), id=f"{type_id}.{i}")
 
     process_node(node_id)
     return d.source
