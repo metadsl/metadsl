@@ -51,13 +51,14 @@ class Executor:
     # Function that takes a rule and an expression and executes it
     execute: typing.Callable[[ExpressionReference, Rule], object]
     # rule that is used if none is passed in
-    default_rule: typing.Optional[Rule]
+    default_rule: Rule
 
     def __call__(self, expr: T, rule: typing.Optional[Rule] = None) -> T:
         execute: typing.Callable[  # type: ignore
             [ExpressionReference, Rule], object
         ] = self.execute  # type: ignore
-        rule = rule or self.default_rule
+        default_rule: Rule = self.default_rule  # type: ignore
+        rule = rule or default_rule
         assert rule
         return typing.cast(T, execute(ExpressionReference.from_expression(expr), rule))
 
@@ -74,7 +75,7 @@ def _execute_all(ref: ExpressionReference, rule: Rule) -> object:
 # Execute should be called on an expression to get the result
 # External modules can set a custom `execute` function or `default_rule`
 # to modify the behavior
-execute = Executor(_execute_all, None)
+execute = Executor(_execute_all, lambda e: [])
 
 
 T_Rule = typing.TypeVar("T_Rule", bound=Rule)
