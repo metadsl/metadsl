@@ -619,8 +619,14 @@ def replace_fn_typevars(
     Replaces all type
     """
     if isinstance(fn, BoundInfer):
-        return dataclasses.replace(  # type: ignore
-            fn, owner=replace_typevars(typevars, fn.owner)
+        return typing.cast(
+            T,
+            BoundInfer(  # type: ignore
+                fn=fn.fn,
+                wrapper=fn.wrapper,
+                is_classmethod=fn.is_classmethod,
+                owner=replace_typevars(typevars, fn.owner),
+            ),
         )
     if isinstance(fn, types.FunctionType):
         # Create new function by replacing typevars in existing function
