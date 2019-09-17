@@ -13,6 +13,7 @@ __all__ = [
     "register_numpy_engine",
     "register_post",
     "register_pre",
+    "run_post_rules",
 ]
 
 
@@ -42,28 +43,26 @@ numpy_engine = RulesRepeatFold()
 register_numpy_engine = numpy_engine.append
 
 
-all_rules = RulesRepeatSequence(
-    RuleInOrder(
-        CollapseReplacementsRule(
-            "core", RulesRepeatSequence(core_pre_rules, core_rules)
-        ),
-        CollapseReplacementsRule(
-            "convert", RulesRepeatSequence(core_pre_rules, core_rules, convert_rules)
-        ),
-        CollapseReplacementsRule(
-            "unbox",
-            RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, unbox_rules),
-        ),
-        CollapseReplacementsRule(
-            "execute",
-            RulesRepeatSequence(
-                core_pre_rules, core_rules, convert_rules, unbox_rules, numpy_engine
-            ),
+all_rules = RuleInOrder(
+    CollapseReplacementsRule("core", RulesRepeatSequence(core_pre_rules, core_rules)),
+    CollapseReplacementsRule(
+        "convert", RulesRepeatSequence(core_pre_rules, core_rules, convert_rules)
+    ),
+    CollapseReplacementsRule(
+        "unbox",
+        RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, unbox_rules),
+    ),
+    CollapseReplacementsRule(
+        "execute",
+        RulesRepeatSequence(
+            core_pre_rules, core_rules, convert_rules, unbox_rules, numpy_engine
         ),
     ),
-    core_post_rules,
 )
 
 
-# Set to use core rules by default
-execute.default_rule = all_rules
+def run_post_rules(should_run: bool) -> None:
+    # Set to use core rules by default
+    execute.default_rule = (  # type: ignore
+        RulesRepeatSequence(all_rules, core_post_rules) if should_run else all_rules
+    )
