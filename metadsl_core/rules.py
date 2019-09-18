@@ -14,6 +14,7 @@ __all__ = [
     "register_post",
     "register_pre",
     "run_post_rules",
+    "register_optimize",
 ]
 
 
@@ -42,6 +43,8 @@ register_unbox = unbox_rules.append
 numpy_engine = RulesRepeatFold()
 register_numpy_engine = numpy_engine.append
 
+optimize_rules = RulesRepeatFold()
+register_optimize = optimize_rules.append
 
 all_rules = RuleInOrder(
     CollapseReplacementsRule("core", RulesRepeatSequence(core_pre_rules, core_rules)),
@@ -49,13 +52,24 @@ all_rules = RuleInOrder(
         "convert", RulesRepeatSequence(core_pre_rules, core_rules, convert_rules)
     ),
     CollapseReplacementsRule(
+        "optimize",
+        RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, optimize_rules),
+    ),
+    CollapseReplacementsRule(
         "unbox",
-        RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, unbox_rules),
+        RulesRepeatSequence(
+            core_pre_rules, core_rules, convert_rules, optimize_rules, unbox_rules
+        ),
     ),
     CollapseReplacementsRule(
         "execute",
         RulesRepeatSequence(
-            core_pre_rules, core_rules, convert_rules, unbox_rules, numpy_engine
+            core_pre_rules,
+            core_rules,
+            convert_rules,
+            optimize_rules,
+            unbox_rules,
+            numpy_engine,
         ),
     ),
 )
