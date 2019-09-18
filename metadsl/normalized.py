@@ -310,7 +310,9 @@ class ExpressionReference(typing.Generic[T]):
     @classmethod
     def from_expression(cls, expr: T) -> ExpressionReference:
         expressions = NormalizedExpressions()
-        expressions.add(expr)
+        # Copy expression before adding so that we can mutate it
+        expr_copy = ExpressionFolder()(expr)
+        expressions.add(expr_copy)
         return cls(expressions)
 
     @property
