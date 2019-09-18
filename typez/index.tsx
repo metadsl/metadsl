@@ -1,6 +1,10 @@
 import { IRenderMime } from "@jupyterlab/rendermime-interfaces";
 import { graphviz, Graphviz } from "d3-graphviz";
 
+import Slider from "@material-ui/core/Slider";
+import Tooltip from "@material-ui/core/Tooltip";
+import PopperJs from "popper.js";
+
 import * as React from "react";
 
 import * as d3transiion from "d3-transition";
@@ -24,96 +28,89 @@ type TypezGraph = {
   }>;
 };
 
-export function ShowLabels({
-  shown,
-  onChange
-}: {
-  shown: boolean;
-  onChange: (show: boolean) => void;
+function ValueLabelComponent(props: {
+  children: React.ReactElement;
+  open: boolean;
+  value: string;
 }) {
+  const { children, open, value } = props;
+
+  const popperRef = React.useRef<PopperJs | null>(null);
+  React.useEffect(() => {
+    if (popperRef.current) {
+      popperRef.current.update();
+    }
+  });
+
   return (
-    <label>
-      <b>Only show labeled</b>
-      <input
-        type="checkbox"
-        checked={shown}
-        onChange={e => onChange(e.target.checked)}
-      />
-    </label>
+    <Tooltip
+      PopperProps={{
+        popperRef
+      }}
+      open={open}
+      enterTouchDelay={0}
+      placement="bottom"
+      title={value}
+    >
+      {children}
+    </Tooltip>
   );
 }
-
 export function SelectState({
   graph,
-  onChange,
-  showLabels
+  onChange
 }: {
   graph: TypezGraph;
-  showLabels: boolean;
   onChange: (node: string) => void;
 }) {
-  // selected index, from bottom to top
+  // selected index, from the right
   const [selected, setSelected] = React.useState<number>(0);
+  const i = graph.states.length - selected;
   React.useEffect(() => {
-    if (selected === graph.states.length) {
+    if (i === 0) {
       onChange(graph.initial);
     } else {
-      onChange(graph.states[graph.states.length - selected - 1].graph);
+      onChange(graph.states[i - 1].graph);
     }
   }, [graph, selected]);
+
   return (
-    <div>
-      <div>
-        <label>
-          <input
-            type="radio"
-            value="-1"
-            checked={selected === graph.states.length}
-            onChange={e =>
-              e.target.value ? setSelected(graph.states.length) : null
-            }
-          />
-          <b>Initial</b>
-        </label>
-      </div>
-      {graph.states.map(({ rule, label }, idx) => {
-        if (showLabels && !label) {
-          return;
-        }
-        return (
-          <div key={idx.toString()}>
-            <label>
-              <input
-                type="radio"
-                value={idx.toString()}
-                checked={idx + selected + 1 == graph.states.length}
-                onChange={e =>
-                  e.target.value
-                    ? setSelected(graph.states.length - idx - 1)
-                    : null
-                }
-              />
-              {showLabels ? (
-                <b>{label}</b>
-              ) : (
-                <>
-                  {label ? <b>{label} </b> : ""}
-                  <code>{rule}</code>
-                </>
-              )}
-            </label>
-          </div>
-        );
-      })}
-    </div>
+    <Slider
+      valueLabelFormat={value => `YO!${value}`}
+      ValueLabelComponent={({ children, open, value }) => (
+        <ValueLabelComponent
+          children={children}
+          open={open}
+          value={
+            value === 0
+              ? "initial"
+              : graph.states[value - 1].label || graph.states[value - 1].rule
+          }
+        />
+      )}
+      step={1}
+      valueLabelDisplay="on"
+      value={i}
+      max={graph.states.length}
+      onChange={(_, newValue) =>
+        setSelected(graph.states.length - (newValue as any))
+      }
+      marks={[
+        { value: 0, label: "initial" },
+        ...graph.states.map(({ label }, idx) => ({
+          value: idx + 1,
+          label
+        }))
+      ]}
+    />
   );
 }
 
 const t = d3transiion
   .transition("main")
-  .ease(d3ease.easeCubicOut)
-  // .delay(100)
-  .duration(500);
+  .ease(d3ease.easeQuadInOut)
+  .delay(100)
+  .duration(600);
 export function GraphvizComponent({ dot }: { dot: string }) {
   const el = React.useRef<HTMLDivElement>(null);
   const [graph, setGraph] = React.useState<null | Graphviz<any, any, any, any>>(
@@ -121,19 +118,22 @@ export function GraphvizComponent({ dot }: { dot: string }) {
   );
 
   React.useEffect(() => {
-    setGraph(graphviz(el.current!, { keyMode: "id" }));
+    setGraph(
+      graphviz(el.current!, {
+        keyMode: "id",
+        // https://github.com/magjac/d3-graphviz#performance
+        tweenShapes: false,
+        tweenPaths: false,
+        height: 
+      }).transition(t as any)
+    );
   }, [el.current]);
 
   React.useEffect(() => {
     if (!graph) {
       return;
     }
-    // if we have already rendered, add a transition
-    if (graph.data()) {
-      graph.transition(() => t).renderDot(dot);
-    } else {
-      graph.renderDot(dot);
-    }
+    graph.renderDot(dot);
   }, [graph, dot]);
 
   return <div ref={el} />;
@@ -141,12 +141,18 @@ export function GraphvizComponent({ dot }: { dot: string }) {
 
 export function GraphComponent({ graph }: { graph: TypezGraph }) {
   const [dot, setDot] = React.useState<string>(graph.initial);
-  const [shown, setShown] = React.useState<boolean>(true);
   return (
-    <div style={{ display: "flex" }}>
-      <div>
-        <ShowLabels shown={shown} onChange={setShown} />
-        <SelectState showLabels={shown} graph={graph} onChange={setDot} />
+    <div>
+      <div
+        style={{
+          paddingLeft: "28px",
+          paddingTop: "8px",
+          paddingRight: "28px",
+          width: "100%",
+          boxSizing: "border-box"
+        }}
+      >
+        <SelectState graph={graph} onChange={setDot} />
       </div>
       <GraphvizComponent dot={dot} />
     </div>
