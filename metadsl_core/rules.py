@@ -66,3 +66,6 @@ def run_post_rules(should_run: bool) -> None:
     execute.default_rule = (  # type: ignore
         RulesRepeatSequence(all_rules, core_post_rules) if should_run else all_rules
     )
+
+
+run_post_rules(True)
