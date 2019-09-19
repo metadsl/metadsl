@@ -1,0 +1,255 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import inspect"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def my_dec(fn):\n",
+    "    return fn, inspect.stack()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class SomeClass:\n",
+    "#     @my_dec\n",
+    "    def fn(self):\n",
+    "        def inner():\n",
+    "            return my_dec(lambda: None)\n",
+    "        return inner()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "f, frame = SomeClass().fn()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {
+    "collapsed": true,
+    "jupyter": {
+     "outputs_hidden": true
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[FrameInfo(frame=<frame at 0x10a0641f0, file '<ipython-input-23-704d05f5a2cd>', line 2, code my_dec>, filename='<ipython-input-23-704d05f5a2cd>', lineno=2, function='my_dec', code_context=['    return fn, inspect.stack()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x10a1c0388, file '<ipython-input-24-8646bce8b6d8>', line 5, code inner>, filename='<ipython-input-24-8646bce8b6d8>', lineno=5, function='inner', code_context=['            return my_dec(lambda: None)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x10a064048, file '<ipython-input-24-8646bce8b6d8>', line 6, code fn>, filename='<ipython-input-24-8646bce8b6d8>', lineno=6, function='fn', code_context=['        return inner()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x1096f39d8, file '<ipython-input-25-721acfe72540>', line 1, code <module>>, filename='<ipython-input-25-721acfe72540>', lineno=1, function='<module>', code_context=['f, frame = SomeClass().fn()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d6f588, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', line 3316, code run_code>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', lineno=3296, function='run_code', code_context=['                    exec(code_obj, self.user_global_ns, self.user_ns)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d65cf8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', line 3242, code run_ast_nodes>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', lineno=3214, function='run_ast_nodes', code_context=['                    if (yield from self.run_code(code, result)):\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d65838, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', line 3065, code run_cell_async>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', lineno=3049, function='run_cell_async', code_context=['                       interactivity=interactivity, compiler=compiler, result=result)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x10926dda0, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/async_helpers.py', line 69, code _pseudo_sync_runner>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/async_helpers.py', lineno=67, function='_pseudo_sync_runner', code_context=['        coro.send(None)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d65608, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', line 2874, code _run_cell>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', lineno=2874, function='_run_cell', code_context=['            return runner(coro)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d65228, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', line 2853, code run_cell>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/IPython/core/interactiveshell.py', lineno=2848, function='run_cell', code_context=['                raw_cell, store_history, silent, shell_futures)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x109325908, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/zmqshell.py', line 536, code run_cell>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/zmqshell.py', lineno=536, function='run_cell', code_context=['        return super(ZMQInteractiveShell, self).run_cell(*args, **kwargs)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d64bb8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/ipkernel.py', line 344, code do_execute>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/ipkernel.py', lineno=294, function='do_execute', code_context=['                res = shell.run_cell(code, store_history=store_history, silent=silent)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24f85f88, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', line 239, code wrapper>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', lineno=209, function='wrapper', code_context=['                    yielded = next(result)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d64748, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', line 558, code execute_request>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', lineno=534, function='execute_request', code_context=['                user_expressions, allow_stdin,\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24f85d68, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', line 239, code wrapper>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', lineno=209, function='wrapper', code_context=['                    yielded = next(result)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24f85148, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', line 278, code dispatch_shell>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', lineno=267, function='dispatch_shell', code_context=['                yield gen.maybe_future(handler(stream, idents, msg))\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d6ffc8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', line 239, code wrapper>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', lineno=209, function='wrapper', code_context=['                    yielded = next(result)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x109316630, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', line 357, code process_one>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelbase.py', lineno=357, function='process_one', code_context=['        yield gen.maybe_future(dispatch(*args))\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24d705c8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', line 768, code run>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', lineno=748, function='run', code_context=['                        yielded = self.gen.send(value)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x109320048, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', line 787, code inner>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/gen.py', lineno=787, function='inner', code_context=['                self.run()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x1096d9828, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/ioloop.py', line 763, code _run_callback>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/ioloop.py', lineno=743, function='_run_callback', code_context=['            ret = callback()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x109271b58, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/ioloop.py', line 690, code <lambda>>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/ioloop.py', lineno=690, function='<lambda>', code_context=['                lambda f: self._run_callback(functools.partial(callback, future))\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba27d545e8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/events.py', line 101, code _run>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/events.py', lineno=88, function='_run', code_context=['            self._context.run(self._callback, *self._args)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24f63228, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/base_events.py', line 1776, code _run_once>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/base_events.py', lineno=1775, function='_run_once', code_context=['                handle._run()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x10931c048, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/base_events.py', line 539, code run_forever>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/asyncio/base_events.py', lineno=539, function='run_forever', code_context=['                self._run_once()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x109276d68, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/platform/asyncio.py', line 148, code start>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/tornado/platform/asyncio.py', lineno=148, function='start', code_context=['            self.asyncio_loop.run_forever()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x1091b5448, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelapp.py', line 505, code start>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel/kernelapp.py', lineno=505, function='start', code_context=['            self.io_loop.start()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba27d0fc78, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/traitlets/config/application.py', line 658, code launch_instance>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/traitlets/config/application.py', lineno=658, function='launch_instance', code_context=['        app.start()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x106684b88, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel_launcher.py', line 16, code <module>>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/site-packages/ipykernel_launcher.py', lineno=16, function='<module>', code_context=['    app.launch_new_instance()\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24c0bb18, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/runpy.py', line 85, code _run_code>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/runpy.py', lineno=85, function='_run_code', code_context=['    exec(code, run_globals)\\n'], index=0),\n",
+       " FrameInfo(frame=<frame at 0x7fba24c2d8c8, file '/usr/local/miniconda3/envs/metadsl/lib/python3.7/runpy.py', line 193, code _run_module_as_main>, filename='/usr/local/miniconda3/envs/metadsl/lib/python3.7/runpy.py', lineno=193, function='_run_module_as_main', code_context=['                     \"__main__\", mod_spec)\\n'], index=0)]"
+      ]
+     },
+     "execution_count": 26,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "frame"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'self': <__main__.SomeClass at 0x10a05d588>,\n",
+       " 'inner': <function __main__.SomeClass.fn.<locals>.inner()>}"
+      ]
+     },
+     "execution_count": 34,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "frame[2].frame.f_locals"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['__name__',\n",
+       " '__doc__',\n",
+       " '__package__',\n",
+       " '__loader__',\n",
+       " '__spec__',\n",
+       " '__builtin__',\n",
+       " '__builtins__',\n",
+       " '_ih',\n",
+       " '_oh',\n",
+       " '_dh',\n",
+       " 'In',\n",
+       " 'Out',\n",
+       " 'get_ipython',\n",
+       " 'exit',\n",
+       " 'quit',\n",
+       " '_',\n",
+       " '__',\n",
+       " '___',\n",
+       " '_i',\n",
+       " '_ii',\n",
+       " '_iii',\n",
+       " '_i1',\n",
+       " 'inspect',\n",
+       " '_i2',\n",
+       " 'my_dec',\n",
+       " '_i3',\n",
+       " 'SomeClass',\n",
+       " '_i4',\n",
+       " 'f',\n",
+       " 'frame',\n",
+       " '_i5',\n",
+       " '_5',\n",
+       " '_i6',\n",
+       " '_i7',\n",
+       " '_7',\n",
+       " '_i8',\n",
+       " '_i9',\n",
+       " '_i10',\n",
+       " '_10',\n",
+       " '_i11',\n",
+       " '_i12',\n",
+       " '_12',\n",
+       " '_i13',\n",
+       " '_13',\n",
+       " '_i14',\n",
+       " '_i15',\n",
+       " '_15',\n",
+       " '_i16',\n",
+       " '_i17',\n",
+       " '_i18',\n",
+       " '_i19',\n",
+       " '_19',\n",
+       " '_i20',\n",
+       " '_20',\n",
+       " '_i21',\n",
+       " '_21',\n",
+       " '_i22',\n",
+       " '_i23',\n",
+       " '_i24',\n",
+       " '_i25',\n",
+       " '_i26',\n",
+       " '_26',\n",
+       " '_i27',\n",
+       " '_i28',\n",
+       " '_i29',\n",
+       " '_i30',\n",
+       " '_30',\n",
+       " '_i31',\n",
+       " '_31',\n",
+       " '_i32',\n",
+       " '_32',\n",
+       " '_i33',\n",
+       " '_33',\n",
+       " '_i34',\n",
+       " '_34',\n",
+       " '_i35',\n",
+       " '_i36',\n",
+       " '_36',\n",
+       " '_i37']"
+      ]
+     },
+     "execution_count": 37,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "list(frame[2].frame.f_globals.keys())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

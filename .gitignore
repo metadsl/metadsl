@@ -25,3 +25,4 @@ Demo.py
 *.gv
 *.gv.pdf
 *.prof
+tmp.py

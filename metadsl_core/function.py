@@ -15,6 +15,8 @@ from .abstraction import *
 import typing
 
 __all__ = ["FunctionZero", "FunctionOne", "FunctionTwo", "FunctionThree"]
+
+
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 V = typing.TypeVar("V")

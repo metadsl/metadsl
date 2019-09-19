@@ -94,7 +94,7 @@ def generic_getattr(self, attr):
         # If the attribute is a descriptor, pass in the generic class
         try:
             property = self.__origin__.__getattribute__(self.__origin__, attr)
-        except:
+        except Exception:
             return
 
         if hasattr(property, "__get__"):
@@ -118,6 +118,8 @@ def generic_subclasscheck(self, cls):
 
 # Allow isinstance and issubclass calls on special forms like union
 def special_form_subclasscheck(self, cls):
+    if self == typing.Any:
+        return True
     if self == cls:
         return True
     raise TypeError
@@ -175,12 +177,16 @@ def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
     return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]
 
 
+def get_function_replace_type(f: FunctionReplaceTyping) -> typing.Type[typing.Callable]:
+    return replace_typevars(f.typevars, get_function_type(f.fn))
+
+
 def get_bound_infer_type(b: BoundInfer) -> typing.Type[typing.Callable]:
     """
     Returns a typing.Callable type that corresponds to the type of the bound infer.
 
     TODO: This logic is a combination of `get_function_type` and `infer_return_type`.
-    We should eventually merge all of this into a consistant API so we don't have to duplicate this code. 
+    We should eventually merge all of this into a consistant API so we don't have to duplicate this code.
     """
     hints = copy.copy(typing_get_type_hints(b.fn))
     signature = inspect_signature(b.fn)
@@ -250,6 +256,8 @@ def get_type(v: T) -> typing.Type[T]:
         return get_function_type(v.fn)  # type: ignore
     if isinstance(v, BoundInfer):
         return get_bound_infer_type(v)  # type: ignore
+    if isinstance(v, FunctionReplaceTyping):
+        return get_function_replace_type(v)  # type: ignore
 
     tp = typing_inspect.get_generic_type(v)
     # Special case, only support homogoneous tuple that are inferred to iterables
@@ -610,6 +618,36 @@ def match_functions(
     raise TypeError(f"{fn_with_typevars} != {fn}")
 
 
+@dataclasses.dataclass(unsafe_hash=True)
+class FunctionReplaceTyping:
+    fn: typing.Callable
+    typevars: TypeVarMapping
+    inner_mapping: typing.Callable[[typing.Any], typing.Any]
+
+    @classmethod
+    def create(
+        cls,
+        fn: typing.Callable,
+        typevars: TypeVarMapping,
+        inner_mapping: typing.Callable[[typing.Any], typing.Any],
+    ) -> typing.Callable:
+        if not typevars:
+            return fn
+        if isinstance(fn, FunctionReplaceTyping):
+            fn = fn.fn
+        return cls(fn, typevars, inner_mapping)
+
+    def __post_init__(self):
+        functools.update_wrapper(self, self.fn)
+        self.__annotations__ = {
+            k: replace_typevars(self.typevars, v)
+            for k, v in typing_get_type_hints(self.fn).items()
+        }
+
+    def __call__(self, *args, **kwargs):
+        return self.inner_mapping(self.fn(*args, **kwargs))
+
+
 def replace_fn_typevars(
     fn: T,
     typevars: TypeVarMapping,
@@ -630,13 +668,7 @@ def replace_fn_typevars(
         )
     if isinstance(fn, types.FunctionType):
         # Create new function by replacing typevars in existing function
-        new_fn = lambda *args, **kwargs: inner_mapping(fn(*args, **kwargs))
-        functools.update_wrapper(new_fn, fn)
-        new_fn.__annotations__ = {
-            k: replace_typevars(typevars, v)
-            for k, v in typing_get_type_hints(fn).items()
-        }
-        return new_fn  # type: ignore
+        return FunctionReplaceTyping.create(fn, typevars, inner_mapping)  # type: ignore
     return fn
 
 
