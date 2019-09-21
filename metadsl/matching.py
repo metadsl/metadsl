@@ -109,8 +109,9 @@ class DefaultRule:
 
         elif fn != expr.function:
             return None
-        new_expr = self.inner_fn(*args, **expr.kwargs)
-        result = replace_typevars_expression(new_expr, typevars)
+        with TypeVarScope(*typevars.keys()):
+            new_expr = self.inner_fn(*args, **expr.kwargs)
+            result = replace_typevars_expression(new_expr, typevars)
         ref.replace(result)
         yield Replacement(str(self))
 
@@ -204,8 +205,9 @@ class MatchRule:
                 )
             except NoMatch:
                 continue
-            result_expr = replace_typevars_expression(result_expr, typevars)
-            ref.replace(result_expr)
+            with TypeVarScope(*typevars.keys()):
+                result_expr = replace_typevars_expression(result_expr, typevars)
+                ref.replace(result_expr)
             yield Replacement(str(self))
             return
 

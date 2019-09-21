@@ -21,6 +21,7 @@ __all__ = [
     "match_functions",
     "match_values",
     "BoundInfer",
+    "TypeVarScope",
     "infer_return_type",
     "ExpandedType",
     "replace_fn_typevars",
@@ -343,6 +344,14 @@ def get_inner_types(t: typing.Type) -> typing.Iterable[typing.Type]:
     return typing_inspect.get_args(t)
 
 
+def get_all_typevars(t: typing.Type) -> typing.Iterable[typing.TypeVar]:  # type: ignore
+    for t in get_inner_types(t):
+        if isinstance(t, typing.TypeVar):  # type: ignore
+            yield t
+        else:
+            yield from get_all_typevars(t)
+
+
 def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
@@ -513,13 +522,25 @@ def infer_return_type(
     except ValueError:
         raise TypeError(f"Couldn't merge mappings {mappings}")
 
-    return (
-        # Remove first arg if it was a classmethod
-        bound.args[1:] if is_classmethod else bound.args,
-        bound.kwargs,
-        replace_typevars(matches, return_hint),
-        matches,
-    )
+    final_args = bound.args[1:] if is_classmethod else bound.args
+    final_kwargs = bound.kwargs
+    for arg in final_args:
+        record_scoped_typevars(arg)
+    for kwarg in final_kwargs.values():
+        record_scoped_typevars(kwarg)
+    return (final_args, final_kwargs, replace_typevars(matches, return_hint), matches)
+
+
+def record_scoped_typevars(f: object) -> None:
+    if not isinstance(f, types.FunctionType) or hasattr(f, "__scoped_typevars__"):
+        return
+    # import pudb
+
+    # pudb.set_trace()
+    f.__scoped_typevars__ = {  # type: ignore
+        *get_all_typevars(get_function_type(f)),
+        *get_typevars_in_scope(),
+    }
 
 
 WrapperType = typing.Callable[
@@ -533,6 +554,47 @@ WrapperType = typing.Callable[
 ]
 
 
+_TYPEVARS_IN_SCOPE: typing.Counter[  # type: ignore
+    typing.TypeVar
+] = collections.Counter()
+
+
+def get_typevars_in_scope() -> typing.Set[typing.TypeVar]:  # type: ignore
+    return set(k for k, v in _TYPEVARS_IN_SCOPE.items() if v > 0)
+
+
+@dataclasses.dataclass
+class TypeVarScope:
+    typevars_in_scope: typing.Tuple[typing.TypeVar, ...]  # type: ignore
+
+    def __init__(self, *tvs: typing.TypeVar) -> None:  # type: ignore
+        self.typevars_in_scope = tvs
+
+    def __enter__(self) -> None:
+        # print("adding", self.typevars_in_scope)
+        _TYPEVARS_IN_SCOPE.update(self.typevars_in_scope)
+
+    def __exit__(self, *exc_details) -> None:
+        # print("removing", self.typevars_in_scope)
+        _TYPEVARS_IN_SCOPE.subtract(self.typevars_in_scope)
+
+
+@dataclasses.dataclass
+class NewTypeVarScope:
+    previous_typvars_in_scope: typing.Optional[  # type: ignore
+        typing.Counter[typing.TypeVar]
+    ] = None
+
+    def __enter__(self) -> None:
+        assert not self.previous_typvars_in_scope
+        self.previous_typvars_in_scope = collections.Counter(_TYPEVARS_IN_SCOPE)
+        _TYPEVARS_IN_SCOPE.clear()
+
+    def __exit__(self, *exc_details) -> None:
+        assert self.previous_typvars_in_scope
+        _TYPEVARS_IN_SCOPE.update(self.previous_typvars_in_scope)
+
+
 @dataclasses.dataclass(unsafe_hash=True)
 class Infer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
@@ -542,9 +604,10 @@ class Infer(typing.Generic[T, U]):
         functools.update_wrapper(self, self.fn)
 
     def __call__(self, *args, **kwargs) -> U:
-        return self.wrapper(  # type: ignore
-            self, *infer_return_type(self.fn, None, False, args, kwargs)[:-1]
-        )
+        *wrapper_args, typevars = infer_return_type(self.fn, None, False, args, kwargs)
+        with TypeVarScope(*typevars.keys()):
+            res = self.wrapper(self, *wrapper_args)  # type: ignore
+        return res
 
     def __get__(self, instance, owner) -> BoundInfer[T, U]:
         is_classmethod = isinstance(self.fn, classmethod)
@@ -575,12 +638,12 @@ class BoundInfer(typing.Generic[T, U]):
         functools.update_wrapper(self, self.fn)
 
     def __call__(self, *args, **kwargs) -> U:
-        return self.wrapper(  # type: ignore
-            self,
-            *infer_return_type(self.fn, self.owner, self.is_classmethod, args, kwargs)[
-                :-1
-            ],
+        *wrapper_args, typevars = infer_return_type(
+            self.fn, self.owner, self.is_classmethod, args, kwargs
         )
+        with TypeVarScope(*typevars.keys()):
+            res = self.wrapper(self, *wrapper_args)  # type: ignore
+        return res
 
     def __repr__(self):
         # Generic types are already formatted nicely
@@ -622,7 +685,10 @@ def match_functions(
 class FunctionReplaceTyping:
     fn: typing.Callable
     typevars: TypeVarMapping
-    inner_mapping: typing.Callable[[typing.Any], typing.Any]
+    typevars_in_scope: typing.Set[typing.TypeVar]  # type: ignore
+    inner_mapping: typing.Callable[[typing.Any], typing.Any] = dataclasses.field(
+        repr=False
+    )
 
     @classmethod
     def create(
@@ -631,21 +697,27 @@ class FunctionReplaceTyping:
         typevars: TypeVarMapping,
         inner_mapping: typing.Callable[[typing.Any], typing.Any],
     ) -> typing.Callable:
-        if not typevars:
-            return fn
         if isinstance(fn, FunctionReplaceTyping):
-            fn = fn.fn
-        return cls(fn, typevars, inner_mapping)
+            return fn
+        typevars_in_scope: typing.Set[TypeVar] = fn.__scoped_typevars__  # type: ignore
+        if not typevars_in_scope:
+            return fn
 
-    def __post_init__(self):
-        functools.update_wrapper(self, self.fn)
-        self.__annotations__ = {
-            k: replace_typevars(self.typevars, v)
-            for k, v in typing_get_type_hints(self.fn).items()
+        typevars = {k: v for k, v in typevars.items() if k in typevars_in_scope}
+        res = cls(fn, typevars, typevars_in_scope, inner_mapping)
+
+        functools.update_wrapper(res, fn)
+        res.__annotations__ = {
+            k: replace_typevars(typevars, v)
+            for k, v in typing_get_type_hints(fn).items()
         }
 
+        return res
+
     def __call__(self, *args, **kwargs):
-        return self.inner_mapping(self.fn(*args, **kwargs))
+        with NewTypeVarScope():
+            with TypeVarScope(*self.typevars_in_scope):
+                return self.inner_mapping(self.fn(*args, **kwargs))
 
 
 def replace_fn_typevars(
@@ -653,9 +725,6 @@ def replace_fn_typevars(
     typevars: TypeVarMapping,
     inner_mapping: typing.Callable[[T], T] = lambda a: a,
 ) -> T:
-    """
-    Replaces all type
-    """
     if isinstance(fn, BoundInfer):
         return typing.cast(
             T,
