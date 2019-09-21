@@ -41,39 +41,30 @@ class Children:
         return itertools.chain(enumerate(self.args), self.kwargs.items())
 
 
+def compute_hash(value: object, children: typing.Optional[Children]) -> Hash:
+    if children:
+        assert isinstance(value, Expression)
+        return Hash(
+            hash(
+                (
+                    value.function,
+                    tuple(children.args),
+                    frozenset(children.kwargs.items()),
+                )
+            )
+        )
+    try:
+        return Hash(hash((type(value), value)))
+    except TypeError:
+        return Hash(hash((type(value), id(value))))
+
+
 @dataclasses.dataclass
 class NormalizedExpression:
     children: typing.Optional[Children]
     value: object
-
-    prev_id: dataclasses.InitVar[typing.Optional[ID]]
-
-    id: ID = dataclasses.field(init=False)
-    hash: Hash = dataclasses.field(init=False)
-
+    id: ID
     parents: typing.Set[Parent] = dataclasses.field(default_factory=set)
-
-    def __post_init__(self, prev_id):
-        self.hash = self._compute_hash()
-        self.id = prev_id or ID(self.hash)
-
-    # TODO just return hash in creation instead of storing
-    def _compute_hash(self) -> Hash:
-        if self.children:
-            assert isinstance(self.value, Expression)
-            return Hash(
-                hash(
-                    (
-                        self.value.function,
-                        tuple(self.children.args),
-                        frozenset(self.children.kwargs.items()),
-                    )
-                )
-            )
-        try:
-            return Hash(hash((type(self.value), self.value)))
-        except TypeError:
-            return Hash(hash((type(self.value), id(self.value))))
 
 
 @dataclasses.dataclass
@@ -85,6 +76,7 @@ class NormalizedExpressions:
     ] = dataclasses.field(default_factory=collections.OrderedDict)
     ids: typing.Dict[ID, Hash] = dataclasses.field(default_factory=dict)
 
+    next_id: ID = ID(0)
     # THe first hash  added. Used when adding a new expression, so we can record the left
     # most hash and delete  every hash before that
     _first_hash: typing.Optional[Hash] = None
@@ -173,25 +165,22 @@ class NormalizedExpressions:
         else:
             children = None
 
-        ref = NormalizedExpression(
-            children=children,
-            value=expr,
-            prev_id=prev_id if prev_id not in self.ids else None,
-        )
+        hash = compute_hash(expr, children)
 
         if children:
             for key, child_hash in children.references():
-                self.expressions[child_hash].parents.add(Parent(ref.hash, key))
+                self.expressions[child_hash].parents.add(Parent(hash, key))
 
         if not self._first_hash:
-            self._first_hash = ref.hash
-        if ref.hash not in self.expressions:
-            self.expressions[ref.hash] = ref
-            self.ids[ref.id] = ref.hash
-        return ref.hash
+            self._first_hash = hash
+        if hash not in self.expressions:
+            id = self._get_new_id(prev_id)
+            self.expressions[hash] = NormalizedExpression(children, expr, id)
+            self.ids[id] = hash
+        return hash
 
     def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
-        new_expressions = NormalizedExpressions()
+        new_expressions = NormalizedExpressions(next_id=self.next_id)
         if not hash:
             # If we didn't get a hash, we are replacing the root node
             root_hash = next(iter(reversed(self.expressions)))
@@ -212,6 +201,15 @@ class NormalizedExpressions:
         new_expressions.add(root_expr, (root_hash, self.expressions))
         self.expressions = new_expressions.expressions
         self.ids = new_expressions.ids
+        self.next_id = new_expressions.next_id
+
+    def _get_new_id(self, prev_id: typing.Optional[ID]) -> ID:
+        if prev_id and prev_id not in self.ids:
+            return prev_id
+        id = self.next_id
+        self.next_id = ID(self.next_id + 1)
+        assert id not in self.ids
+        return id
 
     def _get_root(self, hash: Hash) -> Hash:
         parents = list(self.expressions[hash].parents)
@@ -272,7 +270,7 @@ class NormalizedExpressions:
 
     def _assert_hashes_accurate(self):
         for hash, ref in self.expressions.items():
-            assert hash == ref._compute_hash()
+            assert hash == compute_hash(ref.value, ref.children)
 
     def _assert_children_match_values(self):
         for hash, ref in self.expressions.items():

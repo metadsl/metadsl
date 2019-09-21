@@ -71,9 +71,12 @@ def test_replace():
     for i in (0, 1, 2):
         assert original_hashes[i] != new_hashes[i]
 
-    # the ids should be the  same
-    for i in (0, 1, 2):
+    # the first two ids should be the  same
+    for i in (0, 1):
         assert original_ids[i] == new_ids[i]
+
+    # the last should be different
+    assert original_ids[2] != new_ids[2]
 
 
 def test_replace_child():
@@ -116,9 +119,12 @@ def test_replace_child():
     for i in (0, 1, 2):
         assert original_hashes[i] != new_hashes[i]
 
-    # the ids should be the  same
-    for i in (0, 1, 2):
+    # the first two ids should be the  same
+    for i in (0, 1):
         assert original_ids[i] == new_ids[i]
+
+    # the last should be different
+    assert original_ids[2] != new_ids[2]
 
 
 @expression
