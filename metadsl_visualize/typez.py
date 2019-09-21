@@ -112,17 +112,22 @@ _builtins = inspect.getmodule(int)
 
 SHOW_MODULE = False
 
+WARN_ON_TYPEVAR = False
+
 
 def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     """
     returns the name of the type or function prefixed by the module name if it isn't a builtin
     """
     if isinstance(o, typing.TypeVar):  # type: ignore
-        warnings.warn(
-            "Unresolved typevar in type argument, this means the typing is broken",
-            RuntimeWarning,
-        )
-        return repr(o)
+        if WARN_ON_TYPEVAR:
+            warnings.warn(
+                "Unresolved typevar in type argument, this means the typing is broken",
+                RuntimeWarning,
+            )
+            return repr(o)
+        else:
+            raise RuntimeError("Unresolved typevar in type argument")
 
     # This is true for `typing.Any`
     if isinstance(o, typing._SpecialForm):
