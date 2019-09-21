@@ -140,32 +140,35 @@ class NormalizedExpressions:
             prev_kwargs = None
 
         if isinstance(expr, Expression):
-            children = Children(
-                [
-                    self.add(
-                        arg,
-                        (
-                            prev_args[i] if prev_args and i < len(prev_args) else None,
-                            prev_expressions,
-                        )
-                        if prev_expressions
-                        else None,
+            children = Children([], {})
+            for i, arg in enumerate(expr.args):
+                arg_hash = self.add(
+                    arg,
+                    (
+                        prev_args[i] if prev_args and i < len(prev_args) else None,
+                        prev_expressions,
                     )
-                    for i, arg in enumerate(expr.args)
-                ],
-                {
-                    k: self.add(
-                        v,
-                        (
-                            prev_kwargs.get(k, None) if prev_kwargs else None,
-                            prev_expressions,
-                        )
-                        if prev_expressions
-                        else None,
+                    if prev_expressions
+                    else None,
+                )
+                children.args.append(arg_hash)
+
+                # Update expression with child, so that points to same one
+                expr.args[i] = self.expressions[arg_hash].value
+            for k, v in expr.kwargs.items():
+                kwarg_hash = self.add(
+                    v,
+                    (
+                        prev_kwargs.get(k, None) if prev_kwargs else None,
+                        prev_expressions,
                     )
-                    for k, v in expr.kwargs.items()
-                },
-            )
+                    if prev_expressions
+                    else None,
+                )
+                children.kwargs[k] = kwarg_hash
+
+                # Update expression with child, so that points to same one
+                expr.kwargs[k] = self.expressions[kwarg_hash].value
         else:
             children = None
 
@@ -279,11 +282,11 @@ class NormalizedExpressions:
                 continue
             assert isinstance(value, Expression)
 
-            assert value.args == [self.expressions[h].value for h in ref.children.args]
+            for h, arg in zip(ref.children.args, value.args):
+                assert self.expressions[h].value is arg
 
-            assert value.kwargs == {
-                k: self.expressions[v].value for k, v in ref.children.kwargs.items()
-            }
+            for k, v in ref.children.kwargs.items():
+                assert value.kwargs[k] is self.expressions[k].value
 
     def _assert_ids_match(self):
         for id, hash in self.ids.items():
