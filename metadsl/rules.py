@@ -60,7 +60,12 @@ class Executor:
         default_rule: Rule = self.default_rule  # type: ignore
         rule = rule or default_rule
         assert rule
-        return typing.cast(T, execute(ExpressionReference.from_expression(expr), rule))
+        return typing.cast(
+            T,
+            execute(
+                ExpressionReference.from_expression(ExpressionFolder()(expr)), rule
+            ),
+        )
 
 
 def _execute_all(ref: ExpressionReference, rule: Rule) -> object:

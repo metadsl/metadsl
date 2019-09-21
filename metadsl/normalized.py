@@ -57,6 +57,7 @@ class NormalizedExpression:
         self.hash = self._compute_hash()
         self.id = prev_id or ID(self.hash)
 
+    # TODO just return hash in creation instead of storing
     def _compute_hash(self) -> Hash:
         if self.children:
             assert isinstance(self.value, Expression)
@@ -208,7 +209,6 @@ class NormalizedExpressions:
 
             root_hash = self._get_root(hash)
             root_expr = self.expressions[root_hash].value
-
         new_expressions.add(root_expr, (root_hash, self.expressions))
         self.expressions = new_expressions.expressions
         self.ids = new_expressions.ids
@@ -302,6 +302,9 @@ class ExpressionReference(typing.Generic[T]):
     expressions: NormalizedExpressions
     _hash: typing.Optional[Hash] = dataclasses.field(default=None, repr=False)
 
+    def __post_init__(self):
+        self.verify_integrity()
+
     @property
     def hash(self) -> Hash:
         return self._hash or self.root_hash
@@ -313,9 +316,7 @@ class ExpressionReference(typing.Generic[T]):
     @classmethod
     def from_expression(cls, expr: T) -> ExpressionReference:
         expressions = NormalizedExpressions()
-        # Copy expression before adding so that we can mutate it
-        expr_copy = ExpressionFolder()(expr)
-        expressions.add(expr_copy)
+        expressions.add(expr)
         return cls(expressions)
 
     @property
@@ -327,7 +328,7 @@ class ExpressionReference(typing.Generic[T]):
         self._hash = None
 
         # Optional, this could be disabled to improve performance
-        # self.verify_integrity()
+        self.verify_integrity()
 
     @property
     def children(self) -> typing.Iterable[ExpressionReference]:
