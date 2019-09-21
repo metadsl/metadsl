@@ -76,10 +76,10 @@ class FunctionOne(Expression, typing.Generic[T, U]):
             inner_fn = cls.create(fn.__name__, inner_abst)
 
             @Abstraction.from_fn
-            def inner_inner(arg1: T) -> U:
+            def inner(arg1: T) -> U:
                 return fn(inner_fn, arg1)
 
-            return inner_inner
+            return inner
 
         return cls.create(fn.__name__, inner)
 
@@ -106,10 +106,10 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     @classmethod
     def from_fn(cls, fn: typing.Callable[[T, U], V]) -> FunctionTwo[T, U, V]:
         def inner(arg1: T) -> Abstraction[U, V]:
-            def inner_inner(arg2: U) -> V:
+            def inner(arg2: U) -> V:
                 return fn(arg1, arg2)
 
-            return Abstraction.from_fn(inner_inner)
+            return Abstraction.from_fn(inner)
 
         return cls.create(fn.__name__, Abstraction.from_fn(inner))
 
@@ -130,14 +130,14 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
             inner_fn = cls.create(fn.__name__, inner_abst)
 
             @Abstraction.from_fn
-            def inner_inner(arg1: T) -> Abstraction[U, V]:
+            def inner(arg1: T) -> Abstraction[U, V]:
                 @Abstraction.from_fn
-                def inner_inner_inner(arg2: U) -> V:
+                def inner(arg2: U) -> V:
                     return fn(inner_fn, arg1, arg2)
 
-                return inner_inner_inner
+                return inner
 
-            return inner_inner
+            return inner
 
         return cls.create(fn.__name__, inner)
 
@@ -168,14 +168,14 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
         @Abstraction.from_fn
         def inner(arg1: T) -> Abstraction[U, Abstraction[V, X]]:
             @Abstraction.from_fn
-            def inner_inner(arg2: U) -> Abstraction[V, X]:
+            def inner(arg2: U) -> Abstraction[V, X]:
                 @Abstraction.from_fn
-                def inner_inner_inner(arg3: V) -> X:
+                def inner(arg3: V) -> X:
                     return fn(arg1, arg2, arg3)
 
-                return inner_inner_inner
+                return inner
 
-            return inner_inner
+            return inner
 
         return cls.create(fn.__name__, inner)
 
@@ -196,18 +196,18 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
             inner_fn = cls.create(fn.__name__, inner_abst)
 
             @Abstraction.from_fn
-            def inner_inner(arg1: T) -> Abstraction[U, Abstraction[V, X]]:
+            def inner(arg1: T) -> Abstraction[U, Abstraction[V, X]]:
                 @Abstraction.from_fn
-                def inner_inner_inner(arg2: U) -> Abstraction[V, X]:
+                def inner(arg2: U) -> Abstraction[V, X]:
                     @Abstraction.from_fn
-                    def inner_inner_inner_inner(arg3: V) -> X:
+                    def inner(arg3: V) -> X:
                         return fn(inner_fn, arg1, arg2, arg3)
 
-                    return inner_inner_inner_inner
+                    return inner
 
-                return inner_inner_inner
+                return inner
 
-            return inner_inner
+            return inner
 
         return cls.create(fn.__name__, inner)
 
