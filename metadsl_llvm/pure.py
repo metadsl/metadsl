@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import typing
 
+__all__ = [
+    "Module",
+    "RegisteredFunctionOne",
+    "RegisteredFunctionTwo",
+    "RegisteredFunctionThree",
+]
 from metadsl import *
 from metadsl_core import *
 
@@ -35,6 +41,7 @@ class Module(Expression):
     ) -> Pair[Module, RegisteredFunctionThree[T, U, V, X]]:
         ...
 
+
 class RegisteredFunctionOne(Expression, typing.Generic[T, U]):
     @expression
     def __call__(self, a: T) -> U:
@@ -44,6 +51,7 @@ class RegisteredFunctionOne(Expression, typing.Generic[T, U]):
     def to_fn(self) -> typing.Callable[[T], U]:
         ...
 
+
 class RegisteredFunctionTwo(Expression, typing.Generic[T, U, V]):
     @expression
     def __call__(self, a: T, b: U) -> V:
@@ -52,6 +60,7 @@ class RegisteredFunctionTwo(Expression, typing.Generic[T, U, V]):
     @expression
     def to_fn(self) -> typing.Callable[[T, U], V]:
         ...
+
 
 class RegisteredFunctionThree(Expression, typing.Generic[T, U, V, X]):
     @expression
