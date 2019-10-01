@@ -1,5 +1,7 @@
 from __future__ import annotations
 import typing
+import pytest
+
 from .matching import *
 from .rules import *
 from .typing_tools import *
@@ -25,6 +27,11 @@ class _Number(Expression):
     def __add__(self, other: _Number) -> _Number:
         ...
 
+    @expression
+    @classmethod
+    def NaN(cls) -> _Number:
+        ...
+
 
 @expression
 def _from_int(i: int) -> _Number:
@@ -47,6 +54,11 @@ class _List(Expression, typing.Generic[T]):
     @expression
     @classmethod
     def create(cls, *items: T) -> _List[T]:
+        ...
+
+    @staticmethod
+    @expression
+    def sum(l: _List[_Number]) -> _Number:
         ...
 
 
@@ -135,6 +147,40 @@ class TestRule:
             execute(_List.create(1) + _List.create(3), _concat_lists_minus_end)
             == _List[int].create()
         )
+
+    @pytest.skip("This isn't supported yet")
+    def test_variable_args_generator(self):
+        """
+        We should be able to iterate through variables args to create a sequence
+        of homogenous rules
+        """
+
+        @rule
+        def _sum_list(xs: typing.Sequence[int]) -> R[_Number]:
+            return (
+                _List.sum(_List[_Number].create(*(_from_int(x) for x in xs))),
+                lambda: _from_int(sum(xs)),
+            )
+
+        assert execute(_List.sum(_List[_Number].create()), _sum_list) == _from_int(0)
+        assert execute(_List.sum(_List.create(_from_int(10))), _sum_list) == _from_int(
+            10
+        )
+        assert execute(
+            _List.sum(_List.create(_from_int(10), _from_int(1))), _sum_list
+        ) == _from_int(1)
+
+        # Verify doesn't replace when not integers
+        assert execute(_List.sum(_List.create(_Number.NaN())), _sum_list) == _List.sum(
+            _List.create(_Number.NaN())
+        )
+        assert execute(
+            _List.sum(_List.create(_from_int(0), _Number.NaN())), _sum_list
+        ) == _List.sum(_List.create(_from_int(0), _Number.NaN()))
+
+        assert execute(
+            _List.sum(_List.create(_Number.NaN(), _from_int(0))), _sum_list
+        ) == _List.sum(_List.create(_Number.NaN(), _from_int(0)))
 
     def test_different_generic_param(self):
         """
