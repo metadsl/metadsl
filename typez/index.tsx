@@ -123,8 +123,7 @@ export function GraphvizComponent({ dot }: { dot: string }) {
         keyMode: "id",
         // https://github.com/magjac/d3-graphviz#performance
         tweenShapes: false,
-        tweenPaths: false,
-        height: 
+        tweenPaths: false
       }).transition(t as any)
     );
   }, [el.current]);
