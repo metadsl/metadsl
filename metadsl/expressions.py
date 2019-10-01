@@ -78,7 +78,7 @@ class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     """
     An expression that represents a type of `T`, for example T could be `int`.
 
-    This is needed when a functionr returns a non expression type, it still has to return
+    This is needed when a function returns a non expression type, it still has to return
     an expression under the covers until it has been replaced.
 
     It is also needed when using Wildcards in expressions when doing matching.
