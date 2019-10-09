@@ -1,5 +1,4 @@
 import { IRenderMime } from "@jupyterlab/rendermime-interfaces";
-import { graphviz, Graphviz } from "d3-graphviz";
 
 import Slider from "@material-ui/core/Slider";
 import Tooltip from "@material-ui/core/Tooltip";
@@ -7,26 +6,15 @@ import PopperJs from "popper.js";
 
 import * as React from "react";
 
-import * as d3transiion from "d3-transition";
-import * as d3ease from "d3-ease";
 import { ReactWidget } from "@jupyterlab/apputils";
+import { Typez } from "./schema";
+import { ElementsDefinition } from "cytoscape";
+import CytoscapeComponent from './CytoscapeComponent'
 
 /**
  * The default mime type for the extension.
  */
-const MIME_TYPE = "application/x.typez.graph+json";
-
-/**
- * This is a seperate type, of the compiled typez states as graphviz
- */
-type TypezGraph = {
-  initial: string;
-  states: Array<{
-    graph: string;
-    rule: string;
-    label: string | null;
-  }>;
-};
+const MIME_TYPE = "application/x.typez+json";
 
 function ValueLabelComponent(props: {
   children: React.ReactElement;
@@ -57,26 +45,26 @@ function ValueLabelComponent(props: {
   );
 }
 export function SelectState({
-  graph,
+  typez: { states },
   onChange
 }: {
-  graph: TypezGraph;
+  typez: Typez;
   onChange: (node: string) => void;
 }) {
   // selected index, from the right
   const [selected, setSelected] = React.useState<number>(0);
-  const i = graph.states.length - selected;
+  const n = states?.states?.length || 0;
+  const i = n - selected;
   React.useEffect(() => {
     if (i === 0) {
-      onChange(graph.initial);
+      onChange(states!.initial);
     } else {
-      onChange(graph.states[i - 1].graph);
+      onChange(states!.states![i - 1]!.node);
     }
-  }, [graph, selected]);
+  }, [states, selected]);
 
   return (
     <Slider
-      valueLabelFormat={value => `YO!${value}`}
       ValueLabelComponent={({ children, open, value }) => (
         <ValueLabelComponent
           children={children}
@@ -84,62 +72,72 @@ export function SelectState({
           value={
             value === 0
               ? "initial"
-              : graph.states[value - 1].label || graph.states[value - 1].rule
+              : states!.states![value - 1].label ?? states!.states![value - 1].rule
           }
         />
       )}
       step={1}
       valueLabelDisplay="on"
       value={i}
-      max={graph.states.length}
+      max={n}
       onChange={(_, newValue) =>
-        setSelected(graph.states.length - (newValue as any))
+        setSelected(n - (newValue as any))
       }
       marks={[
         { value: 0, label: "initial" },
-        ...graph.states.map(({ label }, idx) => ({
+        ...(states?.states?.map(({ label }, idx) => ({
           value: idx + 1,
           label
-        }))
+        })) ?? [])
       ]}
     />
   );
 }
 
-const t = d3transiion
-  .transition("main")
-  .ease(d3ease.easeQuadInOut)
-  .delay(100)
-  .duration(600);
-export function GraphvizComponent({ dot }: { dot: string }) {
-  const el = React.useRef<HTMLDivElement>(null);
-  const [graph, setGraph] = React.useState<null | Graphviz<any, any, any, any>>(
-    null
-  );
 
-  React.useEffect(() => {
-    setGraph(
-      graphviz(el.current!, {
-        keyMode: "id",
-        // https://github.com/magjac/d3-graphviz#performance
-        tweenShapes: false,
-        tweenPaths: false
-      }).transition(t as any)
-    );
-  }, [el.current]);
 
-  React.useEffect(() => {
-    if (!graph) {
-      return;
+function typezToCytoscape(nodes: Typez['nodes'], id: string): ElementsDefinition {
+  console.log("Starting with", {nodes, id})
+  if (!nodes) {
+    throw new Error('Must have nodes');
+  }
+
+  const elements: ElementsDefinition = {nodes: [], edges: []}
+  const seen = new Set<string>();
+  const toProcess = new Set([nodes[id]]);
+
+  for (const args of toProcess) {
+    toProcess.delete(args)
+
+    const [persistantID, node] = args;
+    seen.add(persistantID)
+
+    let label: string;
+    if ("repr" in node) {
+      label = node.repr
+    } else {
+      label = node.function;
+      for (const [childIndex, childID] of [
+        ...Object.entries(node.kwargs || {}),
+        ...(node.args || []).map((argID, index) => [index, argID] as [number, string])
+      ]) {
+        const childNode = nodes[childID];
+        const childPersistantID = childNode[0];
+        elements.edges.push({data: {source: persistantID, id: `${persistantID}.${childIndex}`, target: childPersistantID}})
+        if (!seen.has(childPersistantID)) {
+          toProcess.add(childNode)
+        }
+      }
     }
-    graph.renderDot(dot);
-  }, [graph, dot]);
+    elements.nodes.push({data: {id: persistantID, label}})
+  }
+  console.log("Ending with", elements)
+  return elements;}
 
-  return <div ref={el} />;
-}
+export function GraphComponent({ typez }: { typez: Typez }) {
+  const [id, setID] = React.useState(typez.states!.initial);
+  const elements = typezToCytoscape(typez['nodes'], id);
 
-export function GraphComponent({ graph }: { graph: TypezGraph }) {
-  const [dot, setDot] = React.useState<string>(graph.initial);
   return (
     <div>
       <div
@@ -151,9 +149,9 @@ export function GraphComponent({ graph }: { graph: TypezGraph }) {
           boxSizing: "border-box"
         }}
       >
-        <SelectState graph={graph} onChange={setDot} />
+        <SelectState typez={typez} onChange={setID} />
       </div>
-      <GraphvizComponent dot={dot} />
+      <CytoscapeComponent elements={elements} />
     </div>
   );
 }
@@ -163,18 +161,18 @@ class OutputWidget extends ReactWidget implements IRenderMime.IRenderer {
    * Render typez-graph into this widget's node.
    */
   async renderModel(model: IRenderMime.IMimeModel): Promise<void> {
-    this.graph = model.data[MIME_TYPE] as TypezGraph;
+    this.typez = model.data[MIME_TYPE] as Typez;
     this.update();
   }
 
   render() {
-    if (!this.graph) {
+    if (!this.typez) {
       return <></>;
     }
-    return <GraphComponent graph={this.graph} />;
+    return <GraphComponent typez={this.typez} />;
   }
 
-  graph: TypezGraph | null = null;
+  typez: Typez | null = null;
 }
 
 /**

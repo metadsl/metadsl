@@ -50,7 +50,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
+                                    "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
                                   },
                                   "type": "object"
                                 },
@@ -115,7 +115,7 @@
                                 "properties": {
                                   "params": {
                                     "additionalProperties": {
-                                      "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
+                                      "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
                                     },
                                     "type": "object"
                                   },
@@ -176,7 +176,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
+                              "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
                             },
                             "type": "object"
                           },
@@ -261,7 +261,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-schema.ts-3573-3712-schema.ts-0-4265"
+                                    "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
                                   },
                                   "type": "object"
                                 },
@@ -362,7 +362,7 @@
       },
       "type": "object"
     },
-    "alias-schema.ts-2495-2601-schema.ts-0-4265": {
+    "alias-src/schema.ts-2495-2601-src/schema.ts-0-4797": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -381,7 +381,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-2495-2601-schema.ts-0-4265"
+                "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
               },
               "type": "object"
             },
@@ -413,14 +413,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-schema.ts-3573-3712-schema.ts-0-4265": {
+    "alias-src/schema.ts-3573-3712-src/schema.ts-0-4797": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-schema.ts-3573-3712-schema.ts-0-4265"
+                "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
               },
               "type": "object"
             },

@@ -151,3 +151,32 @@ type State = {
   // An optional label to be shown to the user, to highlight this state
   label?: string;
 };
+
+
+/**
+ * Examples
+ */
+
+
+// const Natural: Definitions = {
+//   "Natural": {},
+//   "Natural.__add__": {
+//     params: [["left", {type: "Natural"}], ["right", {type: "Natural"}]],
+//     return_: {type: "Natural"}
+//   },
+//   "Vec": ["Item"],
+//   "Vec.__getitem__": {
+//     type
+//   }
+// };
+
+// const Vec: Definitions = {
+  
+//   "Vec": ["T"] }
+//   {
+//     function: "Vec.__getitem__",
+//     type_params: ["T"],
+//     params: [["self", { param: "T" }], ["index", { type: "Nat" }]],
+//     return: { param: "T" }
+//   }
+// ];

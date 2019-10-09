@@ -13,9 +13,9 @@
     "mimeExtension": true
   },
   "scripts": {
-    "clean": "rimraf tsconfig.tsbuildinfo index.js index.d.ts index.js.map schema.json",
+    "clean": "rimraf tsconfig.tsbuildinfo schema.json lib",
     "build": "tsc && yarn run build:schema",
-    "build:schema": "ts-json-schema-generator --skip-type-check -f tsconfig.json --path schema.ts Typez > schema.json",
+    "build:schema": "ts-json-schema-generator --skip-type-check -f tsconfig.json --path src/schema.ts Typez > schema.json",
     "prepare": "yarn run clean && yarn run build",
     "watch": "tsc -w",
     "extension:install": "jupyter labextension install typez",
@@ -28,17 +28,19 @@
     "@jupyterlab/rendermime-interfaces": "^1.4.0",
     "@material-ui/core": "4.4.2",
     "@phosphor/widgets": "^1.9.0",
-    "d3-ease": "1.0.5",
-    "d3-graphviz": "2.6.1",
-    "d3-transition": "1.2.0",
+    "cytoscape": "^3.2.0",
+    "cytoscape-dagre": "2.2.2",
     "react": "~16.8.4"
   },
   "devDependencies": {
-    "@types/d3-ease": "1.0.8",
-    "@types/d3-graphviz": "2.6.2",
+    "@types/cytoscape": "3.8.2",
     "@types/react": "~16.8.18",
+    "react-dom": "^16.8.0",
     "rimraf": "3.0.0",
     "ts-json-schema-generator": "0.52.14",
-    "typescript": "3.6.2"
+    "typescript": "3.7.0-beta"
+  },
+  "peerDependencies": {
+    "react-dom": "^16.8.0"
   }
 }

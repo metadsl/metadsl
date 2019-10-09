@@ -10,7 +10,6 @@ import json
 import jsonschema
 import pathlib
 import IPython.core.display
-import graphviz
 
 __all__ = [
     "Typez",
@@ -45,73 +44,6 @@ with open(pathlib.Path(__file__).parent / "schema.json") as f:
 
 
 @dataclass(frozen=True)
-class TypezGraph:
-    initial: Optional[str]
-    states: List[GraphState]
-
-
-@dataclass(frozen=True)
-class GraphState:
-    graph: str
-    rule: str
-    label: Union[str, None]
-
-
-def render_graph(node_id: str, nodes: Nodes) -> str:
-    """
-    Renders a graphviz graph for a node and its descendents
-    """
-    d = graphviz.Digraph()
-    d.attr("node", shape="plain")
-    d.attr("edge", penwidth="0.5", arrowsize="0.5")
-    seen: Set[str] = set()
-
-    def process_type_instance(id_: str, instance: TypeInstance):
-        if isinstance(instance, ExternalTypeInstance):
-            d.node(id_, filter_str(instance.repr), id=id_)
-            return
-        d.node(id_, filter_str(instance.type))
-        for i, kv in enumerate((instance.params or {}).items()):
-            child_id = f"{id_}.{i}"
-            k, v = kv
-            process_type_instance(child_id, v)
-            d.edge(id_, child_id, label=filter_str(k), id=f"{id_}.{i}")
-
-    def process_node(id_: str):
-        if id_ in seen:
-            return
-        seen.add(id_)
-        persistant_id, node = nodes[id_]
-        # If this is a primitive node, we don't need to process anymore
-        if isinstance(node, PrimitiveNode):
-            d.node(id_, filter_str(node.repr), id=persistant_id)
-            return
-        # Otherwise, create the node then add its children
-        d.node(id_, filter_str(node.function), id=persistant_id)
-        for i, child in enumerate(node.args or []):
-            d.edge(id_, child, id=f"{persistant_id}.args[{i}]")
-            process_node(child)
-        for k, child in (node.kwargs or {}).items():
-            d.edge(id_, child, id=f"{persistant_id}.kwargs[{k}]")
-            process_node(child)
-        if not SHOW_TYPES:
-            return
-        # Then add the type params for this node
-        for i, kv in enumerate((node.type_params or {}).items()):
-            k, v = kv
-            type_id = f"{id_}.{i}"
-            process_type_instance(type_id, v)
-            d.edge(id_, type_id, label=filter_str(k), id=f"{type_id}.{i}")
-
-    process_node(node_id)
-    return d.source
-
-
-def filter_str(n):
-    return n.replace("<", "").replace(">", "")
-
-
-@dataclass(frozen=True)
 class Typez:
     definitions: Optional[Definitions] = None
     nodes: Optional[Nodes] = None
@@ -130,27 +62,7 @@ class Typez:
         return dict_
 
     def _repr_mimebundle_(self, include=None, exclude=None):
-        return {
-            "application/json": self.asdict(),
-            "application/x.typez.graph+json": dataclasses.asdict(self.as_graph()),
-        }
-
-    def as_graph(self) -> TypezGraph:
-        return TypezGraph(
-            initial=render_graph(self.states.initial, self.nodes or {})
-            if self.states
-            else None,
-            states=[
-                GraphState(
-                    graph=render_graph(state.node, self.nodes or {}),
-                    rule=state.rule,
-                    label=state.label,
-                )
-                for state in self.states.states or []
-            ]
-            if self.states
-            else [],
-        )
+        return {"application/x.typez+json": self.asdict()}
 
 
 Definitions = Dict[str, Union["Kind", "Function"]]
