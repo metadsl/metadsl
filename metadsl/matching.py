@@ -237,9 +237,11 @@ def match_expression(
     """
     Returns a mapping of wildcards to the objects at that level, or None if it does not match.
 
+    template: the expression with wildcards in it
+    expr: the expression without wildcards to match against
+
     A wildcard can match either an expression or a value. If it matches two nodes, they must be equal.
     """
-
     if template in wildcards:
         # If we are matching against a placeholder and the expression is not resolved to that placeholder, don't match.
         if (
@@ -292,7 +294,7 @@ def match_expression(
             # template args, minus the iterator, is the minimum length of the values
             # If they have less values than this, raise an error
             if len(expr.args) < len(template.args) - 1:
-                raise TypeError("Wrong number of args in match")
+                raise NoMatch("Wrong number of args in match")
             template_args_ = list(template.args)
             # Only support one iterated arg for now
             # TODO: Support more than one, would require branching
@@ -313,7 +315,7 @@ def match_expression(
 
         else:
             if len(template.args) != len(expr.args):
-                raise TypeError("Wrong number of args in match")
+                raise NoMatch("Wrong number of args in match")
             template_args = template.args
             expr_args = expr.args
 
