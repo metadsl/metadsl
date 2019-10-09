@@ -8,6 +8,8 @@ import dataclasses
 import typing
 import itertools
 import collections
+import functools
+
 
 from .expressions import *
 
@@ -18,6 +20,7 @@ __all__ = [
     "NormalizedExpressions",
     "Parent",
     "Children",
+    "hash_value",
     "Hash",
     "ID",
 ]
@@ -30,6 +33,20 @@ Hash = typing.NewType("Hash", int)
 class Parent:
     hash: Hash
     key: typing.Union[str, int]
+
+
+@functools.singledispatch
+def hash_value(value: object) -> int:
+    """
+    Computes some hash for a value that should be stable. Either use the built in hash, or if we cannot
+    (like the object is mutable) then use the id.
+
+    It's a single dispatch function so that you can register custom hashes for objects you don't control.
+    """
+    try:
+        return Hash(hash((type(value), value)))
+    except TypeError:
+        return Hash(hash((type(value), id(value))))
 
 
 @dataclasses.dataclass
@@ -53,10 +70,7 @@ def compute_hash(value: object, children: typing.Optional[Children]) -> Hash:
                 )
             )
         )
-    try:
-        return Hash(hash((type(value), value)))
-    except TypeError:
-        return Hash(hash((type(value), id(value))))
+    return Hash(hash_value(value))
 
 
 @dataclasses.dataclass
