@@ -103,12 +103,6 @@ class ModuleReference(Expression):
         ...
 
 
-@register_llvmlite_ir
-@rule
-def module_box(mod: ir.Module, functions: Vec[Function]) -> R[Module]:
-    return Module.create(ModuleReference.box(mod), functions), Module.box(mod)
-
-
 @register_llvmlite_ir_ref
 @rule
 def module_reference_box(name: str) -> R[ModuleReference]:
@@ -191,6 +185,12 @@ class Function(Expression):
     @classmethod
     def box(cls, function: ir.Function) -> Function:
         ...
+
+
+@register_llvmlite_ir
+@rule
+def module_box(mod: ir.Module, functions: Vec[Function]) -> R[Module]:
+    return Module.create(ModuleReference.box(mod), functions), Module.box(mod)
 
 
 @register
