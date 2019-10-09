@@ -1,0 +1,10 @@
+Natural:
+  __add__:
+    - int.__add__:
+      args:
+      kwargs:
+
+{'@context':{
+    Natural.__add__: int.__add__
+  }}
+
