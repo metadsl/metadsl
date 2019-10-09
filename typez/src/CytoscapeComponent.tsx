@@ -152,7 +152,6 @@ export default function CytoscapeComponent({
     if (!cy.current) {
       return;
     }
-    console.log("updating", elements);
     cy.current.json({ elements });
     cy.current.layout(layout).run();
   }, [cy.current, elements]);
