@@ -112,8 +112,10 @@ const style: Stylesheet[] = [
     selector: "node",
     style: {
       label: "data(label)",
-      "text-wrap": "ellipsis",
-      "text-max-width": "400px"
+      "text-valign": "top",
+      "text-halign": "right",
+      "text-wrap": "wrap"
+      // "text-max-width": "400px"
     }
   },
   {
