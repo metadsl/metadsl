@@ -148,7 +148,7 @@ class TestRule:
             == _List[int].create()
         )
 
-    @pytest.skip("This isn't supported yet")
+    @pytest.mark.skip("This isn't supported yet")
     def test_variable_args_generator(self):
         """
         We should be able to iterate through variables args to create a sequence
