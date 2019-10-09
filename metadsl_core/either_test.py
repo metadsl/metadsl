@@ -62,7 +62,7 @@ def convert_to_str(s: str) -> R[Maybe[Str]]:
     return Converter[Str].convert(s), lambda: Maybe.just(Str.from_str(s))
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *all_rules.rules)
+convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, all_rules)
 
 
 class TestConvert:

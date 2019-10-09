@@ -4,6 +4,9 @@ We have a set of core rules that we want to execute all the time.
 We also have a number of named rules, for conversions.
 """
 
+import collections
+import typing
+
 from metadsl import *
 
 __all__ = [
@@ -13,8 +16,9 @@ __all__ = [
     "register_numpy_engine",
     "register_post",
     "register_pre",
-    "run_post_rules",
     "register_optimize",
+    "run_post_rules",
+    "rule_groups",
 ]
 
 
@@ -46,40 +50,36 @@ register_numpy_engine = numpy_engine.append
 optimize_rules = RulesRepeatFold()
 register_optimize = optimize_rules.append
 
-all_rules = RuleInOrder(
-    CollapseReplacementsRule("core", RulesRepeatSequence(core_pre_rules, core_rules)),
-    CollapseReplacementsRule(
-        "convert", RulesRepeatSequence(core_pre_rules, core_rules, convert_rules)
-    ),
-    CollapseReplacementsRule(
-        "optimize",
-        RulesRepeatSequence(core_pre_rules, core_rules, convert_rules, optimize_rules),
-    ),
-    CollapseReplacementsRule(
-        "unbox",
-        RulesRepeatSequence(
-            core_pre_rules, core_rules, convert_rules, optimize_rules, unbox_rules
-        ),
-    ),
-    CollapseReplacementsRule(
-        "execute",
-        RulesRepeatSequence(
-            core_pre_rules,
-            core_rules,
-            convert_rules,
-            optimize_rules,
-            unbox_rules,
-            numpy_engine,
-        ),
-    ),
+
+rule_groups: typing.DefaultDict[str, Rule] = collections.defaultdict(
+    core=core_rules,
+    convert=convert_rules,
+    optimize=optimize_rules,
+    unbox=unbox_rules,
+    execute=numpy_engine,
 )
+
+RUN_POST_RULES = True
 
 
 def run_post_rules(should_run: bool) -> None:
-    # Set to use core rules by default
-    execute.default_rule = (  # type: ignore
-        RulesRepeatSequence(all_rules, core_post_rules) if should_run else all_rules
-    )
+    global RUN_POST_RULES
+    RUN_POST_RULES = should_run
 
 
-run_post_rules(True)
+def all_rules(expression: ExpressionReference) -> typing.Iterable[Replacement]:
+    sub_rules: typing.List[Rule] = [core_pre_rules]
+    rules_in_order: typing.List[Rule] = []
+    for k, v in rule_groups.items():
+        sub_rules.append(v)
+        rules_in_order.append(
+            CollapseReplacementsRule(k, RulesRepeatSequence(*sub_rules))
+        )
+    ordered = RuleInOrder(*rules_in_order)
+    if RUN_POST_RULES:
+        return RulesRepeatSequence(ordered, core_post_rules)(expression)
+    return ordered(expression)
+
+
+execute.default_rule = all_rules  # type: ignore
+

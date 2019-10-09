@@ -25,6 +25,7 @@ __all__ = [
     "RuleInOrder",
     "RuleFold",
     "RuleRepeat",
+    "Replacement",
     "CollapseReplacementsRule",
 ]
 T = typing.TypeVar("T")
