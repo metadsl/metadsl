@@ -2,8 +2,8 @@
   "name": "typez",
   "version": "1.0.0",
   "license": "MIT",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "keywords": [
     "jupyter",
     "jupyterlab",
