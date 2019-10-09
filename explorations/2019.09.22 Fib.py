@@ -17,7 +17,7 @@
 N = 1000
 
 
-# In[8]:
+# In[2]:
 
 
 def fib_more(n, a, b):
@@ -31,7 +31,7 @@ def fib(n):
     return fib_more(n, 0, 1)
 
 
-# In[11]:
+# In[3]:
 
 
 # %timeit fib(N)
@@ -41,7 +41,7 @@ def fib(n):
 # 
 # First, lets start with the low level `llvmlite` library to build up the llvm directly:
 
-# In[2]:
+# In[6]:
 
 
 from llvmlite import ir
@@ -119,7 +119,7 @@ llvm_ir = (str(create_mod()))
 # print(llvm_ir)
 
 
-# In[31]:
+# In[5]:
 
 
 from ctypes import CFUNCTYPE, c_int
@@ -173,7 +173,7 @@ make_c_wrapper(mod.get_global('fib'))
 _, f = execute(mod)
 
 
-# In[32]:
+# In[6]:
 
 
 # %timeit f(N)
@@ -192,109 +192,115 @@ import metadsl_llvm as ml
 import metadsl_visualize
 
 
-# In[23]:
+# In[2]:
 
 
-mod = ml.ModuleReference.create("fib")
+def create_metadsl_fn():
+    mod = ml.ModuleReference.create("fib")
 
-int_type = ml.Type.create_int(32)
-zero = ml.Value.constant(int_type, 0)
-one = ml.Value.constant(int_type, 1)
+    int_type = ml.Type.create_int(32)
+    zero = ml.Value.constant(int_type, 0)
+    one = ml.Value.constant(int_type, 1)
 
-fib_more_fn = ml.FunctionReference.create(
-    mod,
-    ml.FunctionType.create(int_type, int_type, int_type, int_type),
-    'fib_more',
-    'fastcc'
-)
+    fib_more_fn = ml.FunctionReference.create(
+        mod,
+        ml.FunctionType.create(int_type, int_type, int_type, int_type),
+        'fib_more',
+        'fastcc'
+    )
 
-fib_fn = ml.FunctionReference.create(
-    mod,
-    ml.FunctionType.create(int_type, int_type),
-    'fib',
-    'fastcc'
-)
+    fib_fn = ml.FunctionReference.create(
+        mod,
+        ml.FunctionType.create(int_type, int_type),
+        'fib',
+        'fastcc'
+    )
 
-fib_n = fib_fn.arguments[mc.Integer.from_int(0)]
-fib_more_n = fib_more_fn.arguments[mc.Integer.from_int(0)]
-fib_more_a = fib_more_fn.arguments[mc.Integer.from_int(1)]
-fib_more_b = fib_more_fn.arguments[mc.Integer.from_int(2)]
+    fib_n = fib_fn.arguments[mc.Integer.from_int(0)]
+    fib_more_n = fib_more_fn.arguments[mc.Integer.from_int(0)]
+    fib_more_a = fib_more_fn.arguments[mc.Integer.from_int(1)]
+    fib_more_b = fib_more_fn.arguments[mc.Integer.from_int(2)]
 
-fib_entry = ml.BlockReference.create('entry', fib_fn)
-fib_more_entry = ml.BlockReference.create('entry', fib_more_fn)
-fib_pred_cont = ml.BlockReference.create('pred_cont', fib_more_fn)
-fib_not_pred_cont = ml.BlockReference.create('not_pred_cont', fib_more_fn)
-fib_n_eq_one = ml.BlockReference.create('n_eq_one', fib_more_fn)
-fib_n_neq_one = ml.BlockReference.create('n_neq_one', fib_more_fn)
+    fib_entry = ml.BlockReference.create('entry', fib_fn)
+    fib_more_entry = ml.BlockReference.create('entry', fib_more_fn)
+    fib_pred_cont = ml.BlockReference.create('pred_cont', fib_more_fn)
+    fib_not_pred_cont = ml.BlockReference.create('not_pred_cont', fib_more_fn)
+    fib_n_eq_one = ml.BlockReference.create('n_eq_one', fib_more_fn)
+    fib_n_neq_one = ml.BlockReference.create('n_neq_one', fib_more_fn)
 
-fib_entry_builder = ml.Builder.create(fib_entry)
-fib_more_entry_builder = ml.Builder.create(fib_more_entry)
-fib_pred_cont_builder = ml.Builder.create(fib_pred_cont)
-fib_not_pred_cont_builder = ml.Builder.create(fib_not_pred_cont)
-fib_n_eq_one_builder = ml.Builder.create(fib_n_eq_one)
-fib_n_neq_one_builder = ml.Builder.create(fib_n_neq_one)
-
-
-res = fib_entry_builder.call(
-    fib_more_fn,
-    mc.Vec.create(fib_n, zero, one)
-)
-fib_entry_builder = res.builder
-fib_entry_builder = fib_entry_builder.ret(res.value)
+    fib_entry_builder = ml.Builder.create(fib_entry)
+    fib_more_entry_builder = ml.Builder.create(fib_more_entry)
+    fib_pred_cont_builder = ml.Builder.create(fib_pred_cont)
+    fib_not_pred_cont_builder = ml.Builder.create(fib_not_pred_cont)
+    fib_n_eq_one_builder = ml.Builder.create(fib_n_eq_one)
+    fib_n_neq_one_builder = ml.Builder.create(fib_n_neq_one)
 
 
-res = fib_more_entry_builder.icmp_signed(">", fib_more_n, one)
-fib_more_entry_builder = res.builder
-pred_cont = res.value
-
-fib_more_entry_builder = fib_more_entry_builder.cbranch(pred_cont, fib_pred_cont, fib_not_pred_cont)
-
-res = fib_pred_cont_builder.sub(fib_more_n, one)
-minus1 = res.value
-fib_pred_cont_builder = res.builder
-res = fib_pred_cont_builder.add(fib_more_a, fib_more_b)
-ab = res.value
-fib_pred_cont_builder = res.builder
-
-res = fib_pred_cont_builder.call(fib_more_fn, mc.Vec.create(minus1, fib_more_b, ab))
-added = res.value
-fib_pred_cont_builder = res.builder
-fib_pred_cont_builder = fib_pred_cont_builder.ret(added)
-
-res = fib_not_pred_cont_builder.icmp_signed("==", fib_more_n, one)
-n_eq_1 = res.value
-fib_not_pred_cont_builder = res.builder
-fib_not_pred_cont_builder = fib_not_pred_cont_builder.cbranch(n_eq_1, fib_n_eq_one, fib_n_neq_one)
-
-fib_n_eq_one_builder = fib_n_eq_one_builder.ret(fib_more_b)
-
-fib_n_neq_one_builder = fib_n_neq_one_builder.ret(fib_more_a)
-
-# Create blocks with builders and references
-fib_entry_block = ml.Block.create(fib_entry, fib_entry_builder)
-fib_more_entry_block = ml.Block.create(fib_more_entry, fib_more_entry_builder)
-fib_pred_cont_block = ml.Block.create(fib_pred_cont, fib_pred_cont_builder)
-fib_not_pred_cont_block = ml.Block.create(fib_not_pred_cont, fib_not_pred_cont_builder)
-fib_n_eq_one_block = ml.Block.create(fib_n_eq_one, fib_n_eq_one_builder)
-fib_n_neq_one_block = ml.Block.create(fib_n_neq_one, fib_n_neq_one_builder)
-
-# Create functions with blocks
-fib_fn_real = ml.Function.create(fib_fn, mc.Vec.create(fib_entry_block))
-fib_more_fn_real = ml.Function.create(fib_fn, mc.Vec.create(
-    fib_more_entry_block,
-    fib_pred_cont_block,
-    fib_not_pred_cont_block,
-    fib_n_eq_one_block,
-    fib_n_neq_one_block,
-))
-
-module_real = ml.Module.create(mod, mc.Vec.create(fib_fn_real, fib_more_fn_real))
+    res = fib_entry_builder.call(
+        fib_more_fn,
+        mc.Vec.create(fib_n, zero, one)
+    )
+    fib_entry_builder = res.builder
+    fib_entry_builder = fib_entry_builder.ret(res.value)
 
 
-# In[24]:
+    res = fib_more_entry_builder.icmp_signed(">", fib_more_n, one)
+    fib_more_entry_builder = res.builder
+    pred_cont = res.value
+
+    fib_more_entry_builder = fib_more_entry_builder.cbranch(pred_cont, fib_pred_cont, fib_not_pred_cont)
+
+    res = fib_pred_cont_builder.sub(fib_more_n, one)
+    minus1 = res.value
+    fib_pred_cont_builder = res.builder
+    res = fib_pred_cont_builder.add(fib_more_a, fib_more_b)
+    ab = res.value
+    fib_pred_cont_builder = res.builder
+
+    res = fib_pred_cont_builder.call(fib_more_fn, mc.Vec.create(minus1, fib_more_b, ab))
+    added = res.value
+    fib_pred_cont_builder = res.builder
+    fib_pred_cont_builder = fib_pred_cont_builder.ret(added)
+
+    res = fib_not_pred_cont_builder.icmp_signed("==", fib_more_n, one)
+    n_eq_1 = res.value
+    fib_not_pred_cont_builder = res.builder
+    fib_not_pred_cont_builder = fib_not_pred_cont_builder.cbranch(n_eq_1, fib_n_eq_one, fib_n_neq_one)
+
+    fib_n_eq_one_builder = fib_n_eq_one_builder.ret(fib_more_b)
+
+    fib_n_neq_one_builder = fib_n_neq_one_builder.ret(fib_more_a)
+
+    # Create blocks with builders and references
+    fib_entry_block = ml.Block.create(fib_entry, fib_entry_builder)
+    fib_more_entry_block = ml.Block.create(fib_more_entry, fib_more_entry_builder)
+    fib_pred_cont_block = ml.Block.create(fib_pred_cont, fib_pred_cont_builder)
+    fib_not_pred_cont_block = ml.Block.create(fib_not_pred_cont, fib_not_pred_cont_builder)
+    fib_n_eq_one_block = ml.Block.create(fib_n_eq_one, fib_n_eq_one_builder)
+    fib_n_neq_one_block = ml.Block.create(fib_n_neq_one, fib_n_neq_one_builder)
+
+    # Create functions with blocks
+    fib_fn_real = ml.Function.create(fib_fn, mc.Vec.create(fib_entry_block))
+    fib_more_fn_real = ml.Function.create(fib_more_fn, mc.Vec.create(
+        fib_more_entry_block,
+        fib_pred_cont_block,
+        fib_not_pred_cont_block,
+        fib_n_eq_one_block,
+        fib_n_neq_one_block,
+    ))
+
+    module_real = ml.Module.create(mod, mc.Vec.create(fib_fn_real, fib_more_fn_real))
+
+    c_int = ml.CType.c_int()
+    c_func_type = ml.CFunctionType.create(c_int, c_int)
+
+    return ml.compile_function(module_real, fib_fn, c_func_type)
 
 
-module_real._ipython_display_()
+# In[4]:
+
+
+metadsl_fn = m.execute(create_metadsl_fn())
 
 
 # In[ ]:

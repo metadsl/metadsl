@@ -75,7 +75,7 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             )
         else:
             node = PrimitiveNode(
-                type=function_or_type_repr(type(value)), repr=repr(value)
+                type=function_or_type_repr(type(value)), repr=str(value)
             )
         nodes[str(hash_)] = [str(expr.id), node]  # type: ignore
     return nodes
