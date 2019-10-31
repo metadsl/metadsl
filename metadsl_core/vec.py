@@ -110,7 +110,7 @@ def convert_vec(xs: object) -> R[Maybe[Vec[T]]]:
 
             @Abstraction.from_fn
             def fn(b: Pair[Vec[T], T]) -> Vec[T]:
-                return b.left().append(b.right())
+                return b.left.append(b.right)
 
             res = (res & Converter[T].convert(x)).map(fn)  # type: ignore
         return res

@@ -571,11 +571,9 @@ class TypeVarScope:
         self.typevars_in_scope = tvs
 
     def __enter__(self) -> None:
-        # print("adding", self.typevars_in_scope)
         _TYPEVARS_IN_SCOPE.update(self.typevars_in_scope)
 
     def __exit__(self, *exc_details) -> None:
-        # print("removing", self.typevars_in_scope)
         _TYPEVARS_IN_SCOPE.subtract(self.typevars_in_scope)
 
 
@@ -611,14 +609,21 @@ class Infer(typing.Generic[T, U]):
 
     def __get__(self, instance, owner) -> BoundInfer[T, U]:
         is_classmethod = isinstance(self.fn, classmethod)
-        fn = self.fn.__func__ if is_classmethod else self.fn  # type: ignore
+        is_property = isinstance(self.fn, property)
+        if is_classmethod and is_property:
+            raise NotImplementedError("classmethod properties are not supported")
+        fn = self.fn
+        if is_classmethod:
+            fn = fn.__func__  # type: ignore
+        if is_property:
+            fn = fn.fget  # type: ignore
         if instance:
-            return functools.partial(  # type: ignore
-                BoundInfer(  # type: ignore
-                    fn, self.wrapper, get_type(instance), is_classmethod  # type: ignore
-                ),
-                instance,
+            method = BoundInfer(  # type: ignore
+                fn, self.wrapper, get_type(instance), is_classmethod  # type: ignore
             )
+            if is_property:
+                return method(instance)  # type: ignore
+            return functools.partial(method, instance)  # type: ignore
         return BoundInfer(  # type: ignore
             fn, self.wrapper, owner, is_classmethod  # type: ignore
         )

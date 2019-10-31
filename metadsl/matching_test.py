@@ -496,3 +496,17 @@ class TestDefaultRule:
             execute(subtract(add(1, 2), 3), RulesRepeatFold(subtract_rule, add_rule))
             == 0
         )
+
+    def test_property(self):
+        class C(Expression, typing.Generic[T]):
+            @expression
+            @classmethod
+            def create(cls) -> C[T]:
+                ...
+
+            @property  # type: ignore
+            @expression
+            def get(self) -> T:
+                ...
+
+        globals()["C"] = C
