@@ -97,7 +97,6 @@ export function SelectState({
 
 
 function typezToCytoscape(nodes: Typez['nodes'], id: string): ElementsDefinition {
-  console.log("Starting with", {nodes, id})
   if (!nodes) {
     throw new Error('Must have nodes');
   }
