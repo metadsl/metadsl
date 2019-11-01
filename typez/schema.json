@@ -1,0 +1,452 @@
+{
+  "$ref": "#/definitions/Typez",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Typez": {
+      "additionalProperties": false,
+      "description": "OK the idea here is to be able to represent our types and functions in JSON.\n\nWhy? Good question, well I think it makes the core system a lot smaller.\nYou can also more easily generate JSON then generate Python code.\n\nThe idea would be to use this JSON to generate `metadsl` code.\n\nThis type system is pretty much like System F, because types can take\nparameters, except it doesn't allow functions to take functions as parameters,\nonly values. Why this restriction? Not sure exactly, I just came to this\nsetup when building from the top down. We actually build an untyped lambda\ncalculus *embedded* in this system, so we use that pass functions to other functions.\n\nIt's a system for building DSLs, so the functions that you pass around are not first\nclass, they are just data structures that represent functions aka the simply typed\nlambda calculus. It seems to work!\n\nTakes a look at the `metadsl_core` package next to this one, if you wanna see\nwhat these things look like in Python land. \n First we start with some definitions of our type system itself.\n\nThe idea is these typescript types could be translated into JSON schema\nwith https://github.com/vega/ts-json-schema-generator/ \n A combination of defintions, nodes, and states.\n\nThe nodes should refer to types in the definitions, and  the states\nshould refer to the nodes.",
+      "properties": {
+        "definitions": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "params": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "description": "A definition for a function. Everything that would be a method in python\nis defined here as just a function, with the idea being that if it is named\nlike `<type name>.<method name>` and its first argument takes in the type,\nthen it is a method.",
+                "properties": {
+                  "params": {
+                    "items": {
+                      "items": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "param": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "param"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "params": {
+                                  "additionalProperties": {
+                                    "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                                  },
+                                  "type": "object"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "repr": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "repr"
+                              ],
+                              "type": "object"
+                            }
+                          ],
+                          "description": "A type we use  to define a function."
+                        }
+                      ],
+                      "maxItems": 2,
+                      "minItems": 2,
+                      "type": "array"
+                    },
+                    "type": "array"
+                  },
+                  "rest_param": {
+                    "anyOf": [
+                      {
+                        "items": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "param": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "param"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "params": {
+                                    "additionalProperties": {
+                                      "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                                    },
+                                    "type": "object"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "repr": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "repr"
+                                ],
+                                "type": "object"
+                              }
+                            ],
+                            "description": "A type we use  to define a function."
+                          }
+                        ],
+                        "maxItems": 2,
+                        "minItems": 2,
+                        "type": "array"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "return_": {
+                    "anyOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "param": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "param"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "params": {
+                            "additionalProperties": {
+                              "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                            },
+                            "type": "object"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "repr": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "repr"
+                        ],
+                        "type": "object"
+                      }
+                    ],
+                    "description": "A type we use  to define a function."
+                  },
+                  "type_params": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "params",
+                  "return_"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "description": "Top level definitions can either define type constructor or functions.",
+          "type": "object"
+        },
+        "nodes": {
+          "additionalProperties": {
+            "items": [
+              {
+                "description": "This ID is used to keep track of nodes accross states. Different\nnodes may be related to each other, like one turned into the other,\nso we give them the same persistant ID to aid in visualization.",
+                "type": "string"
+              },
+              {
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "args": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "function": {
+                        "type": "string"
+                      },
+                      "kwargs": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "type_params": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "params": {
+                                  "additionalProperties": {
+                                    "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
+                                  },
+                                  "type": "object"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "repr": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "repr"
+                              ],
+                              "type": "object"
+                            }
+                          ],
+                          "description": "A type that is passed into a function to set one of its  type"
+                        },
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "function"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "description": "A primitive node that represents some type in  the host language",
+                    "properties": {
+                      "repr": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "repr"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "description": "A mapping of node IDs to the functions",
+          "type": "object"
+        },
+        "states": {
+          "additionalProperties": false,
+          "description": "A sequence of the states the expression is in.",
+          "properties": {
+            "initial": {
+              "type": "string"
+            },
+            "states": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "node": {
+                    "type": "string"
+                  },
+                  "rule": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "node",
+                  "rule"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "initial"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "alias-src/schema.ts-2495-2601-src/schema.ts-0-4797": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "param"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "params": {
+              "additionalProperties": {
+                "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+              },
+              "type": "object"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "repr": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "repr"
+          ],
+          "type": "object"
+        }
+      ],
+      "description": "A type we use  to define a function."
+    },
+    "alias-src/schema.ts-3573-3712-src/schema.ts-0-4797": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "params": {
+              "additionalProperties": {
+                "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
+              },
+              "type": "object"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "repr": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "repr"
+          ],
+          "type": "object"
+        }
+      ],
+      "description": "A type that is passed into a function to set one of its  type"
+    }
+  }
+}

@@ -43,12 +43,12 @@ class TestMatches:
 
         str_to_int = Abstraction.from_fn(Int.from_str)
 
-        assert execute_rule(
-            all_rules, IntStr.left(Int.from_int(10)).match(double_int, str_to_int)
+        assert execute(
+            IntStr.left(Int.from_int(10)).match(double_int, str_to_int)
         ) == Int.from_int(2) * Int.from_int(10)
 
-        assert execute_rule(
-            all_rules, IntStr.right(Str.from_str("10")).match(double_int, str_to_int)
+        assert execute(
+            IntStr.right(Str.from_str("10")).match(double_int, str_to_int)
         ) == Int.from_str(Str.from_str("10"))
 
 
@@ -62,28 +62,26 @@ def convert_to_str(s: str) -> R[Maybe[Str]]:
     return Converter[Str].convert(s), lambda: Maybe.just(Str.from_str(s))
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, *all_rules.rules)
-
-execute_rules = lambda e: execute_rule(convert_rules, e)
+convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, all_rules)
 
 
 class TestConvert:
     def test_convert_int(self):
-        assert execute_rules(Converter[Int].convert(123)) == Maybe.just(
+        assert execute(Converter[Int].convert(123), convert_rules) == Maybe.just(
             Int.from_int(123)
         )
 
     def test_convert_str(self):
-        assert execute_rules(Converter[Str].convert("hi")) == Maybe.just(
+        assert execute(Converter[Str].convert("hi"), convert_rules) == Maybe.just(
             Str.from_str("hi")
         )
 
     def test_convert_either_int(self):
-        assert execute_rules(Converter[IntStr].convert(123)) == Maybe.just(
+        assert execute(Converter[IntStr].convert(123), convert_rules) == Maybe.just(
             IntStr.left(Int.from_int(123))
         )
 
     def test_convert_either_str(self):
-        assert execute_rules(Converter[IntStr].convert("hi")) == Maybe.just(
+        assert execute(Converter[IntStr].convert("hi"), convert_rules) == Maybe.just(
             IntStr.right(Str.from_str("hi"))
         )

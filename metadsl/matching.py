@@ -20,9 +20,12 @@ import typing_inspect
 
 from .expressions import *
 from .dict_tools import *
+from .normalized import *
 from .typing_tools import *
 from .rules import Rule, Replacement
 
+
+__all__ = ["R", "NoMatch", "rule", "default_rule", "create_wildcard"]
 
 T = typing.TypeVar("T", bound=Expression)
 
@@ -36,7 +39,7 @@ class NoMatch(Exception):
     pass
 
 
-def rule(fn: MatchFunctionType[T]) -> Rule[T]:
+def rule(fn: MatchFunctionType) -> Rule:
     """
     Creates a new rule given a callable that accepts wildcards and returns
     the match value and the replacement value.
@@ -66,7 +69,7 @@ class DefaultRule:
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
 
-    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
         """
         This rule should match whenever the expression is this function.
 
@@ -74,6 +77,7 @@ class DefaultRule:
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
+        expr = ref.normalized_expression.value
         if not isinstance(expr, Expression):
             return
 
@@ -84,33 +88,32 @@ class DefaultRule:
         # If any of the args are placeholders, don't match!
         if any(
             isinstance(arg, PlaceholderExpression)
-            for arg in args + tuple(expr.kwargs.values())
+            for arg in args + list(expr.kwargs.values())
         ):
-            return
+            return None
 
         typevars: TypeVarMapping = infer_return_type(
             expr.function.fn,  # type: ignore
             getattr(expr.function, "owner", None),
             getattr(expr.function, "is_classmethod", False),
-            args,
+            tuple(args),
             expr.kwargs,
         )[-1]
         if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
             if fn.fn != expr.function.fn:
-                return
+                return None
             if fn.is_classmethod:
-                args = (
-                    typing.cast(object, replace_typevars(typevars, fn.owner)),
-                ) + args
+                args = [
+                    typing.cast(object, replace_typevars(typevars, fn.owner))
+                ] + args
 
         elif fn != expr.function:
-            return
-
-        result = replace_typevars_expression(
-            self.inner_fn(*args, **expr.kwargs), typevars
-        )
-
-        yield Replacement(self, expr, result, result)
+            return None
+        with TypeVarScope(*typevars.keys()):
+            new_expr = self.inner_fn(*args, **expr.kwargs)
+            result = replace_typevars_expression(new_expr, typevars)
+        ref.replace(result)
+        yield Replacement(str(self))
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -174,7 +177,8 @@ class MatchRule:
             else [result]
         )
 
-    def __call__(self, expr: object) -> typing.Iterable[Replacement]:
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
+        expr = ref.normalized_expression.value
         for i, result in enumerate(self.results):
             template, _ = result
             try:
@@ -201,8 +205,10 @@ class MatchRule:
                 )
             except NoMatch:
                 continue
-            result_expr = replace_typevars_expression(result_expr, typevars)
-            yield Replacement(self, expr, result_expr, result_expr)
+            with TypeVarScope(*typevars.keys()):
+                result_expr = replace_typevars_expression(result_expr, typevars)
+                ref.replace(result_expr)
+            yield Replacement(str(self))
             return
 
 
@@ -210,13 +216,19 @@ def replace_typevars_expression(expression: object, typevars: TypeVarMapping) ->
     """
     Replaces all typevars found in the classmethods of an expression.
     """
-    return ExpressionFolder(
-        # Also replace the typevars in the expressions, so that
-        # bound functions that are values are replaced
-        # Used in either replacement rule
-        lambda e: replace_fn_typevars(e, typevars),
-        typevars=typevars,
-    )(expression)
+    if isinstance(expression, Expression):
+        new_args = [replace_typevars_expression(a, typevars) for a in expression.args]
+        new_kwargs = {
+            k: replace_typevars_expression(v, typevars)
+            for k, v in expression.kwargs.items()
+        }
+        new_fn = replace_fn_typevars(expression.function, typevars)
+        return replace_typevars(typevars, typing_inspect.get_generic_type(expression))(
+            new_fn, new_args, new_kwargs
+        )
+    return replace_fn_typevars(
+        expression, typevars, lambda e: replace_typevars_expression(e, typevars)
+    )
 
 
 def match_expression(
@@ -225,9 +237,11 @@ def match_expression(
     """
     Returns a mapping of wildcards to the objects at that level, or None if it does not match.
 
+    template: the expression with wildcards in it
+    expr: the expression without wildcards to match against
+
     A wildcard can match either an expression or a value. If it matches two nodes, they must be equal.
     """
-
     if template in wildcards:
         # If we are matching against a placeholder and the expression is not resolved to that placeholder, don't match.
         if (
@@ -280,7 +294,7 @@ def match_expression(
             # template args, minus the iterator, is the minimum length of the values
             # If they have less values than this, raise an error
             if len(expr.args) < len(template.args) - 1:
-                raise TypeError("Wrong number of args in match")
+                raise NoMatch("Wrong number of args in match")
             template_args_ = list(template.args)
             # Only support one iterated arg for now
             # TODO: Support more than one, would require branching
@@ -292,7 +306,7 @@ def match_expression(
             template_args = template_args_
 
             expr_args = collapse_tuple(
-                expr.args,
+                tuple(expr.args),
                 template_index_iterated,
                 # The number we should preserve on the right, is the number of template
                 # args after index
@@ -301,7 +315,7 @@ def match_expression(
 
         else:
             if len(template.args) != len(expr.args):
-                raise TypeError("Wrong number of args in match")
+                raise NoMatch("Wrong number of args in match")
             template_args = template.args
             expr_args = expr.args
 
@@ -348,4 +362,3 @@ def collapse_tuple(t: typing.Tuple, l: int, r: int) -> typing.Tuple:
     if r == 0:
         return tuple([*t[:l], t[l:]])
     return tuple([*t[:l], t[l:-r], *t[-r:]])
-

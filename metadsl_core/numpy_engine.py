@@ -15,6 +15,8 @@ from .vec import *
 
 __all__ = ["ndarray_getitem"]
 
+T = typing.TypeVar("T")
+
 
 @expression
 def unbox_integer(i: Integer) -> int:
@@ -45,17 +47,15 @@ def unbox_arange(i: Integer) -> R[numpy.ndarray]:
 def ndarray_getitem(
     self: numpy.ndarray, i: typing.Union[int, typing.Tuple[int, ...]]
 ) -> numpy.ndarray:
-    return self[i]
+    # Always return array not scalars
+    return numpy.array(self[i], ndmin=0)
 
 
 register_numpy_engine(default_rule(ndarray_getitem))
 
 
 @expression
-def ndarray_add(
-    self: typing.Union[numpy.ndarray, numpy.int64],
-    other: typing.Union[numpy.ndarray, numpy.int64],
-) -> typing.Union[numpy.ndarray, numpy.int64]:
+def ndarray_add(self: numpy.ndarray, other: numpy.ndarray) -> numpy.ndarray:
     return self + other
 
 

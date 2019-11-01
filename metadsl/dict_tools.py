@@ -45,7 +45,7 @@ class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
         for item in self._items:
             if item.key == key:
                 return item
-        raise KeyError(f"Cannot find key {key} in {self}")
+        raise KeyError()
 
     def __iter__(self):
         for item in self._items:
@@ -68,9 +68,7 @@ def safe_merge(
         for key, value in mapping.items():
             if key in res:
                 if res[key] != value:
-                    raise ValueError(
-                        f"Got two different values {res[key]} and {value} for key {key} while merging"
-                    )
+                    raise ValueError()
             else:
                 res[key] = value
     return res

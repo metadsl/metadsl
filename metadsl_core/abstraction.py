@@ -4,7 +4,7 @@ import dataclasses
 import typing
 
 from metadsl import *
-
+import metadsl.typing_tools
 from .rules import *
 
 __all__ = ["Abstraction", "Variable"]
@@ -56,12 +56,45 @@ class Abstraction(Expression, typing.Generic[T, U]):
         """
         ...
 
+    @staticmethod
+    @expression
+    def fix(fn: Abstraction[T, T]) -> T:
+        """
+        Fixed pointer operator, used to define recursive functions.
+        """
+        return fn(Abstraction.fix(fn))
 
-from_fn_rule = register(default_rule(Abstraction[T, U].from_fn))
+
+# Run the `from_fn` before any other rules, so that variables
+# are all created before any are replaced
+# This  is needed if a variable is caught in an inner scope of a local function
+from_fn_rule = register_pre(default_rule(Abstraction[T, U].from_fn))
+# Run  the fixed point  operator  rule after all others, so that
+# it is only expanded if we need it.
+fix_rule = register_post(default_rule(Abstraction.fix))
 
 
 def _replace(body: U, var: T, arg: T) -> U:
-    return ExpressionReplacer(UnhashableMapping(Item(var, arg)))(body)
+    """
+    Replaces all instances of `var` with `arg` inside of `body`, 
+    except for local bindings of `var` as declared in other `from_fn`s inside.
+    """
+    if body == var:
+        return arg  # type: ignore
+    if not isinstance(body, Expression):
+        return body
+
+    is_abstraction = (
+        isinstance(body.function, metadsl.typing_tools.BoundInfer)
+        and body.function.fn == Abstraction.create.fn  # type: ignore
+    )
+    # If is  a `from_fn` node with the same  var bound, don't try replacing its children
+    if is_abstraction and body.args[0] == var:
+        return body  # type: ignore
+    return body.function(
+        *(_replace(a, var, arg) for a in body.args),
+        **{k: _replace(v, var, arg) for k, v in body.kwargs.items()},
+    )
 
 
 @register

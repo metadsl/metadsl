@@ -1,0 +1,47 @@
+{
+  "name": "typez",
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension"
+  ],
+  "jupyterlab": {
+    "mimeExtension": true
+  },
+  "scripts": {
+    "clean": "rimraf tsconfig.tsbuildinfo schema.json lib",
+    "build": "tsc && yarn run build:schema",
+    "build:schema": "ts-json-schema-generator --skip-type-check -f tsconfig.json --path src/schema.ts Typez > schema.json",
+    "prepare": "yarn run clean && yarn run build",
+    "watch": "tsc -w",
+    "extension:install": "jupyter labextension install typez",
+    "extension:uninstall": "jupyter labextension uninstall  typez",
+    "extension:enable": "jupyter labextension enable typez",
+    "extension:disable": "jupyter labextension disable typez"
+  },
+  "dependencies": {
+    "@jupyterlab/apputils": "^1.1.0",
+    "@jupyterlab/rendermime-interfaces": "^1.4.0",
+    "@material-ui/core": "4.4.2",
+    "@phosphor/widgets": "^1.9.0",
+    "cytoscape": "^3.2.0",
+    "cytoscape-dagre": "2.2.2",
+    "cytoscape-klay": "3.1.2",
+    "react": "~16.8.4"
+  },
+  "devDependencies": {
+    "@types/cytoscape": "3.8.2",
+    "@types/react": "~16.8.18",
+    "react-dom": "^16.8.0",
+    "rimraf": "3.0.0",
+    "ts-json-schema-generator": "0.52.14",
+    "typescript": "3.7.0-beta"
+  },
+  "peerDependencies": {
+    "react-dom": "^16.8.0"
+  }
+}

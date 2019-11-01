@@ -26,7 +26,7 @@ class IntCompat(Expression):
         return IntCompat.from_maybe_integer(
             (Converter[Integer].convert(self) & Converter[Integer].convert(other)).map(
                 Abstraction[Pair[Integer, Integer], Integer].from_fn(
-                    lambda p: p.left() + p.right()
+                    lambda p: p.left + p.right
                 )
             )
         )
@@ -52,7 +52,7 @@ class TupleIntCompat(Expression):
         return IntCompat.from_maybe_integer(
             (Converter[Vec[Integer]].convert(self) & Converter[Integer].convert(i)).map(
                 Abstraction[Pair[Vec[Integer], Integer], Integer].from_fn(
-                    lambda p: p.left()[p.right()]
+                    lambda p: p.left[p.right]
                 )
             )
         )
@@ -110,7 +110,7 @@ class NDArrayCompat(Expression):
             ).map(
                 Abstraction[
                     Pair[NDArray, Either[Integer, Vec[Integer]]], NDArray
-                ].from_fn(lambda p: p.left()[p.right()])
+                ].from_fn(lambda p: p.left[p.right])
             )
         )
 

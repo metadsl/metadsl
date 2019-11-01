@@ -21,3 +21,9 @@ htmlcov
 .cache
 .local
 .testmondata
+Demo.py
+*.gv
+*.gv.pdf
+*.prof
+tmp.py
+.DS_Store

@@ -38,8 +38,8 @@ class Expression(GenericCheck):
     """
 
     function: typing.Callable
-    args: typing.Tuple[object, ...]
-    kwargs: typing.Mapping[str, object]
+    args: typing.List[object]
+    kwargs: typing.Dict[str, object]
 
     def __str__(self):
         arg_strings = (str(arg) for arg in self.args)
@@ -78,7 +78,7 @@ class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     """
     An expression that represents a type of `T`, for example T could be `int`.
 
-    This is needed when a functionr returns a non expression type, it still has to return
+    This is needed when a function returns a non expression type, it still has to return
     an expression under the covers until it has been replaced.
 
     It is also needed when using Wildcards in expressions when doing matching.
@@ -99,7 +99,7 @@ T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 def wrapper(fn, args, kwargs, return_type):
     expr_return_type = extract_expression_type(return_type)
-    return expr_return_type(fn, args, kwargs)
+    return expr_return_type(fn, list(args), kwargs)
 
 
 def expression(fn: T_callable) -> T_callable:
