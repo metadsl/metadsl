@@ -21,7 +21,7 @@ class CType(Expression):
 
     @expression
     @classmethod
-    def box(cls, tp: typing.Type[ctypes._SimpleCData]) -> CType:
+    def box(cls, tp: typing.Any) -> CType:
         ...
 
 
@@ -51,7 +51,7 @@ class CFunctionType(Expression):
 @register_ctypes
 @rule
 def c_function_type_create_1(
-    return_tp: typing.Type[ctypes._SimpleCData], arg1: typing.Type[ctypes._SimpleCData]
+    return_tp: typing.Any, arg1: typing.Any
 ) -> R[CFunctionType]:
     return (
         CFunctionType.create(CType.box(return_tp), CType.box(arg1)),
@@ -74,20 +74,28 @@ register(default_rule(concat_strings))
 
 
 @expression
-def make_c_wrapper(fn: FunctionReference) -> Function:
+def make_c_wrapper(
+    module_builder: ModuleBuilder, original_fn_ref: FunctionReference
+) -> Pair[ModuleBuilder, Function]:
     """
     Creates a new function that wraps the old function,
     making sure the calling convention is default.
     """
-    wrapper_fn = FunctionReference.create(
-        fn.module, fn.type, concat_strings("entry_", fn.name)
-    )
-    block_ref = BlockReference.create("entry", wrapper_fn)
-    builder = Builder.create(block_ref)
-    res = builder.call(fn, wrapper_fn.arguments)
-    builder, value = res.builder, res.value
-    builder = builder.ret(value)
-    return Function.create(wrapper_fn, Vec.create(Block.create(block_ref, builder)))
+    module_builder, fn_ref = FunctionReference.create(
+        module_builder,
+        original_fn_ref.type,
+        concat_strings("entry_", original_fn_ref.name),
+    ).spread
+    fn_builder = FunctionBuilder.create(fn_ref)
+    fn_builder, block_ref = BlockReference.create("entry", fn_builder).spread
+    block_builder = BlockBuilder.create(block_ref)
+    block_builder, value = block_builder.call(
+        original_fn_ref, fn_builder.arguments
+    ).spread
+    block_builder = block_builder.ret(value)
+    block = Block.create(block_ref, block_builder)
+    function = Function.create(fn_ref, Vec.create(block))
+    return Pair.create(module_builder, function)
 
 
 register(default_rule(make_c_wrapper))
@@ -96,11 +104,12 @@ register(default_rule(make_c_wrapper))
 @expression
 def compile_function(
     module: Module,
-    function: FunctionReference,
+    module_builder: ModuleBuilder,
+    function_ref: FunctionReference,
     cfunctype: CFunctionType,
     optimization: int = 1,
 ) -> typing.Callable:
-    wrapper_fn = make_c_wrapper(function)
+    module_builder, wrapper_fn = make_c_wrapper(module_builder, function_ref).spread
     module = Module.create(module.reference, module.functions.append(wrapper_fn))
     module_ref = ModuleRef.create(module.to_string())
     module_ref = module_ref.optimize(optimization)

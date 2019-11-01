@@ -115,14 +115,17 @@ const style: Stylesheet[] = [
       "text-valign": "top",
       "text-halign": "right",
       "text-wrap": "wrap"
+      // "min-zoomed-font-size": 13
       // "text-max-width": "400px"
     }
   },
   {
     selector: "edge",
     style: {
-      "target-arrow-shape": "triangle"
-    }
+      // haystack so multiple edges don't overlap
+      "curve-style": "haystack",
+      "haystack-radius": 1
+    } as any
   }
 ];
 
@@ -139,7 +142,12 @@ export default function CytoscapeComponent({
     if (!ref) {
       return;
     }
-    cy.current = Cytoscape({ container: ref.current!, style });
+    cy.current = Cytoscape({
+      container: ref.current!,
+      style,
+      pixelRatio: 1.0,
+      hideEdgesOnViewport: true
+    });
     return () => {
       if (cy.current) {
         cy.current.destroy();

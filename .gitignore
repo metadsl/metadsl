@@ -26,3 +26,4 @@ Demo.py
 *.gv.pdf
 *.prof
 tmp.py
+.DS_Store
