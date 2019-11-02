@@ -30,6 +30,7 @@
     "@phosphor/widgets": "^1.9.0",
     "cytoscape": "^3.2.0",
     "cytoscape-dagre": "2.2.2",
+    "cytoscape-elk": "1.1.10",
     "cytoscape-klay": "3.1.2",
     "react": "~16.8.4"
   },

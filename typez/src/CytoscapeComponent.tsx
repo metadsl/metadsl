@@ -6,7 +6,6 @@
 
 import {
   ElementsDefinition,
-  LayoutOptions,
   Stylesheet,
   BaseLayoutOptions,
   AnimatedLayoutOptions
@@ -14,8 +13,10 @@ import {
 import Cytoscape from "cytoscape";
 import Dagre from "cytoscape-dagre";
 import Klay from "cytoscape-klay";
+import Elk from "cytoscape-elk";
 import * as React from "react";
 
+Cytoscape.use(Elk);
 Cytoscape.use(Dagre);
 Cytoscape.use(Klay);
 
@@ -77,7 +78,7 @@ const defaultKlay = {
   thoroughness: 7 // How much effort should be spent to produce a nice layout..
 };
 
-type klayLayout = {
+type KlayLayout = {
   name: "klay";
   klay: Partial<typeof defaultKlay>;
 } & BaseLayoutOptions &
@@ -91,29 +92,52 @@ export const dagreLayout: DagreLayoutOption = {
   animationDuration: 900
 };
 
-export const layout:
-  | LayoutOptions
-  | DagreLayoutOption
-  | klayLayout = dagreLayout;
+export const klayLayout: KlayLayout = {
+  name: "klay",
+  // nodeDimensionsIncludeLabels: true,
+  animate: true,
+  animationDuration: 900,
+  klay: {
+    // nodeLayering: "INTERACTIVE",
+    // direction: "VERTICAL"
+  }
+};
 
-// {
-//   name: "klay",
-//   nodeDimensionsIncludeLabels: true,
-//   animate: true,
-//   animationDuration: 900
-//   // klay: {
-//   //   nodeLayering: "INTERACTIVE",
-//   //   direction: "VERTICAL"
-//   // }
-// };
+const layout = {
+  name: "elk",
+  nodeDimensionsIncludeLabels: true, // Boolean which changes whether label dimensions are included when calculating node dimensions
+  fit: true, // Whether to fit
+  padding: 30, // Padding on fit
+  animate: true, // Whether to transition the node positions
+  animationDuration: 900, // Duration of animation in ms if enabled
+  animationEasing: "ease-in-out-cubic",
+  // animationEasing: undefined, // Easing of animation if enabled
+  // transform: function( node, pos ){ return pos; }, // A function that applies a transform to the final node position
+  // ready: undefined, // Callback on layoutready
+  // stop: undefined, // Callback on layoutstop
+  elk: {
+    // All options are available at http://www.eclipse.org/elk/reference.html
+    // 'org.eclipse.elk.' can be dropped from the Identifier
+    // Or look at demo.html for an example.
+    // Enums use the name of the enum e.g.
+    // 'searchOrder': 'DFS'
+    zoomToFit: true,
+    algorithm: "mrtree"
+  }
+  // priority: function( edge ){ return null; }, // Edges with a non-nil value are skipped when geedy edge cycle breaking is enabled
+};
+// export const layout:
+//   | LayoutOptions
+//   | DagreLayoutOption
+//   | KlayLayout = klayLayout;
 
 const style: Stylesheet[] = [
   {
     selector: "node",
     style: {
       label: "data(label)",
-      "text-valign": "top",
-      "text-halign": "right",
+      "text-valign": "center",
+      "text-halign": "center",
       "text-wrap": "wrap"
       // "min-zoomed-font-size": 13
       // "text-max-width": "400px"
@@ -124,7 +148,7 @@ const style: Stylesheet[] = [
     style: {
       // haystack so multiple edges don't overlap
       "curve-style": "haystack",
-      "haystack-radius": 1
+      "haystack-radius": 0.2
     } as any
   }
 ];
@@ -144,9 +168,9 @@ export default function CytoscapeComponent({
     }
     cy.current = Cytoscape({
       container: ref.current!,
-      style,
-      pixelRatio: 1.0,
-      hideEdgesOnViewport: true
+      style
+      // pixelRatio: 1.0
+      // hideEdgesOnViewport: true
     });
     return () => {
       if (cy.current) {
@@ -161,8 +185,8 @@ export default function CytoscapeComponent({
       return;
     }
     cy.current.json({ elements });
-    cy.current.layout(layout).run();
+    cy.current.layout(layout as any).run();
   }, [cy.current, elements]);
 
-  return <div style={{ height: "1000px" }} ref={ref} />;
+  return <div style={{ height: "800px" }} ref={ref} />;
 }
