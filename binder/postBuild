@@ -5,5 +5,5 @@ flit -f visualize.pyproject.toml install --symlink
 flit -f llvm.pyproject.toml install --symlink
 cd typez
 jlpm
-jlpm run buikd
+jlpm run build
 jupyter labextension install .
