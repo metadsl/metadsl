@@ -19,6 +19,7 @@ __all__ = [
     "register_optimize",
     "run_post_rules",
     "rule_groups",
+    "all_rules",
 ]
 
 
