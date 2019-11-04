@@ -3,4 +3,7 @@ flit install --symlink
 flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink
 flit -f llvm.pyproject.toml install --symlink
-jupyter labextension install ./typez
+cd typez
+jlpm
+jlpm run buikd
+jupyter labextension install .
