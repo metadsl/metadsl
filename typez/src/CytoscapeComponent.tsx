@@ -107,7 +107,7 @@ const layout = {
   name: "elk",
   nodeDimensionsIncludeLabels: true, // Boolean which changes whether label dimensions are included when calculating node dimensions
   fit: true, // Whether to fit
-  padding: 30, // Padding on fit
+  padding: 40, // Padding on fit
   animate: true, // Whether to transition the node positions
   animationDuration: 900, // Duration of animation in ms if enabled
   animationEasing: "ease-in-out-cubic",
@@ -120,7 +120,7 @@ const layout = {
     // 'org.eclipse.elk.' can be dropped from the Identifier
     // Or look at demo.html for an example.
     // Enums use the name of the enum e.g.
-    // 'searchOrder': 'DFS'
+    // searchOrder: "BFS",
     zoomToFit: true,
     algorithm: "mrtree"
   }
@@ -137,8 +137,11 @@ const style: Stylesheet[] = [
     style: {
       label: "data(label)",
       "text-valign": "center",
-      "text-halign": "center",
+      "text-halign": "right",
       "text-wrap": "wrap"
+      // "text-outline-color": "#555",
+      // "text-outline-width": "2px",
+      // color: "#fff"
       // "min-zoomed-font-size": 13
       // "text-max-width": "400px"
     }
@@ -147,8 +150,12 @@ const style: Stylesheet[] = [
     selector: "edge",
     style: {
       // haystack so multiple edges don't overlap
-      "curve-style": "haystack",
-      "haystack-radius": 0.2
+      // "curve-style": "segments",
+      // "haystack-radius": 0.2,
+      "curve-style": "straight",
+      "target-arrow-shape": "triangle",
+      "target-arrow-fill": "filled",
+      opacity: "0.5"
     } as any
   }
 ];
@@ -188,5 +195,5 @@ export default function CytoscapeComponent({
     cy.current.layout(layout as any).run();
   }, [cy.current, elements]);
 
-  return <div style={{ height: "800px" }} ref={ref} />;
+  return <div style={{ height: "500px" }} ref={ref} />;
 }

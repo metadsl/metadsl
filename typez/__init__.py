@@ -58,7 +58,7 @@ class Typez:
             self,
             dict_factory=lambda entries: {k: v for k, v in entries if v is not None},
         )
-        jsonschema.validate(dict_, typez_schema)
+        # jsonschema.validate(dict_, typez_schema)
         return dict_
 
     def _repr_mimebundle_(self, include=None, exclude=None):
