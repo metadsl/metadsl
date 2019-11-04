@@ -1,2 +1,3 @@
 nodejs
 libkrb5-dev
+build-essential
