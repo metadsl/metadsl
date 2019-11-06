@@ -15,4 +15,4 @@ from .numpy import *
 from .numpy_engine import *
 from .function import *
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
