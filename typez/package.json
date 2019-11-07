@@ -14,9 +14,9 @@
   },
   "scripts": {
     "clean": "rimraf tsconfig.tsbuildinfo schema.json lib",
-    "build": "tsc && yarn run build:schema",
+    "build": "tsc && jlpm run build:schema",
     "build:schema": "ts-json-schema-generator --skip-type-check -f tsconfig.json --path src/schema.ts Typez > schema.json",
-    "prepare": "yarn run clean && yarn run build",
+    "prepare": "jlpm run clean && jlpm run build",
     "watch": "tsc -w",
     "extension:install": "jupyter labextension install typez",
     "extension:uninstall": "jupyter labextension uninstall  typez",
