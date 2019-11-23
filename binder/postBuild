@@ -6,4 +6,4 @@ flit -f llvm.pyproject.toml install --symlink
 cd typez
 jlpm
 jlpm run build
-jupyter labextension install .
+jupyter labextension install . || $(cat /tmp/jupyterlab-debug-* && exit 1)

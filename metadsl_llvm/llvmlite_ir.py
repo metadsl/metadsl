@@ -1,3 +1,7 @@
+"""
+Generate LLVM IR
+"""
+
 from __future__ import annotations
 
 # TODO: make supertype things dunder so they don't interfere
@@ -706,10 +710,13 @@ def module_box_2(mod: ir.Module, fn1: ir.Function, fn2: ir.Function) -> R[Module
 
 @register_llvmlite_ir
 @rule
-def module_box_3(mod: ir.Module, fn1: ir.Function, fn2: ir.Function, fn3: ir.Function) -> R[Module]:
+def module_box_3(
+    mod: ir.Module, fn1: ir.Function, fn2: ir.Function, fn3: ir.Function
+) -> R[Module]:
     return (
         Module.create(
-            ModuleReference.box(mod), Vec.create(Function.box(fn1), Function.box(fn2), Function.box(fn3))
+            ModuleReference.box(mod),
+            Vec.create(Function.box(fn1), Function.box(fn2), Function.box(fn3)),
         ),
         Module.box(mod),
     )

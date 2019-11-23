@@ -42,14 +42,18 @@ release = ""
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.coverage",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "nbsphinx",
-    "recommonmark"
+    "recommonmark",
 ]
 
+
+autosummary_generate = True
+set_type_checking_flag = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -75,6 +79,7 @@ language = None
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
     "_build",
+    "_templates",
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
@@ -106,11 +111,11 @@ html_theme_options = {
     # 'vcs_pageview_mode': '',
     # 'style_nav_header_background': 'white',
     # Toc options
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 5,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 5,
     # 'includehidden': True,
-    'titles_only': False
+    "titles_only": False,
 }
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

@@ -1,3 +1,6 @@
+"""
+Compile LLVM module from IR.
+"""
 from __future__ import annotations
 import typing
 
