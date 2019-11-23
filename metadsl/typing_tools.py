@@ -91,7 +91,10 @@ def generic_getattr(self, attr):
     Modified from
     https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L694-L699
     """
-    if "__origin__" in self.__dict__ and attr not in ("__wrapped__"):
+    if "__origin__" in self.__dict__ and attr not in (
+        "__wrapped__",
+        "__union_params__",
+    ):
         # If the attribute is a descriptor, pass in the generic class
         try:
             property = self.__origin__.__getattribute__(self.__origin__, attr)
