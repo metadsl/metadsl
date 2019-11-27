@@ -485,9 +485,10 @@ cytoscape-dagre@2.2.2:
   dependencies:
     dagre "^0.8.2"
 
-"cytoscape-elk@https://github.com/jfstephe/cytoscape.js-elk.git":
-  version "1.1.10"
-  resolved "https://github.com/jfstephe/cytoscape.js-elk.git#db497d02e2f95b4e2c355b522e43283049e6bf91"
+cytoscape-elk-saul@1.1.12:
+  version "1.1.12"
+  resolved "https://registry.yarnpkg.com/cytoscape-elk-saul/-/cytoscape-elk-saul-1.1.12.tgz#a211d9f30bab4b733e1d15bc2483a20b832ac324"
+  integrity sha512-0amwzGwSTEXU50ceT16z9XdjCy6GGvzzTtbPvqLcmTxbw32zm3PLG8ER+qgLdsOmlN7GQKeqfNnm8lQESfir0Q==
   dependencies:
     clean "^4.0.2"
     elkjs "^0.3.0"

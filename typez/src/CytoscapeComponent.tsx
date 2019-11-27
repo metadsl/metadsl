@@ -13,7 +13,7 @@ import {
 import Cytoscape from "cytoscape";
 import Dagre from "cytoscape-dagre";
 import Klay from "cytoscape-klay";
-import Elk from "cytoscape-elk";
+import Elk from "cytoscape-elk-saul";
 import * as React from "react";
 
 Cytoscape.use(Elk);

@@ -35,8 +35,8 @@ __version__ = "0.1.0"
 
 SHOW_TYPES = False
 
-with open(pathlib.Path(__file__).parent / "schema.json") as f:
-    typez_schema = json.load(f)
+# with open(pathlib.Path(__file__).parent / "schema.json") as f:
+#     typez_schema = json.load(f)
 
 # All of these defintions are copied from
 # `index.ts` and these two files should be manually

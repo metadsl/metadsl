@@ -1,3 +1,4 @@
+conda install -c conda-forge llvmlite
 flit -f typez.pyproject.toml install --symlink
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
@@ -6,4 +7,4 @@ flit -f llvm.pyproject.toml install --symlink
 cd typez
 jlpm
 jlpm run build
-jupyter labextension install . || $(cat /tmp/jupyterlab-debug-* && exit 1)
+jupyter labextension install .
