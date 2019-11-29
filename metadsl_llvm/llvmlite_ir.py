@@ -5,13 +5,18 @@ Generate LLVM IR
 from __future__ import annotations
 
 # TODO: make supertype things dunder so they don't interfere
+
 # Support level of indirection to allow for mutable functions
 # (support this as Mutates[...] like fortran, in, out, inout)
+
 # Meta level transformations... Taking things like returning
 # pairs of things and changing to mutate passed in args!
+
 # Basically rewrites at the meta level? Or too many layers?
+
 # Tradeoff  of making it harder to have client implementation with
 # confusion
+
 # CONCLUSION: Dont do at meta level, just support first class
 # with Mutates[...] added to args which creates GDT of the arg names
 # + the return type, if there is one.
