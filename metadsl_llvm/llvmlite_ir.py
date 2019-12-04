@@ -105,6 +105,14 @@ class Type(Expression):
     def box(cls, type: ir.Type) -> Type:
         ...
 
+    @expression
+    def __or__(self, other: Type) -> Type:
+        """
+        Returns a type union of the two. By default this just verifies they
+        are the same, otherwise it fails. 
+        """
+        ...
+
 
 class FunctionType(Expression):
     @expression
@@ -218,6 +226,10 @@ class BlockBuilder(Expression):
     def sub(self, left: Value, right: Value) -> Pair[BlockBuilder, Value]:
         ...
 
+    @expression
+    def alloca(self, type: Type) -> Pair[BlockBuilder, Value]:
+        ...
+
 
 class Value(Expression):
     @expression
@@ -228,6 +240,11 @@ class Value(Expression):
     @expression
     @classmethod
     def box(cls, value: ir.Value) -> Value:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def type(self) -> Type:
         ...
 
 
@@ -307,6 +324,16 @@ def module_builder_box(mod: ir.Module) -> R[ModuleBuilder]:
 @rule
 def type_create_int_box(bits: int) -> R[Type]:
     return Type.create_int(bits), lambda: Type.box(ir.IntType(bits))
+
+
+@register_llvmlite_ir_ref
+@rule
+def type_or(l: ir.Type, r: ir.Type) -> R[Type]:
+    def res() -> Type:
+        if l != r:
+            raise NoMatch()
+        return Type.box(l)
+    return Type.box(l) | Type.box(r), res
 
 
 @register_llvmlite_ir_ref
@@ -441,6 +468,12 @@ def value_constant(tp: ir.Type, value: typing.Any) -> R[Value]:
         Value.constant(Type.box(tp), value),
         lambda: Value.box(ir.Constant(tp, value)),
     )
+
+
+@register_llvmlite_ir_ref
+@rule
+def value_type(value: ir.Value) -> R[Type]:
+    return (Value.box(value).type, lambda: Type.box(value.type))
 
 
 @register_llvmlite_ir_ref
@@ -585,6 +618,16 @@ def builder_sub(
         lambda: Pair[BlockBuilder, Value].create(
             builder_, Value.box(builder.sub(left, right))
         ),
+    )
+
+
+@register_llvmlite_ir_ref
+@rule
+def builder_alloca(builder: ir.IRBuilder, tp: ir.Type) -> R[Pair[BlockBuilder, Value]]:
+    builder_ = BlockBuilder.box(builder)
+    return (
+        builder_.alloca(Type.box(tp)),
+        lambda: Pair.create(builder_, Value.box(builder.alloca(tp))),
     )
 
 
