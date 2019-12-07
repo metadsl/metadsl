@@ -75,26 +75,23 @@ register(default_rule(concat_strings))
 
 @expression
 def make_c_wrapper(
-    module_builder: ModuleBuilder, original_fn_ref: FunctionReference
+    module_builder: ModuleBuilder, original_fn_builder: FunctionBuilder
 ) -> Pair[ModuleBuilder, Function]:
     """
     Creates a new function that wraps the old function,
     making sure the calling convention is default.
     """
-    module_builder, fn_ref = FunctionReference.create(
+    module_builder, fn_builder = FunctionBuilder.create(
         module_builder,
-        original_fn_ref.type,
-        concat_strings("entry_", original_fn_ref.name),
+        original_fn_builder.type,
+        concat_strings("entry_", original_fn_builder.name),
     ).spread
-    fn_builder = FunctionBuilder.create(fn_ref)
-    fn_builder, block_ref = BlockReference.create("entry", fn_builder).spread
-    block_builder = BlockBuilder.create(block_ref)
+    fn_builder, block_builder = BlockBuilder.create("entry", fn_builder).spread
     block_builder, value = block_builder.call(
-        original_fn_ref, fn_builder.arguments
+        original_fn_builder, fn_builder.arguments
     ).spread
     block_builder = block_builder.ret(value)
-    block = Block.create(block_ref, block_builder)
-    function = Function.create(fn_ref, Vec.create(block))
+    function = Function.create(fn_builder, Vec.create(block_builder))
     return Pair.create(module_builder, function)
 
 
@@ -105,16 +102,16 @@ register(default_rule(make_c_wrapper))
 def compile_function(
     module: Module,
     module_builder: ModuleBuilder,
-    function_ref: FunctionReference,
+    function_builder: FunctionBuilder,
     cfunctype: CFunctionType,
     optimization: int = 1,
 ) -> typing.Callable:
-    module_builder, wrapper_fn = make_c_wrapper(module_builder, function_ref).spread
-    module = Module.create(module.reference, module.functions.append(wrapper_fn))
+    module_builder, wrapper_fn = make_c_wrapper(module_builder, function_builder).spread
+    module = module.append_function(wrapper_fn)
     module_ref = ModuleRef.create(module.to_string())
     module_ref = module_ref.optimize(optimization)
     engine = ExecutionEngine.create(module_ref)
-    return cfunctype(engine.get_function_address(wrapper_fn.reference.name))
+    return cfunctype(engine.get_function_address(wrapper_fn.builder.name))
 
 
 register(default_rule(compile_function))

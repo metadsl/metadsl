@@ -47,18 +47,24 @@ from metadsl_core import *
 
 from .rules import register_llvmlite_ir_ref, register_llvmlite_ir
 
+# TODO: Combine builders with references?
+# Yes, try this, then then context can just be the values? But inverted
+# Then, they will be pairs of values, still have current context but point to
+# actual thing instead of builder
 
+# So should block have vector of instructions instead of Block Builder as arg?
+# Or should others have builder as arg instead of vector?
+
+# 1. remove vec[xxx] from things and replace with builders (removes need for complicated transforms)
+# 2. Remove references, and just have builders.
+# 3. Have context use
 __all__ = [
-    "ModuleReference",
     "ModuleBuilder",
     "Type",
     "FunctionType",
-    "FunctionReference",
     "FunctionBuilder",
-    "BlockReference",
     "BlockBuilder",
     "Value",
-    "Block",
     "Function",
     "Module",
     "Value",
@@ -70,22 +76,10 @@ def hash_llvmlite_type(value: ir.Type) -> int:
     return hash((type(value), value._to_string()))
 
 
-class ModuleReference(Expression):
-    @expression
-    @classmethod
-    def create(cls, name: str) -> ModuleReference:
-        ...
-
-    @expression
-    @classmethod
-    def box(cls, module: ir.Module) -> ModuleReference:
-        ...
-
-
 class ModuleBuilder(Expression):
     @expression
     @classmethod
-    def create(cls, mod_ref: ModuleReference) -> ModuleBuilder:
+    def create(cls, name: str) -> ModuleBuilder:
         ...
 
     @expression
@@ -126,7 +120,7 @@ class FunctionType(Expression):
         ...
 
 
-class FunctionReference(Expression):
+class FunctionBuilder(Expression):
     @expression
     @classmethod
     def create(
@@ -135,12 +129,17 @@ class FunctionReference(Expression):
         type: FunctionType,
         name: str,
         calling_convention: str = "",
-    ) -> Pair[ModuleBuilder, FunctionReference]:
+    ) -> Pair[ModuleBuilder, FunctionBuilder]:
         ...
 
     @expression
     @classmethod
-    def box(cls, function: ir.Function) -> FunctionReference:
+    def box(cls, function: ir.Function) -> FunctionBuilder:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def arguments(self) -> Vec[Value]:
         ...
 
     @expression  # type: ignore
@@ -154,41 +153,12 @@ class FunctionReference(Expression):
         ...
 
 
-class FunctionBuilder(Expression):
-    @expression
-    @classmethod
-    def create(cls, function_ref: FunctionReference) -> FunctionBuilder:
-        ...
-
-    @expression
-    @classmethod
-    def box(cls, function: ir.Function) -> FunctionBuilder:
-        ...
-
-    @expression  # type: ignore
-    @property
-    def arguments(self) -> Vec[Value]:
-        ...
-
-
-class BlockReference(Expression):
+class BlockBuilder(Expression):
     @expression
     @classmethod
     def create(
         cls, name: str, fn_builder: FunctionBuilder
-    ) -> Pair[FunctionBuilder, BlockReference]:
-        ...
-
-    @expression
-    @classmethod
-    def box(cls, block: ir.Block) -> BlockReference:
-        ...
-
-
-class BlockBuilder(Expression):
-    @expression
-    @classmethod
-    def create(cls, block: BlockReference) -> BlockBuilder:
+    ) -> Pair[FunctionBuilder, BlockBuilder]:
         ...
 
     @expression
@@ -208,13 +178,13 @@ class BlockBuilder(Expression):
 
     @expression
     def call(
-        self, function: FunctionReference, args: Vec[Value]
+        self, function: FunctionBuilder, args: Vec[Value]
     ) -> Pair[BlockBuilder, Value]:
         ...
 
     @expression
     def cbranch(
-        self, condition: Value, true: BlockReference, false: BlockReference
+        self, condition: Value, true: BlockBuilder, false: BlockBuilder
     ) -> BlockBuilder:
         ...
 
@@ -248,32 +218,20 @@ class Value(Expression):
         ...
 
 
-class Block(Expression):
-    @expression
-    @classmethod
-    def create(cls, block_ref: BlockReference, block_builder: BlockBuilder) -> Block:
-        ...
-
-    @expression
-    @classmethod
-    def box(cls, block: ir.Block) -> Block:
-        ...
-
-
 class Function(Expression):
     @expression
     @classmethod
-    def create(cls, reference: FunctionReference, blocks: Vec[Block]) -> Function:
+    def create(cls, builder: FunctionBuilder, blocks: Vec[BlockBuilder]) -> Function:
         ...
 
     @expression  # type: ignore
     @property
-    def reference(self) -> FunctionReference:
+    def builder(self) -> FunctionBuilder:
         ...
 
     @expression  # type: ignore
     @property
-    def blocks(self) -> Vec[Block]:
+    def blocks(self) -> Vec[BlockBuilder]:
         ...
 
     @expression
@@ -285,7 +243,7 @@ class Function(Expression):
 class Module(Expression):
     @expression
     @classmethod
-    def create(cls, module_ref: ModuleReference, functions: Vec[Function]) -> Module:
+    def create(cls, module_builder: ModuleBuilder, functions: Vec[Function]) -> Module:
         ...
 
     @expression
@@ -295,14 +253,13 @@ class Module(Expression):
 
     @expression  # type: ignore
     @property
-    def reference(self) -> ModuleReference:
+    def functions(self) -> Vec[Function]:
         ...
 
     @expression  # type: ignore
     @property
-    def functions(self) -> Vec[Function]:
+    def builder(self) -> ModuleBuilder:
         ...
-
     @expression
     def to_string(self) -> str:
         ...
@@ -310,14 +267,8 @@ class Module(Expression):
 
 @register_llvmlite_ir_ref
 @rule
-def module_reference_box(name: str) -> R[ModuleReference]:
-    return ModuleReference.create(name), lambda: ModuleReference.box(ir.Module(name))
-
-
-@register_llvmlite_ir_ref
-@rule
-def module_builder_box(mod: ir.Module) -> R[ModuleBuilder]:
-    return (ModuleBuilder.create(ModuleReference.box(mod)), ModuleBuilder.box(mod))
+def module_builder_box(name: str) -> R[ModuleBuilder]:
+    return ModuleBuilder.create(name), lambda: ModuleBuilder.box(ir.Module(name))
 
 
 @register_llvmlite_ir_ref
@@ -333,6 +284,7 @@ def type_or(l: ir.Type, r: ir.Type) -> R[Type]:
         if l != r:
             raise NoMatch()
         return Type.box(l)
+
     return Type.box(l) | Type.box(r), res
 
 
@@ -369,33 +321,33 @@ def function_type_box_3(
 
 @register
 @rule
-def function_reference_type(
+def function_builder_type(
     module: ModuleBuilder, type: FunctionType, name: str, calling_convention: str
 ) -> R[FunctionType]:
     return (
-        FunctionReference.create(module, type, name, calling_convention).right.type,
+        FunctionBuilder.create(module, type, name, calling_convention).right.type,
         type,
     )
 
 
 @register
 @rule
-def function_reference_name(
+def function_builder_name(
     module: ModuleBuilder, type: FunctionType, name: str, calling_convention: str
 ) -> R[str]:
     return (
-        FunctionReference.create(module, type, name, calling_convention).right.name,
+        FunctionBuilder.create(module, type, name, calling_convention).right.name,
         name,
     )
 
 
 @register_llvmlite_ir_ref
 @rule
-def function_reference_create_builder(
+def function_builder_create(
     mod: ir.Module, function_type: FunctionType, name: str, calling_convention: str
 ) -> R[ModuleBuilder]:
     return (
-        FunctionReference.create(
+        FunctionBuilder.create(
             ModuleBuilder.box(mod), function_type, name, calling_convention
         ).left,
         ModuleBuilder.box(mod),
@@ -404,28 +356,19 @@ def function_reference_create_builder(
 
 @register_llvmlite_ir_ref
 @rule
-def function_reference_box(
+def function_builder_box(
     mod: ir.Module, fntype: ir.FunctionType, name: str, calling_convention: str
-) -> R[FunctionReference]:
-    def inner() -> FunctionReference:
+) -> R[FunctionBuilder]:
+    def inner() -> FunctionBuilder:
         fn = ir.Function(mod, fntype, name)
         fn.calling_convention = calling_convention
-        return FunctionReference.box(fn)
+        return FunctionBuilder.box(fn)
 
     return (
-        FunctionReference.create(
+        FunctionBuilder.create(
             ModuleBuilder.box(mod), FunctionType.box(fntype), name, calling_convention
         ).right,
         inner,
-    )
-
-
-@register_llvmlite_ir_ref
-@rule
-def function_builder_box(fn: ir.Function,) -> R[FunctionBuilder]:
-    return (
-        FunctionBuilder.create(FunctionReference.box(fn)),
-        lambda: FunctionBuilder.box(fn),
     )
 
 
@@ -440,24 +383,15 @@ def function_builder_arguments(function: ir.Function) -> R[Vec[Value]]:
 
 @register_llvmlite_ir_ref
 @rule
-def block_reference_box(
+def block_builder_box(
     function: ir.Function, name: str
-) -> R[Pair[FunctionBuilder, BlockReference]]:
+) -> R[Pair[FunctionBuilder, BlockBuilder]]:
     return (
-        BlockReference.create(name, FunctionBuilder.box(function)),
+        BlockBuilder.create(name, FunctionBuilder.box(function)),
         lambda: Pair.create(
             FunctionBuilder.box(function),
-            BlockReference.box(function.append_basic_block(name)),
+            BlockBuilder.box(ir.IRBuilder(function.append_basic_block(name))),
         ),
-    )
-
-
-@register_llvmlite_ir_ref
-@rule
-def block_builder_box(block: ir.Block) -> R[BlockBuilder]:
-    return (
-        BlockBuilder.create(BlockReference.box(block)),
-        lambda: BlockBuilder.box(ir.IRBuilder(block)),
     )
 
 
@@ -509,7 +443,7 @@ def builder_call_1(
 ) -> R[Pair[BlockBuilder, Value]]:
     builder_ = BlockBuilder.box(builder)
     return (
-        builder_.call(FunctionReference.box(function), Vec.create(Value.box(arg1))),
+        builder_.call(FunctionBuilder.box(function), Vec.create(Value.box(arg1))),
         lambda: Pair[BlockBuilder, Value].create(
             builder_, Value.box(builder.call(function, (arg1,)))
         ),
@@ -524,8 +458,7 @@ def builder_call_2(
     builder_ = BlockBuilder.box(builder)
     return (
         builder_.call(
-            FunctionReference.box(function),
-            Vec.create(Value.box(arg1), Value.box(arg2)),
+            FunctionBuilder.box(function), Vec.create(Value.box(arg1), Value.box(arg2)),
         ),
         lambda: Pair[BlockBuilder, Value].create(
             builder_, Value.box(builder.call(function, (arg1, arg2)))
@@ -545,7 +478,7 @@ def builder_call_3(
     builder_ = BlockBuilder.box(builder)
     return (
         builder_.call(
-            FunctionReference.box(function),
+            FunctionBuilder.box(function),
             Vec.create(Value.box(arg1), Value.box(arg2), Value.box(arg3)),
         ),
         lambda: Pair[BlockBuilder, Value].create(
@@ -564,7 +497,7 @@ def builder_call_3(
 #     builder_ = BlockBuilder.box(builder)
 #     return (
 #         builder_.call(
-#             FunctionReference.box(function),
+#             FunctionBuilder.box(function),
 #             Vec.create(*(Value.box(value) for value in values)),
 #         ),
 #         lambda: Pair[BlockBuilder, Value].create(
@@ -577,17 +510,17 @@ def builder_call_3(
 @register_llvmlite_ir_ref
 @rule
 def builder_cbranch(
-    builder: ir.IRBuilder, cond: ir.Value, true: ir.Block, false: ir.Block
+    builder: ir.IRBuilder, cond: ir.Value, true: ir.IRBuilder, false: ir.IRBuilder
 ) -> R[BlockBuilder]:
     builder_ = BlockBuilder.box(builder)
 
     def inner() -> BlockBuilder:
-        builder.cbranch(cond, true, false)
+        builder.cbranch(cond, true.block, false.block)
         return builder_
 
     return (
         builder_.cbranch(
-            Value.box(cond), BlockReference.box(true), BlockReference.box(false)
+            Value.box(cond), BlockBuilder.box(true), BlockBuilder.box(false)
         ),
         inner,
     )
@@ -633,28 +566,22 @@ def builder_alloca(builder: ir.IRBuilder, tp: ir.Type) -> R[Pair[BlockBuilder, V
 
 @register_llvmlite_ir
 @rule
-def block_box(block: ir.Block, builder: ir.IRBuilder) -> R[Block]:
+def function_box_1(fn: ir.Function, block1: ir.IRBuilder) -> R[Function]:
     return (
-        Block.create(BlockReference.box(block), BlockBuilder.box(builder)),
-        lambda: Block.box(block),
-    )
-
-
-@register_llvmlite_ir
-@rule
-def function_box_1(fn: ir.Function, block1: ir.Block) -> R[Function]:
-    return (
-        Function.create(FunctionReference.box(fn), Vec.create(Block.box(block1))),
+        Function.create(FunctionBuilder.box(fn), Vec.create(BlockBuilder.box(block1))),
         lambda: Function.box(fn),
     )
 
 
 @register_llvmlite_ir
 @rule
-def function_box_2(fn: ir.Function, block1: ir.Block, block2: ir.Block) -> R[Function]:
+def function_box_2(
+    fn: ir.Function, block1: ir.IRBuilder, block2: ir.IRBuilder
+) -> R[Function]:
     return (
         Function.create(
-            FunctionReference.box(fn), Vec.create(Block.box(block1), Block.box(block2))
+            FunctionBuilder.box(fn),
+            Vec.create(BlockBuilder.box(block1), BlockBuilder.box(block2)),
         ),
         lambda: Function.box(fn),
     )
@@ -663,12 +590,16 @@ def function_box_2(fn: ir.Function, block1: ir.Block, block2: ir.Block) -> R[Fun
 @register_llvmlite_ir
 @rule
 def function_box_3(
-    fn: ir.Function, block1: ir.Block, block2: ir.Block, block3: ir.Block
+    fn: ir.Function, block1: ir.IRBuilder, block2: ir.IRBuilder, block3: ir.IRBuilder
 ) -> R[Function]:
     return (
         Function.create(
-            FunctionReference.box(fn),
-            Vec.create(Block.box(block1), Block.box(block2), Block.box(block3)),
+            FunctionBuilder.box(fn),
+            Vec.create(
+                BlockBuilder.box(block1),
+                BlockBuilder.box(block2),
+                BlockBuilder.box(block3),
+            ),
         ),
         lambda: Function.box(fn),
     )
@@ -678,19 +609,19 @@ def function_box_3(
 @rule
 def function_box_4(
     fn: ir.Function,
-    block1: ir.Block,
-    block2: ir.Block,
-    block3: ir.Block,
-    block4: ir.Block,
+    block1: ir.IRBuilder,
+    block2: ir.IRBuilder,
+    block3: ir.IRBuilder,
+    block4: ir.IRBuilder,
 ) -> R[Function]:
     return (
         Function.create(
-            FunctionReference.box(fn),
+            FunctionBuilder.box(fn),
             Vec.create(
-                Block.box(block1),
-                Block.box(block2),
-                Block.box(block3),
-                Block.box(block4),
+                BlockBuilder.box(block1),
+                BlockBuilder.box(block2),
+                BlockBuilder.box(block3),
+                BlockBuilder.box(block4),
             ),
         ),
         lambda: Function.box(fn),
@@ -701,21 +632,21 @@ def function_box_4(
 @rule
 def function_box_5(
     fn: ir.Function,
-    block1: ir.Block,
-    block2: ir.Block,
-    block3: ir.Block,
-    block4: ir.Block,
-    block5: ir.Block,
+    block1: ir.IRBuilder,
+    block2: ir.IRBuilder,
+    block3: ir.IRBuilder,
+    block4: ir.IRBuilder,
+    block5: ir.IRBuilder,
 ) -> R[Function]:
     return (
         Function.create(
-            FunctionReference.box(fn),
+            FunctionBuilder.box(fn),
             Vec.create(
-                Block.box(block1),
-                Block.box(block2),
-                Block.box(block3),
-                Block.box(block4),
-                Block.box(block5),
+                BlockBuilder.box(block1),
+                BlockBuilder.box(block2),
+                BlockBuilder.box(block3),
+                BlockBuilder.box(block4),
+                BlockBuilder.box(block5),
             ),
         ),
         lambda: Function.box(fn),
@@ -724,15 +655,17 @@ def function_box_5(
 
 @register
 @rule
-def function_reference(
-    fn: FunctionReference, blocks: Vec[Block]
-) -> R[FunctionReference]:
-    return Function.create(fn, blocks).reference, fn
+def function_builder(
+    fn: FunctionBuilder, blocks: Vec[BlockBuilder]
+) -> R[FunctionBuilder]:
+    return Function.create(fn, blocks).builder, fn
 
 
 @register
 @rule
-def function_blocks(fn: FunctionReference, blocks: Vec[Block]) -> R[Vec[Block]]:
+def function_blocks(
+    fn: FunctionBuilder, blocks: Vec[BlockBuilder]
+) -> R[Vec[BlockBuilder]]:
     return Function.create(fn, blocks).blocks, blocks
 
 
@@ -740,7 +673,7 @@ def function_blocks(fn: FunctionReference, blocks: Vec[Block]) -> R[Vec[Block]]:
 @rule
 def module_box_1(mod: ir.Module, fn1: ir.Function) -> R[Module]:
     return (
-        Module.create(ModuleReference.box(mod), Vec.create(Function.box(fn1))),
+        Module.create(ModuleBuilder.box(mod), Vec.create(Function.box(fn1))),
         Module.box(mod),
     )
 
@@ -750,7 +683,7 @@ def module_box_1(mod: ir.Module, fn1: ir.Function) -> R[Module]:
 def module_box_2(mod: ir.Module, fn1: ir.Function, fn2: ir.Function) -> R[Module]:
     return (
         Module.create(
-            ModuleReference.box(mod), Vec.create(Function.box(fn1), Function.box(fn2))
+            ModuleBuilder.box(mod), Vec.create(Function.box(fn1), Function.box(fn2))
         ),
         Module.box(mod),
     )
@@ -763,7 +696,7 @@ def module_box_3(
 ) -> R[Module]:
     return (
         Module.create(
-            ModuleReference.box(mod),
+            ModuleBuilder.box(mod),
             Vec.create(Function.box(fn1), Function.box(fn2), Function.box(fn3)),
         ),
         Module.box(mod),
@@ -778,16 +711,16 @@ def module_to_string(mod: ir.Module) -> R[str]:
 
 @register
 @rule
-def module_reference(
-    reference: ModuleReference, functions: Vec[Function]
-) -> R[ModuleReference]:
-    return Module.create(reference, functions).reference, reference
+def module_builder(
+    builder: ModuleBuilder, functions: Vec[Function]
+) -> R[ModuleBuilder]:
+    return Module.create(builder, functions).builder, builder
 
 
 @register
 @rule
 def module_functions(
-    reference: ModuleReference, functions: Vec[Function]
+    reference: ModuleBuilder, functions: Vec[Function]
 ) -> R[Vec[Function]]:
     return Module.create(reference, functions).functions, functions
 
