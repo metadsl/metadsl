@@ -21,6 +21,7 @@ provide a roadmap, and lay out the motivation for this library.
 .. toctree::
    :maxdepth: 3
 
+   Usage
    Motivation
    Simple Arrays
    Concepts

@@ -101,7 +101,6 @@ register(default_rule(make_c_wrapper))
 @expression
 def compile_function(
     module: Module,
-    module_builder: ModuleBuilder,
     function_builder: FunctionBuilder,
     cfunctype: CFunctionType,
     optimization: int = 1,
