@@ -11,9 +11,8 @@ repo2docker -E .
 Or get started with Conda/flit:
 
 ```bash
-conda create -n metadsl jupyterlab llvmlite
+conda create -n metadsl python=3.7 jupyterlab llvmlite flit
 conda activate metadsl
-pip install flit
 flit -f typez.pyproject.toml install --symlink
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
