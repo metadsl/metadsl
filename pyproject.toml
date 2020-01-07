@@ -28,6 +28,7 @@ test = [
     "pytest-randomly",
     "pytest-xdist",
     "pytest-testmon",
+    "pytest-pudb",
     "mypy"
 ]
 doc = [
