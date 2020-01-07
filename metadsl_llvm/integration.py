@@ -25,7 +25,6 @@ def concat_strings(l: str, r: str) -> str:
 register(default_rule(concat_strings))
 
 
-@expression
 def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str, Fn]:
     """
     Creates a new function that wraps the old function,
@@ -40,9 +39,6 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
             Vec.create(block_ref.ret(block_ref.call(original_fn_ref, fn_ref.arguments)))
         ),
     )
-
-
-register_integration(default_rule(make_c_wrapper))
 
 
 @expression
