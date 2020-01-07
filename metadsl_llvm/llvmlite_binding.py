@@ -6,7 +6,6 @@ import typing
 
 from metadsl import *
 from metadsl_core import *
-from .rules import register_llvmlite_binding
 import llvmlite.binding as binding
 
 __all__ = ["ModuleRef", "ExecutionEngine", "llvmlite_binding_rules"]
