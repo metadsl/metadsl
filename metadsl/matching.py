@@ -291,13 +291,15 @@ def match_expression(
             arg for arg in template.args if isinstance(arg, IteratedPlaceholder)
         ]
         if iterated_args:
-            # template args, minus the iterator, is the minimum length of the values
-            # If they have less values than this, raise an error
-            if len(expr.args) < len(template.args) - 1:
-                raise NoMatch("Wrong number of args in match")
-            template_args_ = list(template.args)
             # Only support one iterated arg for now
             # TODO: Support more than one, would require branching
+            assert len(iterated_args) == 1
+            # template args, minus the iterators, is the minimum length of the values
+            # If they have less values than this, raise an error
+            min_n_args = len(template.args) - 1
+            if len(expr.args) < min_n_args:
+                raise NoMatch("Wrong number of args in match")
+            template_args_ = list(template.args)
             (template_iterated,) = iterated_args
             template_index_iterated = list(template.args).index(template_iterated)
 
