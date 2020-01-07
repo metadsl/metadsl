@@ -9,7 +9,7 @@ from .llvmlite_binding import llvmlite_binding_rules
 __all__: typing.List[str] = []
 
 # First do integration rules so that all functions are created
-rule_groups["llvmlite.integration"] = llvmlite_binding_rules
+rule_groups["llvmlite.integration"] = llvm_integration_rules
 # Then create the llvm modules
 rule_groups["llvmlite.ir_llvmlite"] = ir_llvmlite_rules
 # Finally you can create the ctypes
