@@ -386,6 +386,10 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     if typing_inspect.is_typevar(hint):
         return {hint: t}
 
+    # This happens with match rule on conversion, like when the value is TypeVar
+    if typing_inspect.is_typevar(t):
+        return {}
+
     # if both are generic sequences, verify they are the same and have the same contents
     if (
         typing_inspect.is_generic_type(hint)
