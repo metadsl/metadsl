@@ -283,7 +283,7 @@ def match_values(hint_value: T, value: T) -> TypeVarMapping:
 
 def match_type(hint: typing.Type[T], value: T) -> TypeVarMapping:
     if typing_inspect.get_origin(hint) == type:
-        inner_hint, = typing_inspect.get_args(hint)
+        (inner_hint,) = typing_inspect.get_args(hint)
         return match_types(inner_hint, typing.cast(typing.Type, value))
     return match_types(hint, get_type(value))
 
@@ -364,22 +364,22 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
 
     # If it is an instance of OfType[Type[T]], then we should consider it as T
     if isinstance(t, OfType):
-        of_type, = typing_inspect.get_args(get_type(t))
+        (of_type,) = typing_inspect.get_args(get_type(t))
         assert issubclass(of_type, typing.Type)
-        t, = typing_inspect.get_args(of_type)
+        (t,) = typing_inspect.get_args(of_type)
         return match_types(hint, t)
 
     # If the type is an OfType[T] then we should really just consider it as T
     if issubclass(t, OfType) and not issubclass(hint, OfType):
-        t, = typing_inspect.get_args(t)
+        (t,) = typing_inspect.get_args(t)
         return match_types(hint, t)
     if issubclass(hint, OfType) and not issubclass(t, OfType):
-        hint, = typing_inspect.get_args(hint)
+        (hint,) = typing_inspect.get_args(hint)
         return match_types(hint, t)
 
     # Matching an expanded type is like matching just whatever it represents
     if issubclass(t, ExpandedType):
-        t, = typing_inspect.get_args(t)
+        (t,) = typing_inspect.get_args(t)
 
     if typing_inspect.is_typevar(hint):
         return {hint: t}
