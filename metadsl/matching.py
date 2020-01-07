@@ -298,11 +298,11 @@ def match_expression(
             template_args_ = list(template.args)
             # Only support one iterated arg for now
             # TODO: Support more than one, would require branching
-            template_iterated, = iterated_args
+            (template_iterated,) = iterated_args
             template_index_iterated = list(template.args).index(template_iterated)
 
             # Swap template iterated with inner wildcard
-            template_args_[template_index_iterated], = template_iterated.args
+            (template_args_[template_index_iterated],) = template_iterated.args
             template_args = template_args_
 
             expr_args = collapse_tuple(
