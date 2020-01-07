@@ -21,7 +21,7 @@ __all__ = [
     "Terminate",
     "Fn",
     "Mod",
-    "_Uniq"
+    "_Uniq",
 ]
 
 
@@ -109,9 +109,7 @@ class _Uniq:
 
 
 class FnRef(Expression):
-    def block(
-        self, is_first: bool, name: typing.Union[str, None] = None
-    ) -> BlockRef:
+    def block(self, is_first: bool, name: typing.Union[str, None] = None) -> BlockRef:
         return self._block(is_first, name, _Uniq())
 
     @expression
@@ -175,6 +173,11 @@ def fn_blocks(blocks: Vec[Terminate]):
 
 @register
 @rule
-def fn_ref_getters(mod: ModRef, name: str, tp: FnType, calling_convention: str):
-    yield mod.function(name, tp, calling_convention).name, name
-    yield mod.function(name, tp, calling_convention).type, tp
+def fn_ref_get_name(mod: ModRef, name: str, tp: FnType, calling_convention: str):
+    return mod.function(name, tp, calling_convention).name, name
+
+
+@register
+@rule
+def fn_ref_get_type(mod: ModRef, name: str, tp: FnType, calling_convention: str):
+    return mod.function(name, tp, calling_convention).type, tp
