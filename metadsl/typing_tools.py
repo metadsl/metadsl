@@ -266,7 +266,9 @@ def get_type(v: T) -> typing.Type[T]:
     tp = typing_inspect.get_generic_type(v)
     # Special case, only support homogoneous tuple that are inferred to iterables
     if tp == tuple:
-        return typing.Iterable[get_type(v[0]) if v else typing.Any]  # type: ignore
+        if v:
+            return typing.Sequence[get_type(v[0])]  # type: ignore
+        return typing.Sequence  # type: ignore
     # Special case, also support function types.
     if tp == types.FunctionType:
         return get_function_type(v)  # type: ignore
@@ -384,8 +386,20 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     if typing_inspect.is_typevar(hint):
         return {hint: t}
 
-    if typing_inspect.is_typevar(t):
-        return {}
+    # if both are generic sequences, verify they are the same and have the same contents
+    if (
+        typing_inspect.is_generic_type(hint)
+        and typing_inspect.is_generic_type(t)
+        and typing_inspect.get_origin(hint) == collections.abc.Sequence
+        and typing_inspect.get_origin(t) == collections.abc.Sequence
+    ):
+        t_inner = typing_inspect.get_args(t)[0]
+
+        # If t's inner arg is just the default one for seuqnce, it hasn't be initialized so assume
+        # it was an empty tuple that created it and just return a match
+        if t_inner == typing_inspect.get_args(typing.Sequence)[0]:
+            return {}
+        return match_types(typing_inspect.get_args(hint)[0], t_inner)
 
     if typing_inspect.is_union_type(hint):
         # If this is a union, iterate through and use the first that is a subclass
