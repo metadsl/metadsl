@@ -267,7 +267,7 @@ def value_constant(tp: ir.Type, value: typing.Any) -> R[Value]:
 @register_llvmlite
 @rule
 def create_box_fn(
-    builder: ir.Builder, terminate: Terminate, terminates: typing.Sequence[Terminate]
+    builder: ir.IRBuilder, terminate: Terminate, terminates: typing.Sequence[Terminate]
 ):
     # TODO: Replace this with one loop once we add ability to match on loops?
 
