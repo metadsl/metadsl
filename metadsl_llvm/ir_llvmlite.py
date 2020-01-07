@@ -284,7 +284,6 @@ def create_box_fn(
 @register_llvmlite
 @rule
 def create_box_mod(ir_fn: ir.Function, fn: Fn, fns: typing.Sequence[Fn]):
-
     yield Mod.create(Vec.create(box_fn(ir_fn))), lambda: box_mod(ir_fn.module)
     yield Mod.create(Vec.create(box_fn(ir_fn), fn, *fns)), Mod.create(
         Vec.create(fn, *fns)
