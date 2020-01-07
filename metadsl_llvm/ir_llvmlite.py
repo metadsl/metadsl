@@ -88,7 +88,7 @@ def type_create_int_box(bits: int):
 def function_type_box_1(ret: ir.Type, arg1: ir.Type) -> R[FnType]:
     return (
         FnType.create(box_type(ret), box_type(arg1)),
-        lambda: box_fn_type(ir.FnType(ret, (arg1,))),
+        lambda: box_fn_type(ir.FunctionType(ret, (arg1,))),
     )
 
 
@@ -97,7 +97,7 @@ def function_type_box_1(ret: ir.Type, arg1: ir.Type) -> R[FnType]:
 def function_type_box_2(ret: ir.Type, arg1: ir.Type, arg2: ir.Type) -> R[FnType]:
     return (
         FnType.create(box_type(ret), box_type(arg1), box_type(arg2)),
-        lambda: box_fn_type(ir.FnType(ret, (arg1, arg2))),
+        lambda: box_fn_type(ir.FunctionType(ret, (arg1, arg2))),
     )
 
 
@@ -108,7 +108,7 @@ def function_type_box_3(
 ) -> R[FnType]:
     return (
         FnType.create(box_type(ret), box_type(arg1), box_type(arg2), box_type(arg3)),
-        lambda: box_fn_type(ir.FnType(ret, (arg1, arg2, arg3))),
+        lambda: box_fn_type(ir.FunctionType(ret, (arg1, arg2, arg3))),
     )
 
 
