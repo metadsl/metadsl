@@ -537,9 +537,6 @@ def infer_return_type(
 def record_scoped_typevars(f: object) -> None:
     if not isinstance(f, types.FunctionType) or hasattr(f, "__scoped_typevars__"):
         return
-    # import pudb
-
-    # pudb.set_trace()
     f.__scoped_typevars__ = {  # type: ignore
         *get_all_typevars(get_function_type(f)),
         *get_typevars_in_scope(),
