@@ -157,7 +157,7 @@ class TestRule:
             )
 
         assert execute(_List.create(1, 2, 2), _remove_one_first) == _List.create(2, 2)
-        assert execute(_List.create(1, 2), _remove_one_first) == _List.create(1, 2)
+        assert execute(_List.create(1, 2), _remove_one_first) == _List.create(2)
         assert execute(_List.create(1), _remove_one_first) == _List.create(1)
 
     @pytest.mark.skip("This isn't supported yet")
