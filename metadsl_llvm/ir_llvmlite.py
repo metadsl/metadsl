@@ -129,7 +129,7 @@ def box_fn_ref_create(
         return box_fn_ref(fn)
 
     return (
-        box_mod_ref(mod).function(name, box_fn_type(fn_tp), calling_convention),
+        box_mod_ref(mod).function_(name, box_fn_type(fn_tp), calling_convention),
         inner,
     )
 

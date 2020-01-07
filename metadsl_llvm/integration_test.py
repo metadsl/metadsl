@@ -20,11 +20,11 @@ def test_fib():
     ##
     # Function Refs
     ##
-    fib_more_ref = mod_ref.function(
+    fib_more_ref = mod_ref.function_(
         "fib_more", ml.FnType.create(int_type, int_type, int_type, int_type), "fastcc",
     )
 
-    fib_ref = mod_ref.function("fib", ml.FnType.create(int_type, int_type), "fastcc")
+    fib_ref = mod_ref.function_("fib", ml.FnType.create(int_type, int_type), "fastcc")
 
     ##
     # Arguments
@@ -119,7 +119,7 @@ def test_add():
     one = ml.Value.constant(int_type, 1)
 
     mod_ref = ml.ModRef.create("add")
-    fn_ref = mod_ref.function(
+    fn_ref = mod_ref.function_(
         "add", ml.FnType.create(int_type, int_type, int_type), "fastcc",
     )
 

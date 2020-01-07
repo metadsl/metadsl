@@ -140,8 +140,9 @@ class ModRef(Expression):
     def create(cls, name: str) -> ModRef:
         ...
 
+    # TODO: Replace with `function` once our public API changed to remove that
     @expression
-    def function(self, name: str, type: FnType, calling_convention: str = "") -> FnRef:
+    def function_(self, name: str, type: FnType, calling_convention: str = "") -> FnRef:
         ...
 
 
@@ -174,10 +175,10 @@ def fn_blocks(blocks: Vec[Terminate]):
 @register
 @rule
 def fn_ref_get_name(mod: ModRef, name: str, tp: FnType, calling_convention: str):
-    return mod.function(name, tp, calling_convention).name, name
+    return mod.function_(name, tp, calling_convention).name, name
 
 
 @register
 @rule
 def fn_ref_get_type(mod: ModRef, name: str, tp: FnType, calling_convention: str):
-    return mod.function(name, tp, calling_convention).type, tp
+    return mod.function_(name, tp, calling_convention).type, tp

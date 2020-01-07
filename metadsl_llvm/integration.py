@@ -32,7 +32,7 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
     making sure the calling convention is default.
     """
     new_name = concat_strings("entry_", original_fn_ref.name)
-    fn_ref = mod_ref.function(new_name, original_fn_ref.type,)
+    fn_ref = mod_ref.function_(new_name, original_fn_ref.type,)
     block_ref = fn_ref.block(True, "entry")
     return (
         new_name,
