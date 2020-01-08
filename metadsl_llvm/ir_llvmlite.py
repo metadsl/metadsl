@@ -27,6 +27,28 @@ def hash_llvmlite_type(value: ir.Type) -> int:
     return hash((type(value), value._to_string()))
 
 
+@hash_value.register
+def hash_llvmlite_module(mod: ir.Module) -> int:
+    """
+    Add custom hash to also take into account contents.
+    """
+    return hash((mod, str(mod)))
+
+
+@hash_value.register
+def hash_llvmlite_function(fn: ir.Function) -> int:
+    return hash((fn, str(fn)))
+
+
+@hash_value.register
+def hash_llvmlite_builder(builder: ir.IRBuilder) -> int:
+    return hash((builder, str(builder.block)))
+
+
+# Overwrite ir builder str representation
+ir.IRBuilder.__str__ = lambda self: str(self.block)
+
+
 @expression
 def mod_str(mod: Mod) -> str:
     ...
