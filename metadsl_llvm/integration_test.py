@@ -78,7 +78,7 @@ def test_fib():
 
     fib_more_n_eq_one_terminate = fib_more_n_eq_one.ret(fib_more_b)
 
-    fib_more_n_neq_one_terminate = fib_more_n_eq_one.ret(fib_more_a)
+    fib_more_n_neq_one_terminate = fib_more_n_neq_one.ret(fib_more_a)
 
     ##
     # Functions
