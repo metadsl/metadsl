@@ -20,11 +20,11 @@ def test_fib():
     ##
     # Function Refs
     ##
-    fib_more_ref = mod_ref.function_(
+    fib_more_ref = mod_ref.fn(
         "fib_more", ml.FnType.create(int_type, int_type, int_type, int_type), "fastcc",
     )
 
-    fib_ref = mod_ref.function_("fib", ml.FnType.create(int_type, int_type), "fastcc")
+    fib_ref = mod_ref.fn("fib", ml.FnType.create(int_type, int_type), "fastcc")
 
     ##
     # Arguments
@@ -83,8 +83,8 @@ def test_fib():
     ##
     # Functions
     ##
-    fib_fn = ml.Fn.create(mc.Vec.create(fib_entry_terminate))
-    fib_more_fn = ml.Fn.create(
+    fib_fn = fib_ref.fn(mc.Vec.create(fib_entry_terminate))
+    fib_more_fn = fib_more_ref.fn(
         mc.Vec.create(
             fib_more_entry_terminate,
             fib_more_pred_cont_terminate,
@@ -98,7 +98,7 @@ def test_fib():
     # Module
     ##
 
-    mod = ml.Mod.create(mc.Vec.create(fib_fn, fib_more_fn))
+    mod = mod_ref.mod(mc.Vec.create(fib_fn, fib_more_fn))
 
     ##
     # CType
@@ -106,7 +106,7 @@ def test_fib():
     c_int = ml.CType.c_int()
     c_func_type = ml.CFunctionType.create(c_int, c_int)
 
-    metadsl_fn = m.execute(ml.compile_function(mod, mod_ref, fib_ref, c_func_type))
+    metadsl_fn = m.execute(ml.compile_function(mod, fib_ref, c_func_type))
     assert metadsl_fn(10) == 55
 
 
@@ -119,7 +119,7 @@ def test_add():
     one = ml.Value.constant(int_type, 1)
 
     mod_ref = ml.ModRef.create("add")
-    fn_ref = mod_ref.function_(
+    fn_ref = mod_ref.fn(
         "add", ml.FnType.create(int_type, int_type, int_type), "fastcc",
     )
 
@@ -131,12 +131,12 @@ def test_add():
     res = block_ref.add(lr, one)
     terminate = block_ref.ret(res)
 
-    fn = ml.Fn.create(mc.Vec.create(terminate))
+    fn = fn_ref.fn(mc.Vec.create(terminate))
 
-    mod = ml.Mod.create(mc.Vec.create(fn))
+    mod = mod_ref.mod(mc.Vec.create(fn))
 
     c_int = ml.CType.c_int()
     c_func_type = ml.CFunctionType.create(c_int, c_int, c_int)
 
-    real_fn = m.execute(ml.compile_function(mod, mod_ref, fn_ref, c_func_type))
+    real_fn = m.execute(ml.compile_function(mod, fn_ref, c_func_type))
     assert real_fn(10, 11) == 22

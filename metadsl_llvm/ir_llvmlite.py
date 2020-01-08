@@ -151,7 +151,7 @@ def box_fn_ref_create(
         return box_fn_ref(fn)
 
     return (
-        box_mod_ref(mod).function_(name, box_fn_type(fn_tp), calling_convention),
+        box_mod_ref(mod).fn(name, box_fn_type(fn_tp), calling_convention),
         inner,
     )
 
@@ -289,27 +289,29 @@ def value_constant(tp: ir.Type, value: typing.Any) -> R[Value]:
 @register_llvmlite
 @rule
 def create_box_fn(
-    builder: ir.IRBuilder, terminate: Terminate, terminates: typing.Sequence[Terminate]
+    fn: ir.Function,
+    builder: ir.IRBuilder,
+    terminate: Terminate,
+    terminates: typing.Sequence[Terminate],
 ):
-    # TODO: Replace this with one loop once we add ability to match on loops?
-
-    # If we just have one block left, get the function
-    yield Fn.create(Vec.create(box_terminate(builder))), lambda: box_fn(
-        builder.block.function
+    fn_ref = box_fn_ref(fn)
+    # Remove blocks that have already been added
+    yield fn_ref.fn(Vec.create(box_terminate(builder), *terminates)), fn_ref.fn(
+        Vec.create(*terminates)
     )
-    # Otherwise, if we have more blocks left to compile, remove the already compiled ones
-    yield Fn.create(
-        Vec.create(box_terminate(builder), terminate, *terminates)
-    ), Fn.create(Vec.create(terminate, *terminates))
+
+    # If we have added all, used fn_ref
+    yield fn_ref.fn(Vec.create()), box_fn(fn)
 
 
 @register_llvmlite
 @rule
-def create_box_mod(ir_fn: ir.Function, fn: Fn, fns: typing.Sequence[Fn]):
-    yield Mod.create(Vec.create(box_fn(ir_fn))), lambda: box_mod(ir_fn.module)
-    yield Mod.create(Vec.create(box_fn(ir_fn), fn, *fns)), Mod.create(
-        Vec.create(fn, *fns)
-    )
+def create_box_mod(
+    mod: ir.Module, ir_fn: ir.Function, fn: Fn, fns: typing.Sequence[Fn]
+):
+    mod_ref = box_mod_ref(mod)
+    yield mod_ref.mod(Vec.create(box_fn(ir_fn), *fns)), mod_ref.mod(Vec.create(*fns))
+    yield mod_ref.mod(Vec.create()), box_mod(mod)
 
 
 @register_llvmlite

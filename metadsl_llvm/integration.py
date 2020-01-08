@@ -31,11 +31,11 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
     making sure the calling convention is default.
     """
     new_name = concat_strings("entry_", original_fn_ref.name)
-    fn_ref = mod_ref.function_(new_name, original_fn_ref.type,)
+    fn_ref = mod_ref.fn(new_name, original_fn_ref.type,)
     block_ref = fn_ref.block(True, "entry")
     return (
         new_name,
-        Fn.create(
+        fn_ref.fn(
             Vec.create(block_ref.ret(block_ref.call(original_fn_ref, fn_ref.arguments)))
         ),
     )
@@ -43,16 +43,12 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
 
 @expression
 def compile_function(
-    mod: Mod,
-    mod_ref: ModRef,
-    fn_ref: FnRef,
-    cfunctype: CFunctionType,
-    optimization: int = 1,
+    mod: Mod, fn_ref: FnRef, cfunctype: CFunctionType, optimization: int = 1,
 ) -> typing.Callable:
-    new_name, wrapper_fn = make_c_wrapper(mod_ref, fn_ref)
+    new_name, wrapper_fn = make_c_wrapper(mod.ref, fn_ref)
     engine = ExecutionEngine.create(
         ModuleRef.create(
-            mod_str(Mod.create(mod.functions.append(wrapper_fn)))
+            mod_str(mod.ref.mod(mod.functions.append(wrapper_fn)))
         ).optimize(optimization)
     )
     return cfunctype(engine.get_function_address(new_name))

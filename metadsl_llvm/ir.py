@@ -26,26 +26,26 @@ __all__ = [
 
 
 class Mod(Expression):
-    @expression
-    @classmethod
-    def create(cls, functions: Vec[Fn]) -> Mod:
-        ...
-
     @expression  # type: ignore
     @property
     def functions(self) -> Vec[Fn]:
         ...
 
+    @expression  # type: ignore
+    @property
+    def ref(self) -> ModRef:
+        ...
+
 
 class Fn(Expression):
-    @expression
-    @classmethod
-    def create(cls, blocks: Vec[Terminate]) -> Fn:
+    @expression  # type: ignore
+    @property
+    def blocks(self) -> Vec[Terminate]:
         ...
 
     @expression  # type: ignore
     @property
-    def blocks(self) -> Vec[Terminate]:
+    def ref(self) -> FnRef:
         ...
 
 
@@ -109,6 +109,10 @@ class _Uniq:
 
 
 class FnRef(Expression):
+    @expression
+    def fn(self, blocks: Vec[Terminate]) -> Fn:
+        ...
+
     def block(self, is_first: bool, name: typing.Union[str, None] = None) -> BlockRef:
         return self._block(is_first, name, _Uniq())
 
@@ -140,9 +144,12 @@ class ModRef(Expression):
     def create(cls, name: str) -> ModRef:
         ...
 
-    # TODO: Replace with `function` once our public API changed to remove that
     @expression
-    def function_(self, name: str, type: FnType, calling_convention: str = "") -> FnRef:
+    def fn(self, name: str, type: FnType, calling_convention: str = "") -> FnRef:
+        ...
+
+    @expression
+    def mod(self, functions: Vec[Fn]) -> Mod:
         ...
 
 
@@ -162,23 +169,35 @@ class Type(Expression):
 
 @register
 @rule
-def mod_functions(fns: Vec[Fn]):
-    return (Mod.create(fns).functions, fns)
+def mod_functions(ref: ModRef, fns: Vec[Fn]):
+    return (ref.mod(fns).functions, fns)
 
 
 @register
 @rule
-def fn_blocks(blocks: Vec[Terminate]):
-    return (Fn.create(blocks).blocks, blocks)
+def mod_ref(ref: ModRef, fns: Vec[Fn]):
+    return (ref.mod(fns).ref, ref)
+
+
+@register
+@rule
+def fn_blocks(ref: FnRef, blocks: Vec[Terminate]):
+    return (ref.fn(blocks).blocks, blocks)
+
+
+@register
+@rule
+def fn_ref(ref: FnRef, blocks: Vec[Terminate]):
+    return (ref.fn(blocks).ref, ref)
 
 
 @register
 @rule
 def fn_ref_get_name(mod: ModRef, name: str, tp: FnType, calling_convention: str):
-    return mod.function_(name, tp, calling_convention).name, name
+    return mod.fn(name, tp, calling_convention).name, name
 
 
 @register
 @rule
 def fn_ref_get_type(mod: ModRef, name: str, tp: FnType, calling_convention: str):
-    return mod.function_(name, tp, calling_convention).type, tp
+    return mod.fn(name, tp, calling_convention).type, tp
