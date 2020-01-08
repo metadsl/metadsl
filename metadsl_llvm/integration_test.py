@@ -136,7 +136,7 @@ def test_add():
     mod = ml.Mod.create(mc.Vec.create(fn))
 
     c_int = ml.CType.c_int()
-    c_func_type = ml.CFunctionType.create(c_int, c_int)
+    c_func_type = ml.CFunctionType.create(c_int, c_int, c_int)
 
     real_fn = m.execute(ml.compile_function(mod, mod_ref, fn_ref, c_func_type))
-    assert real_fn(10) == 21
+    assert real_fn(10, 11) == 22

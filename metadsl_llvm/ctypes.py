@@ -61,5 +61,16 @@ def c_function_type_create_1(
 
 @register_ctypes
 @rule
+def c_function_type_create_2(
+    return_tp: typing.Any, arg1: typing.Any, arg2: typing.Any
+) -> R[CFunctionType]:
+    return (
+        CFunctionType.create(CType.box(return_tp), CType.box(arg1), CType.box(arg2)),
+        lambda: CFunctionType.box(ctypes.CFUNCTYPE(return_tp, arg1, arg2)),
+    )
+
+
+@register_ctypes
+@rule
 def cfunc_call(fntype: typing.Any, ptr: int) -> R[typing.Callable]:
     return CFunctionType.box(fntype)(ptr), lambda: fntype(ptr)
