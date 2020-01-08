@@ -21,10 +21,10 @@ class Variable:
     """
 
     def __str__(self):
-        return str(id(self))
+        return hex(id(self))
 
     def __repr__(self):
-        return f"Variable({str(self)})"
+        return f"Variable: {str(self)}"
 
 
 class Abstraction(Expression, typing.Generic[T, U]):

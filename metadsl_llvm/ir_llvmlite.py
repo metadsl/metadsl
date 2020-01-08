@@ -42,11 +42,11 @@ def hash_llvmlite_function(fn: ir.Function) -> int:
 
 @hash_value.register
 def hash_llvmlite_builder(builder: ir.IRBuilder) -> int:
-    return hash((builder, str(builder.block)))
+    return hash((builder, str(builder)))
 
 
 # Overwrite ir builder str representation
-ir.IRBuilder.__str__ = lambda self: str(self.block)
+ir.IRBuilder.__str__ = lambda self: f"IRBuilder: {hex(id(self))}\n{self.block}"
 
 
 @expression
