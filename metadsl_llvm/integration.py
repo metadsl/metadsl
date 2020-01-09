@@ -35,9 +35,7 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
     block_ref = fn_ref.block(True, "entry")
     return (
         new_name,
-        fn_ref.fn(
-            Vec.create(block_ref.ret(block_ref.call(original_fn_ref, fn_ref.arguments)))
-        ),
+        fn_ref.fn(block_ref.ret(block_ref.call(original_fn_ref, fn_ref.arguments))),
     )
 
 
@@ -46,11 +44,9 @@ def compile_function(
     mod: Mod, fn_ref: FnRef, cfunctype: CFunctionType, optimization: int = 1,
 ) -> typing.Callable:
     new_name, wrapper_fn = make_c_wrapper(mod.ref, fn_ref)
-    engine = ExecutionEngine.create(
-        ModuleRef.create(
-            mod_str(mod.ref.mod(mod.functions.append(wrapper_fn)))
-        ).optimize(optimization)
-    )
+    module_ref = ModuleRef.create(mod_str(mod.add_fn(wrapper_fn)))
+    module_ref = module_ref.optimize(optimization)
+    engine = ExecutionEngine.create(module_ref)
     return cfunctype(engine.get_function_address(new_name))
 
 

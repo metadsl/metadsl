@@ -28,19 +28,17 @@ __all__ = [
 class Mod(Expression):
     @expression  # type: ignore
     @property
-    def functions(self) -> Vec[Fn]:
+    def ref(self) -> ModRef:
         ...
 
-    @expression  # type: ignore
-    @property
-    def ref(self) -> ModRef:
+    @expression
+    def add_fn(self, fn: Fn) -> Mod:
         ...
 
 
 class Fn(Expression):
-    @expression  # type: ignore
-    @property
-    def blocks(self) -> Vec[Terminate]:
+    @expression
+    def add_block(self, terminate: Terminate) -> Fn:
         ...
 
     @expression  # type: ignore
@@ -110,7 +108,7 @@ class _Uniq:
 
 class FnRef(Expression):
     @expression
-    def fn(self, blocks: Vec[Terminate]) -> Fn:
+    def fn(self, *blocks: Terminate) -> Fn:
         ...
 
     def block(self, is_first: bool, name: typing.Union[str, None] = None) -> BlockRef:
@@ -149,7 +147,7 @@ class ModRef(Expression):
         ...
 
     @expression
-    def mod(self, functions: Vec[Fn]) -> Mod:
+    def mod(self, *fns: Fn) -> Mod:
         ...
 
 
@@ -169,26 +167,26 @@ class Type(Expression):
 
 @register
 @rule
-def mod_functions(ref: ModRef, fns: Vec[Fn]):
-    return (ref.mod(fns).functions, fns)
+def mod_add_fn(ref: ModRef, fns: typing.Sequence[Fn], fn: Fn):
+    return (ref.mod(*fns).add_fn(fn), ref.mod(*fns, fn))
 
 
 @register
 @rule
-def mod_ref(ref: ModRef, fns: Vec[Fn]):
-    return (ref.mod(fns).ref, ref)
+def mod_ref(ref: ModRef, fns: typing.Sequence[Fn]):
+    return (ref.mod(*fns).ref, ref)
 
 
 @register
 @rule
-def fn_blocks(ref: FnRef, blocks: Vec[Terminate]):
-    return (ref.fn(blocks).blocks, blocks)
+def fn_add_block(ref: FnRef, blocks: typing.Sequence[Terminate], block: Terminate):
+    return (ref.fn(*blocks).add_block(block), ref.fn(*blocks, block))
 
 
 @register
 @rule
-def fn_ref(ref: FnRef, blocks: Vec[Terminate]):
-    return (ref.fn(blocks).ref, ref)
+def fn_ref(ref: FnRef, blocks: typing.Sequence[Terminate]):
+    return (ref.fn(*blocks).ref, ref)
 
 
 @register

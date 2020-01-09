@@ -83,22 +83,20 @@ def test_fib():
     ##
     # Functions
     ##
-    fib_fn = fib_ref.fn(mc.Vec.create(fib_entry_terminate))
+    fib_fn = fib_ref.fn(fib_entry_terminate)
     fib_more_fn = fib_more_ref.fn(
-        mc.Vec.create(
-            fib_more_entry_terminate,
-            fib_more_pred_cont_terminate,
-            fib_more_not_pred_cont_terminate,
-            fib_more_n_eq_one_terminate,
-            fib_more_n_neq_one_terminate,
-        ),
+        fib_more_entry_terminate,
+        fib_more_pred_cont_terminate,
+        fib_more_not_pred_cont_terminate,
+        fib_more_n_eq_one_terminate,
+        fib_more_n_neq_one_terminate,
     )
 
     ##
     # Module
     ##
 
-    mod = mod_ref.mod(mc.Vec.create(fib_fn, fib_more_fn))
+    mod = mod_ref.mod(fib_fn, fib_more_fn)
 
     ##
     # CType
@@ -131,9 +129,9 @@ def test_add():
     res = block_ref.add(lr, one)
     terminate = block_ref.ret(res)
 
-    fn = fn_ref.fn(mc.Vec.create(terminate))
+    fn = fn_ref.fn(terminate)
 
-    mod = mod_ref.mod(mc.Vec.create(fn))
+    mod = mod_ref.mod(fn)
 
     c_int = ml.CType.c_int()
     c_func_type = ml.CFunctionType.create(c_int, c_int, c_int)

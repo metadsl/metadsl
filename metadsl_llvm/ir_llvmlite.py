@@ -296,12 +296,12 @@ def create_box_fn(
 ):
     fn_ref = box_fn_ref(fn)
     # Remove blocks that have already been added
-    yield fn_ref.fn(Vec.create(box_terminate(builder), *terminates)), fn_ref.fn(
-        Vec.create(*terminates)
+    yield fn_ref.fn(box_terminate(builder), *terminates), fn_ref.fn(
+        *terminates
     )
 
     # If we have added all, used fn_ref
-    yield fn_ref.fn(Vec.create()), box_fn(fn)
+    yield fn_ref.fn(), box_fn(fn)
 
 
 @register_llvmlite
@@ -310,8 +310,8 @@ def create_box_mod(
     mod: ir.Module, ir_fn: ir.Function, fn: Fn, fns: typing.Sequence[Fn]
 ):
     mod_ref = box_mod_ref(mod)
-    yield mod_ref.mod(Vec.create(box_fn(ir_fn), *fns)), mod_ref.mod(Vec.create(*fns))
-    yield mod_ref.mod(Vec.create()), box_mod(mod)
+    yield mod_ref.mod(box_fn(ir_fn), *fns), mod_ref.mod(*fns)
+    yield mod_ref.mod(), box_mod(mod)
 
 
 @register_llvmlite
