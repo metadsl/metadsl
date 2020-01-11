@@ -40,14 +40,39 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
 
 
 @expression
+def llvm_to_c_fn_type(fn_tp: FnType) -> CFunctionType:
+    ...
+
+
+@expression
+def llvm_to_c_type(tp: Type) -> CType:
+    ...
+
+
+@register_integration
+@rule
+def llvm_to_c_fn_type_rule(ret_tp: Type, arg_tps: typing.Sequence[Type]):
+    return (
+        llvm_to_c_fn_type(FnType.create(ret_tp, *arg_tps)),
+        CFunctionType.create(llvm_to_c_type(ret_tp), *(map(llvm_to_c_type, arg_tps))),
+    )
+
+
+@register_integration
+@rule
+def llvm_to_c_fn_int():
+    return (llvm_to_c_type(Type.create_int(32)), CType.c_int())
+
+
+@expression
 def compile_function(
-    mod: Mod, fn_ref: FnRef, cfunctype: CFunctionType, optimization: int = 1,
+    mod: Mod, fn_ref: FnRef, optimization: int = 1,
 ) -> typing.Callable:
     new_name, wrapper_fn = make_c_wrapper(mod.ref, fn_ref)
     module_ref = ModuleRef.create(mod_str(mod.add_fn(wrapper_fn)))
     module_ref = module_ref.optimize(optimization)
     engine = ExecutionEngine.create(module_ref)
-    return cfunctype(engine.get_function_address(new_name))
+    return llvm_to_c_fn_type(fn_ref.type)(engine.get_function_address(new_name))
 
 
 register_integration(default_rule(compile_function))

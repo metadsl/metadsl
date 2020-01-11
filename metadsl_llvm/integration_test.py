@@ -98,13 +98,7 @@ def test_fib():
 
     mod = mod_ref.mod(fib_fn, fib_more_fn)
 
-    ##
-    # CType
-    ##
-    c_int = ml.CType.c_int()
-    c_func_type = ml.CFunctionType.create(c_int, c_int)
-
-    metadsl_fn = m.execute(ml.compile_function(mod, fib_ref, c_func_type))
+    metadsl_fn = m.execute(ml.compile_function(mod, fib_ref))
     assert metadsl_fn(10) == 55
 
 
@@ -132,9 +126,5 @@ def test_add():
     fn = fn_ref.fn(terminate)
 
     mod = mod_ref.mod(fn)
-
-    c_int = ml.CType.c_int()
-    c_func_type = ml.CFunctionType.create(c_int, c_int, c_int)
-
-    real_fn = m.execute(ml.compile_function(mod, fn_ref, c_func_type))
+    real_fn = m.execute(ml.compile_function(mod, fn_ref))
     assert real_fn(10, 11) == 22
