@@ -294,11 +294,11 @@ class NormalizedExpressions:
                 continue
             assert isinstance(value, Expression)
 
-            for h, arg in zip(ref.children.args, value.args):
-                assert self.expressions[h].value is arg
+            for i, arg in enumerate(ref.children.args):
+                assert self.expressions[arg].value is value.args[i]
 
-            for k, v in ref.children.kwargs.items():
-                assert value.kwargs[k] is self.expressions[k].value
+            for k, kwarg in ref.children.kwargs.items():
+                assert self.expressions[kwarg].value is value.kwargs[k]
 
     def _assert_ids_match(self):
         for id, hash in self.ids.items():
