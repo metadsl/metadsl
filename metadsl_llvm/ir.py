@@ -80,11 +80,19 @@ class BlockRef(Expression):
         ...
 
     @expression
+    def branch(self, target: BlockRef) -> Terminate:
+        ...
+
+    @expression
     def add(self, left: Value, right: Value) -> Value:
         ...
 
     @expression
     def sub(self, left: Value, right: Value) -> Value:
+        ...
+
+    @expression
+    def phi(self, *incoming: Pair[Value, BlockRef]) -> Value:
         ...
 
 

@@ -45,6 +45,13 @@ def hash_llvmlite_builder(builder: ir.IRBuilder) -> int:
     return hash((builder, str(builder)))
 
 
+def union_types(type: ir.Type, *types: ir.Type) -> ir.Type:
+    for tp in types:
+        if tp != type:
+            raise NotImplementedError(f"Cannot merge types {tp} and {type}")
+    return type
+
+
 # Overwrite ir builder str representation
 ir.IRBuilder.__str__ = lambda self: f"IRBuilder: {hex(id(self))}\n{self.block}"
 
@@ -259,6 +266,19 @@ def builder_cbranch(
 
 @register_llvmlite
 @rule
+def builder_branch(builder: ir.IRBuilder, target: ir.IRBuilder):
+    def inner() -> Terminate:
+        builder.branch(target)
+        return box_terminate(builder)
+
+    return (
+        box_block_ref(builder).branch(box_block_ref(target)),
+        inner,
+    )
+
+
+@register_llvmlite
+@rule
 def builder_add(builder: ir.IRBuilder, left: ir.Value, right: ir.Value):
     builder_ = box_block_ref(builder)
     return (
@@ -274,6 +294,30 @@ def builder_sub(builder: ir.IRBuilder, left: ir.Value, right: ir.Value):
     return (
         builder_.sub(box_value(left), box_value(right)),
         lambda: box_value(builder.sub(left, right)),
+    )
+
+
+@register_llvmlite
+@rule
+def builder_phi_two(
+    builder: ir.IRBuilder,
+    builder_1: ir.IRBuilder,
+    value_1: ir.Value,
+    builder_2: ir.IRBuilder,
+    value_2: ir.Value,
+) -> R[Value]:
+    def inner() -> Value:
+        phi = builder.phi(union_types(value_1.type, value_2.type))
+        phi.add_incoming(value_1, builder_1.block)
+        phi.add_incoming(value_2, builder_2.block)
+        return box_value(phi)
+
+    return (
+        box_block_ref(builder).phi(
+            Pair.create(box_value(value_1), box_block_ref(builder_1)),
+            Pair.create(box_value(value_2), box_block_ref(builder_2)),
+        ),
+        inner,
     )
 
 

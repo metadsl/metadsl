@@ -50,6 +50,11 @@ class FunctionZero(Expression, typing.Generic[T]):
     def value(self) -> T:
         ...
 
+    @expression  # type: ignore
+    @property
+    def name(self) -> str:
+        ...
+
 
 class FunctionOne(Expression, typing.Generic[T, U]):
     """
@@ -94,6 +99,11 @@ class FunctionOne(Expression, typing.Generic[T, U]):
 
     @expression
     def abstraction(self) -> Abstraction[T, U]:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def name(self) -> str:
         ...
 
 
@@ -154,6 +164,11 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
 
     @expression
     def abstraction(self) -> Abstraction[T, Abstraction[U, V]]:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def name(self) -> str:
         ...
 
 
@@ -226,6 +241,11 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
     def abstraction(self) -> Abstraction[T, Abstraction[U, Abstraction[V, X]]]:
         ...
 
+    @expression  # type: ignore
+    @property
+    def name(self) -> str:
+        ...
+
 
 register_pre(default_rule(FunctionZero[T].from_fn))
 register_pre(default_rule(FunctionOne[T, U].from_fn))
@@ -287,3 +307,27 @@ def three_abstraction(
     _: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]
 ) -> R[Abstraction[T, Abstraction[U, Abstraction[V, X]]]]:
     return FunctionThree.create(_, abst).abstraction(), abst
+
+
+@register  # type: ignore
+@rule
+def zero_name(name: str, t: T):
+    return FunctionZero.create(name, t).name, name
+
+
+@register  # type: ignore
+@rule
+def one_name(_: str, abst: Abstraction[T, U]):
+    return FunctionOne.create(_, abst).name, _
+
+
+@register  # type: ignore
+@rule
+def two_name(_: str, abst: Abstraction[T, Abstraction[U, V]]):
+    return FunctionTwo.create(_, abst).name, _
+
+
+@register  # type: ignore
+@rule
+def three_name(_: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]):
+    return FunctionThree.create(_, abst).name, _
