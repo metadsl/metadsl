@@ -10,7 +10,7 @@ from .ctypes import *
 from .llvmlite_binding import *
 from .ir_llvmlite import *
 
-__all__ = ["llvm_integration_rules", "make_c_wrapper", "compile_function"]
+__all__ = ["llvm_integration_rules", "compile_function"]
 
 
 llvm_integration_rules = RulesRepeatFold()
