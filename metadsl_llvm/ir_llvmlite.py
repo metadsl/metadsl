@@ -296,9 +296,7 @@ def create_box_fn(
 ):
     fn_ref = box_fn_ref(fn)
     # Remove blocks that have already been added
-    yield fn_ref.fn(box_terminate(builder), *terminates), fn_ref.fn(
-        *terminates
-    )
+    yield fn_ref.fn(box_terminate(builder), *terminates), fn_ref.fn(*terminates)
 
     # If we have added all, used fn_ref
     yield fn_ref.fn(), box_fn(fn)
