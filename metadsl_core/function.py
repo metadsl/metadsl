@@ -186,10 +186,6 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
         return cls.create(fn.__name__, inner)
 
     @expression
-    def to_fn(self) -> typing.Callable[[T, U, V], X]:
-        ...
-
-    @expression
     @classmethod
     def from_fn_recursive(
         cls, fn: typing.Callable[[FunctionThree[T, U, V, X], T, U, V], X]
