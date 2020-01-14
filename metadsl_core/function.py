@@ -34,10 +34,6 @@ class FunctionZero(Expression, typing.Generic[T]):
         return cls.create(fn.__name__, fn())
 
     @expression
-    def to_fn(self) -> typing.Callable[[], T]:
-        ...
-
-    @expression
     def __call__(self) -> T:
         ...
 
@@ -65,10 +61,6 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     @classmethod
     def from_fn(cls, fn: typing.Callable[[T], U]) -> FunctionOne[T, U]:
         return cls.create(fn.__name__, Abstraction.from_fn(fn))
-
-    @expression
-    def to_fn(self) -> typing.Callable[[T], U]:
-        ...
 
     @expression
     @classmethod
@@ -122,10 +114,6 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
             return Abstraction.from_fn(inner)
 
         return cls.create(fn.__name__, Abstraction.from_fn(inner))
-
-    @expression
-    def to_fn(self) -> typing.Callable[[T, U], V]:
-        ...
 
     @expression
     @classmethod
