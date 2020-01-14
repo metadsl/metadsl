@@ -100,6 +100,15 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     def name(self) -> str:
         ...
 
+    @expression  # type: ignore
+    @property
+    def unfix(self) -> Abstraction[FunctionOne[T, U], FunctionOne[T, U]]:
+        @Abstraction.from_fn
+        def inner(fn: FunctionOne[T, U]) -> FunctionOne[T, U]:
+            return FunctionOne.create(self.name, self.abstraction.unfix(fn.abstraction))
+
+        return inner
+
 
 class FunctionTwo(Expression, typing.Generic[T, U, V]):
     """
@@ -161,6 +170,15 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     @property
     def name(self) -> str:
         ...
+
+    @expression  # type: ignore
+    @property
+    def unfix(self) -> Abstraction[FunctionTwo[T, U, V], FunctionTwo[T, U, V]]:
+        @Abstraction.from_fn
+        def inner(fn: FunctionTwo[T, U, V]) -> FunctionTwo[T, U, V]:
+            return FunctionTwo.create(self.name, self.abstraction.unfix(fn.abstraction))
+
+        return inner
 
 
 class FunctionThree(Expression, typing.Generic[T, U, V, X]):
@@ -234,6 +252,19 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
     def name(self) -> str:
         ...
 
+    @expression  # type: ignore
+    @property
+    def unfix(
+        self,
+    ) -> Abstraction[FunctionThree[T, U, V, X], FunctionThree[T, U, V, X]]:
+        @Abstraction.from_fn
+        def inner(fn: FunctionThree[T, U, V, X]) -> FunctionThree[T, U, V, X]:
+            return FunctionThree.create(
+                self.name, self.abstraction.unfix(fn.abstraction)
+            )
+
+        return inner
+
 
 register_pre(default_rule(FunctionZero[T].from_fn))
 register_pre(default_rule(FunctionOne[T, U].from_fn))
@@ -243,6 +274,10 @@ register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
 register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
 register_pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
 register_pre(default_rule(FunctionThree[T, U, V, X].from_fn_recursive))
+
+register_pre(default_rule(FunctionOne[T, U].unfix))
+register_pre(default_rule(FunctionTwo[T, U, V].unfix))
+register_pre(default_rule(FunctionThree[T, U, V, X].unfix))
 
 
 @register  # type: ignore
