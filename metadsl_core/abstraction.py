@@ -64,10 +64,20 @@ class Abstraction(Expression, typing.Generic[T, U]):
         """
         return fn(Abstraction.fix(fn))
 
+    @expression  # type: ignore
+    @property
+    def unfix(self) -> Abstraction[Abstraction[T, U], Abstraction[T, U]]:
+        """
+        Extracts the inner function created from a fixed point operator.
+
+        If its not a fixed point funciton, just returns an identity function.
+        """
+        ...
+
 
 # Run the `from_fn` before any other rules, so that variables
 # are all created before any are replaced
-# This  is needed if a variable is caught in an inner scope of a local function
+# This is needed if a variable is caught in an inner scope of a local function
 from_fn_rule = register_pre(default_rule(Abstraction[T, U].from_fn))
 # Run  the fixed point  operator  rule after all others, so that
 # it is only expanded if we need it.
@@ -126,3 +136,26 @@ def compose(vl: T, bl: U, vr: V, br: T) -> R[Abstraction[V, U]]:
 @rule
 def beta_reduce(var: T, body: U, arg: T) -> R[U]:
     return (Abstraction[T, U].create(var, body)(arg), lambda: _replace(body, var, arg))
+
+
+@register
+@rule
+def unfix_normal(
+    var: T, body: U, arg: T
+) -> R[Abstraction[Abstraction[T, U], Abstraction[T, U]]]:
+    # If this is a normal abstraction, then just return identity for the unfix operator
+    return (
+        Abstraction.create(var, body).unfix,
+        Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(lambda a: a),
+    )
+
+
+@register
+@rule
+def unfix_fixed(
+    a: Abstraction[Abstraction[T, U], Abstraction[T, U]]
+) -> R[Abstraction[Abstraction[T, U], Abstraction[T, U]]]:
+    return (
+        Abstraction.fix(a).unfix,
+        a,
+    )
