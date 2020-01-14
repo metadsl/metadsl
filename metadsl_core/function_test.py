@@ -11,6 +11,13 @@ zero = Integer.from_int(0)
 
 
 class TestFunction:
+    def test_zero_abstraction(self):
+        @FunctionZero.from_fn
+        def fn() -> Integer:
+            return one
+
+        assert execute(fn()) == one
+
     def test_one_recursive_call(self):
         @FunctionOne.from_fn_recursive
         def factorial(fact_fn: FunctionOne[Integer, Integer], n: Integer) -> Integer:
@@ -26,7 +33,7 @@ class TestFunction:
             return a + b
 
         assert (
-            metadsl.typing_tools.get_type(execute(add.abstraction()))
+            metadsl.typing_tools.get_type(execute(add.abstraction))
             == Abstraction[Integer, Abstraction[Integer, Integer]]
         )
 

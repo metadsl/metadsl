@@ -282,26 +282,28 @@ register_pre(default_rule(FunctionThree[T, U, V, X].unfix))
 
 @register  # type: ignore
 @rule
-def zero_call(fn: FunctionZero[T]) -> R[T]:
-    return fn(), fn.value()
+def zero_call(_: str, v: T) -> R[T]:
+    return FunctionZero.create(_, v)(), v
 
 
 @register  # type: ignore
 @rule
-def one_call(fn: FunctionOne[T, U], t: T) -> R[U]:
-    return fn(t), fn.abstraction()(t)
+def one_call(_: str, a: Abstraction[T, U], t: T) -> R[U]:
+    return FunctionOne.create(_, a)(t), a(t)
 
 
 @register  # type: ignore
 @rule
-def two_call(fn: FunctionTwo[T, U, V], t: T, u: U) -> R[V]:
-    return fn(t, u), fn.abstraction()(t)(u)
+def two_call(_: str, a: Abstraction[T, Abstraction[U, V]], t: T, u: U) -> R[V]:
+    return FunctionTwo.create(_, a)(t, u), a(t)(u)
 
 
 @register  # type: ignore
 @rule
-def three_call(fn: FunctionThree[T, U, V, X], t: T, u: U, v: V) -> R[X]:
-    return fn(t, u, v), fn.abstraction()(t)(u)(v)
+def three_call(
+    _: str, a: Abstraction[T, Abstraction[U, Abstraction[V, X]]], t: T, u: U, v: V
+) -> R[X]:
+    return FunctionThree.create(_, a)(t, u, v), a(t)(u)(v)
 
 
 @register  # type: ignore
