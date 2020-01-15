@@ -90,8 +90,8 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     def create(cls, name: str, val: Abstraction[T, U]) -> FunctionOne[T, U]:
         ...
 
-    @property  # type: ignore
-    @expression
+    @expression  # type: ignore
+    @property
     def abstraction(self) -> Abstraction[T, U]:
         ...
 
@@ -161,8 +161,8 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     ) -> FunctionTwo[T, U, V]:
         ...
 
-    @property  # type: ignore
-    @expression
+    @expression  # type: ignore
+    @property
     def abstraction(self) -> Abstraction[T, Abstraction[U, V]]:
         ...
 
@@ -242,8 +242,8 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
     ) -> FunctionThree[T, U, V, X]:
         ...
 
-    @property  # type: ignore
-    @expression
+    @expression  # type: ignore
+    @property
     def abstraction(self) -> Abstraction[T, Abstraction[U, Abstraction[V, X]]]:
         ...
 
