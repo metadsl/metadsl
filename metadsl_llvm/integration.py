@@ -10,7 +10,7 @@ from .ctypes import *
 from .llvmlite_binding import *
 from .ir_llvmlite import *
 
-__all__ = ["llvm_integration_rules", "compile_function"]
+__all__ = ["llvm_integration_rules", "compile_function", "compile_functions"]
 
 
 llvm_integration_rules = RulesRepeatFold()
@@ -73,6 +73,13 @@ def compile_function(
     module_ref = module_ref.optimize(optimization)
     engine = ExecutionEngine.create(module_ref)
     return llvm_to_c_fn_type(fn_ref.type)(engine.get_function_address(new_name))
+
+
+def compile_functions(
+    mod_ref: ModRef, fn: Fn, *fns: Fn, optimization: int = 1,
+) -> typing.Callable:
+    mod = mod_ref.mod(fn, *fns)
+    return compile_function(mod, fn.ref)
 
 
 register_integration(default_rule(compile_function))
