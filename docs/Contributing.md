@@ -41,6 +41,12 @@ You can also test that the documentation notebooks run correctly, but this
 pytest docs/*.ipynb --nbval
 ```
 
+You can also run tests through ipython, to test if the custom visualizations all work:
+
+```bash
+ipython -m pytest
+```
+
 ### Debugging
 
 If you have a notebook that isn't working, one way to debug it is to convert it to a Python
