@@ -18,6 +18,18 @@ class TestFunction:
 
         assert execute(fn()) == one
 
+    def test_one_abstraction(self):
+        @FunctionOne.from_fn
+        def add_one(a: Integer) -> Integer:
+            return a + one
+
+        assert (
+            metadsl.typing_tools.get_type(execute(add_one.abstraction))
+            == Abstraction[Integer, Integer]
+        )
+
+        assert execute(add_one.abstraction(zero)) == one
+
     def test_one_recursive_call(self):
         @FunctionOne.from_fn_recursive
         def factorial(fact_fn: FunctionOne[Integer, Integer], n: Integer) -> Integer:
