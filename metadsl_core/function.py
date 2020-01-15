@@ -314,24 +314,34 @@ def zero_value(_: str, t: T) -> R[T]:
 
 @register  # type: ignore
 @rule
-def one_abstraction(_: str, abst: Abstraction[T, U]) -> R[Abstraction[T, U]]:
-    return FunctionOne.create(_, abst).abstraction, abst
+def one_abstraction(fn: FunctionOne[T, U]) -> R[Abstraction[T, U]]:
+    return fn.abstraction, lambda: Abstraction[T, U].from_fn(lambda t: fn(t))
 
 
 @register  # type: ignore
 @rule
-def two_abstraction(
-    _: str, abst: Abstraction[T, Abstraction[U, V]]
-) -> R[Abstraction[T, Abstraction[U, V]]]:
-    return FunctionTwo.create(_, abst).abstraction, abst
+def two_abstraction(fn: FunctionTwo[T, U, V]) -> R[Abstraction[T, Abstraction[U, V]]]:
+    return (
+        fn.abstraction,
+        lambda: Abstraction[T, Abstraction[U, V]].from_fn(
+            lambda t: Abstraction[U, V].from_fn(lambda u: fn(t, u))
+        ),
+    )
 
 
 @register  # type: ignore
 @rule
 def three_abstraction(
-    _: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]
+    fn: FunctionThree[T, U, V, X]
 ) -> R[Abstraction[T, Abstraction[U, Abstraction[V, X]]]]:
-    return FunctionThree.create(_, abst).abstraction, abst
+    return (
+        fn.abstraction,
+        lambda: Abstraction[T, Abstraction[U, Abstraction[V, X]]].from_fn(
+            lambda t: Abstraction[U, Abstraction[V, X]].from_fn(
+                lambda u: Abstraction[V, X].from_fn(lambda v: fn(t, u, v))
+            )
+        ),
+    )
 
 
 @register  # type: ignore

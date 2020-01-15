@@ -37,6 +37,8 @@ class TestFunction:
             == Abstraction[Integer, Abstraction[Integer, Integer]]
         )
 
+        assert execute(add.abstraction(one)(zero)) == one
+
     def test_two_call(self):
         @FunctionTwo.from_fn
         def add(a: Integer, b: Integer) -> Integer:
