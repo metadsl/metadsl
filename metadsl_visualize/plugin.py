@@ -1,5 +1,8 @@
 # import typing
 
+# Import visualize so uses custom execution if in ipython
+from . import visualize
+
 
 def pytest_assertrepr_compare(op, left, right):
     pass
