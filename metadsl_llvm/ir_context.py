@@ -5,6 +5,7 @@ Dataflow based LLVMLite IR to create LLVMLite IR.
 from __future__ import annotations
 
 import typing
+import functools
 
 from metadsl import *
 from metadsl_core import *
@@ -12,7 +13,7 @@ from metadsl_core import *
 from .ir import *
 from .integration import *
 
-__all__ = ["ir_context_rules", "ModExpr", "FnExpr", "ValueExpr"]
+__all__ = ["ir_context_rules", "llvm_fn", "to_llvm", "ValueExpr"]
 
 ir_context_rules = RulesRepeatFold()
 register_context = ir_context_rules.append
@@ -69,89 +70,109 @@ AllFns = typing.Union[
     FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
 ]
 
-
-class ModExpr(Expression):
-    @expression
-    @classmethod
-    def from_mod_ref(cls, ref: ModRef) -> ModExpr:
-        ...
-
-    def fn_dec(self, fn_tp: FnType) -> typing.Callable[[AllFns], FnExpr]:
-        def inner(fn_n: AllFns, fn_tp=fn_tp) -> FnExpr:
-            if isinstance(fn_n, FunctionOne):
-                return self.fn_1(fn_n, fn_tp)
-            elif isinstance(fn_n, FunctionTwo):
-                return self.fn_2(fn_n, fn_tp)
-            return self.fn_3(fn_n, fn_tp)
-
-        return inner
-
-    @expression
-    def fn_1(self, fn: FunctionOne[ValueExpr, ValueExpr], fn_tp: FnType) -> FnExpr:
-        ...
-
-    @expression
-    def fn_2(
-        self, fn: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], fn_tp: FnType
-    ) -> FnExpr:
-        ...
-
-    @expression
-    def fn_3(
-        self,
-        fn: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
-        fn_tp: FnType,
-    ) -> FnExpr:
-        ...
-
-
-class FnExpr(Expression):
-    @expression
-    def __call__(self, *args: ValueExpr) -> ValueExpr:
-        ...
-
-    @expression
-    def compile(
-        self, mod_ref: ModRef, *other_fns: FnExpr, optimization: int = 1
-    ) -> typing.Callable:
-        ...
+SomeFn = typing.TypeVar("SomeFn", bound=AllFns)
 
 
 @expression
-def fn_expr_from_fn(fn: Fn) -> FnExpr:
+def from_llvm_fn_1(fn: Fn) -> FunctionOne[ValueExpr, ValueExpr]:
     ...
 
 
 @expression
-def fn_expr_get_fn(fn: FnExpr) -> Fn:
+def from_llvm_fn_2(fn: Fn) -> FunctionTwo[ValueExpr, ValueExpr, ValueExpr]:
     ...
 
 
-@register_context
-@rule
-def fn_expr_id_rule(fn: Fn) -> R[Fn]:
-    return (
-        fn_expr_get_fn(fn_expr_from_fn(fn)),
-        fn,
-    )
+@expression
+def from_llvm_fn_3(fn: Fn) -> FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr]:
+    ...
 
 
-def _fn_n_rule(ref: ModRef, fn_n: AllFns, fn_tp: FnType,) -> R[FnExpr]:
-    mod_expr = ModExpr.from_mod_ref(ref)
+def llvm_fn(mod_ref: ModRef, fn_tp: FnType) -> typing.Callable[[SomeFn], SomeFn]:
+    def inner(fn: SomeFn, mod_ref=mod_ref, fn_tp=fn_tp) -> SomeFn:
+        if isinstance(fn, FunctionOne):
+            return llvm_fn_1(fn, mod_ref, fn_tp)  # type: ignore
+        elif isinstance(fn, FunctionTwo):  # type: ignore
+            return llvm_fn_2(fn, mod_ref, fn_tp)  # type: ignore
+        return llvm_fn_3(fn, mod_ref, fn_tp)  # type: ignore
 
-    fn_ref = ref.fn(fn_n.name, fn_tp, "fastcc")
+    return inner
+
+
+@expression
+def llvm_fn_1(
+    fn: FunctionOne[ValueExpr, ValueExpr], mod_ref: ModRef, fn_tp: FnType
+) -> FunctionOne[ValueExpr, ValueExpr]:
+    ...
+
+
+@expression
+def llvm_fn_2(
+    fn: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], mod_ref: ModRef, fn_tp: FnType
+) -> FunctionTwo[ValueExpr, ValueExpr, ValueExpr]:
+    ...
+
+
+@expression
+def llvm_fn_3(
+    fn: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
+    mod_ref: ModRef,
+    fn_tp: FnType,
+) -> FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr]:
+    ...
+
+
+def to_llvm(fn: AllFns) -> Fn:
+    if isinstance(fn, FunctionOne):
+        return to_llvm_fn_1(fn)
+    elif isinstance(fn, FunctionTwo):
+        return to_llvm_fn_2(fn)
+    return to_llvm_fn_3(fn)
+
+
+@typing.overload
+def _fn_n_rule(
+    mod_ref: ModRef, fn_n: FunctionOne[ValueExpr, ValueExpr], fn_tp: FnType,
+) -> R[FunctionOne[ValueExpr, ValueExpr]]:
+    ...
+
+
+@typing.overload
+def _fn_n_rule(
+    mod_ref: ModRef, fn_n: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], fn_tp: FnType,
+) -> R[FunctionTwo[ValueExpr, ValueExpr, ValueExpr]]:
+    ...
+
+
+@typing.overload
+def _fn_n_rule(
+    mod_ref: ModRef,
+    fn_n: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
+    fn_tp: FnType,
+) -> R[FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr]]:
+    ...
+
+
+def _fn_n_rule(mod_ref: ModRef, fn_n: AllFns, fn_tp: FnType,) -> R[AllFns]:
+    fn_ref = mod_ref.fn(fn_n.name, fn_tp, "fastcc")
+
+    # Use this to pass into fixed point operator so it can call itself
+    tmp_fn = fn_ref.fn()
+    fn_expr: AllFns
     if isinstance(fn_n, FunctionOne):
-        fn_expr = mod_expr.fn_1(fn_n, fn_tp)
-        fn_res = fn_n(ValueExpr.from_value(fn_ref.arguments[Integer.from_int(0)]))
+        fn_expr = llvm_fn_1(fn_n, mod_ref, fn_tp)
+        fn_res = fn_n.unfix(from_llvm_fn_1(tmp_fn))(
+            ValueExpr.from_value(fn_ref.arguments[Integer.from_int(0)])
+        )
     elif isinstance(fn_n, FunctionTwo):
-        fn_expr = mod_expr.fn_2(fn_n, fn_tp)
-        fn_res = fn_n(
+        fn_expr = llvm_fn_2(fn_n, mod_ref, fn_tp)
+        fn_res = fn_n.unfix(from_llvm_fn_2(tmp_fn))(
             ValueExpr.from_value(fn_ref.arguments[Integer.from_int(0)]),
             ValueExpr.from_value(fn_ref.arguments[Integer.from_int(1)]),
         )
     else:
-        fn_expr = mod_expr.fn_3(fn_n, fn_tp)
-        fn_res = fn_n(
+        fn_expr = llvm_fn_3(fn_n, mod_ref, fn_tp)
+        fn_res = fn_n.unfix(from_llvm_fn_3(tmp_fn))(
             ValueExpr.from_value(fn_ref.arguments[Integer.from_int(0)]),
             ValueExpr.from_value(fn_ref.arguments[Integer.from_int(1)]),
             ValueExpr.from_value(fn_ref.arguments[Integer.from_int(2)]),
@@ -160,51 +181,105 @@ def _fn_n_rule(ref: ModRef, fn_n: AllFns, fn_tp: FnType,) -> R[FnExpr]:
         Pair.create(fn_ref.block(True), fn_ref.fn())
     ).spread
     block_ref, fn = res_block_ctx.spread
-
+    fn = fn.add_block(block_ref.ret(res_val))
+    if isinstance(fn_n, FunctionOne):
+        fn_n = from_llvm_fn_1(fn)
+    elif isinstance(fn_n, FunctionTwo):
+        fn_n = from_llvm_fn_2(fn)
+    else:
+        fn_n = from_llvm_fn_3(fn)
     return (
         fn_expr,
-        fn_expr_from_fn(fn.add_block(block_ref.ret(res_val))),
+        fn_n,
     )
 
 
 @register_context
 @rule
-def fn_1_rule(
-    ref: ModRef, fn_1: FunctionOne[ValueExpr, ValueExpr], fn_tp: FnType
-) -> R[FnExpr]:
-    return _fn_n_rule(ref, fn_1, fn_tp)
+def llvm_fn_to_from_llvm_fn_1(
+    fn_n: FunctionOne[ValueExpr, ValueExpr], mod_ref: ModRef, fn_tp: FnType
+) -> R[FunctionOne[ValueExpr, ValueExpr]]:
+    return _fn_n_rule(mod_ref, fn_n, fn_tp)
 
 
 @register_context
 @rule
-def fn_2_rule(
-    ref: ModRef, fn_2: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], fn_tp: FnType
-) -> R[FnExpr]:
-    return _fn_n_rule(ref, fn_2, fn_tp)
+def llvm_fn_to_from_llvm_fn_2(
+    fn_n: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], mod_ref: ModRef, fn_tp: FnType
+) -> R[FunctionTwo[ValueExpr, ValueExpr, ValueExpr]]:
+    return _fn_n_rule(mod_ref, fn_n, fn_tp)
 
 
 @register_context
 @rule
-def fn_3_rule(
-    ref: ModRef,
-    fn_3: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
+def llvm_fn_to_from_llvm_fn_3(
+    fn_n: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr],
+    mod_ref: ModRef,
     fn_tp: FnType,
-) -> R[FnExpr]:
-    return _fn_n_rule(ref, fn_3, fn_tp)
+) -> R[FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr]]:
+    return _fn_n_rule(mod_ref, fn_n, fn_tp)
+
+
+@expression
+def to_llvm_fn_1(fn: FunctionOne[ValueExpr, ValueExpr]) -> Fn:
+    ...
+
+
+@expression
+def to_llvm_fn_2(fn: FunctionTwo[ValueExpr, ValueExpr, ValueExpr]) -> Fn:
+    ...
+
+
+@expression
+def to_llvm_fn_3(fn: FunctionThree[ValueExpr, ValueExpr, ValueExpr, ValueExpr]) -> Fn:
+    ...
 
 
 @register_context
 @rule
-def fn_compile_rule(
-    mod_ref: ModRef, fn_expr: FnExpr, other_fn_exprs: typing.Sequence[FnExpr], o: int
-) -> R[typing.Callable]:
-    fn = fn_expr_get_fn(fn_expr)
+def to_from_llvm_fn_1(fn: Fn) -> R[Fn]:
+    yield to_llvm_fn_1(from_llvm_fn_1(fn)), fn
+    yield to_llvm_fn_2(from_llvm_fn_2(fn)), fn
+    yield to_llvm_fn_3(from_llvm_fn_3(fn)), fn
 
+
+@register_context
+@rule
+def build_call_1(fn: Fn, arg: ValueExpr, block_ctx: BlockCtx) -> R[ValueCtx]:
+    arg_v, block_ctx = arg.build(block_ctx).spread
+    res = block_ctx.left.call(fn.ref, Vec.create(arg_v))
     return (
-        fn_expr.compile(mod_ref, *other_fn_exprs, optimization=o),
-        compile_function(
-            mod_ref.mod(fn, *(map(fn_expr_get_fn, other_fn_exprs))), fn.ref, o
-        ),
+        from_llvm_fn_1(fn)(arg).build(block_ctx),
+        Pair.create(res, block_ctx),
+    )
+
+
+@register_context
+@rule
+def build_call_2(
+    fn: Fn, arg1: ValueExpr, arg2: ValueExpr, block_ctx: BlockCtx
+) -> R[ValueCtx]:
+    arg1_v, block_ctx = arg1.build(block_ctx).spread
+    arg2_v, block_ctx = arg2.build(block_ctx).spread
+    res = block_ctx.left.call(fn.ref, Vec.create(arg1_v, arg2_v))
+    return (
+        from_llvm_fn_2(fn)(arg1, arg2).build(block_ctx),
+        Pair.create(res, block_ctx),
+    )
+
+
+@register_context
+@rule
+def build_call_3(
+    fn: Fn, arg1: ValueExpr, arg2: ValueExpr, arg3: ValueExpr, block_ctx: BlockCtx
+) -> R[ValueCtx]:
+    arg1_v, block_ctx = arg1.build(block_ctx).spread
+    arg2_v, block_ctx = arg2.build(block_ctx).spread
+    arg3_v, block_ctx = arg3.build(block_ctx).spread
+    res = block_ctx.left.call(fn.ref, Vec.create(arg1_v, arg2_v, arg3_v))
+    return (
+        from_llvm_fn_3(fn)(arg1, arg2, arg3).build(block_ctx),
+        Pair.create(res, block_ctx),
     )
 
 
