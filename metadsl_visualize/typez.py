@@ -3,15 +3,30 @@ Integeration with typez, to translate a "Rule" into a something that takes retur
 typez object we can use to display as we go.
 """
 
-from typez import *
-import metadsl
-import typing
-import inspect
 import dataclasses
-import typing_inspect
+import functools
+import inspect
+import types
+import typing
 import warnings
 
+import metadsl
+import typing_inspect
+from typez import *
+
 __all__ = ["ExpressionDisplay", "SHOW_MODULE"]
+
+
+@functools.singledispatch
+def metadsl_str(value: object) -> str:
+    return str(value)
+
+
+@metadsl_str.register
+def metadsl_str_fn(fn: types.FunctionType) -> str:
+    if not SHOW_TYPES or not hasattr(fn, "__scoped_typevars__"):
+        return str(fn)
+    return f"{fn} (scoped_typevars={fn.__scoped_typevars__})"  # type: ignore
 
 
 @dataclasses.dataclass
@@ -75,14 +90,14 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             )
         else:
             node = PrimitiveNode(
-                type=function_or_type_repr(type(value)), repr=str(value)
+                type=function_or_type_repr(type(value)), repr=metadsl_str(value)
             )
         nodes[str(hash_)] = [str(expr.id), node]  # type: ignore
     return nodes
 
 
 def typevars_to_typeparams(
-    typevars: metadsl.typing_tools.TypeVarMapping
+    typevars: metadsl.typing_tools.TypeVarMapping,
 ) -> typing.Dict[str, TypeInstance]:
     return {
         var.__name__: type_to_typeinstance(tp)  # type: ignore
