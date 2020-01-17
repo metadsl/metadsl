@@ -546,18 +546,19 @@ def infer_return_type(
     final_args = bound.args[1:] if is_classmethod else bound.args
     final_kwargs = bound.kwargs
     for arg in final_args:
-        record_scoped_typevars(arg)
+        record_scoped_typevars(arg, matches)
     for kwarg in final_kwargs.values():
-        record_scoped_typevars(kwarg)
+        record_scoped_typevars(kwarg, matches)
     return (final_args, final_kwargs, replace_typevars(matches, return_hint), matches)
 
 
-def record_scoped_typevars(f: object) -> None:
-    if not isinstance(f, types.FunctionType) or hasattr(f, "__scoped_typevars__"):
+def record_scoped_typevars(f: object, additional_typevars: TypeVarMapping) -> None:
+    if not isinstance(f, types.FunctionType):
         return
     f.__scoped_typevars__ = {  # type: ignore
         *get_all_typevars(get_function_type(f)),
         *get_typevars_in_scope(),
+        *additional_typevars.keys(),
     }
 
 
