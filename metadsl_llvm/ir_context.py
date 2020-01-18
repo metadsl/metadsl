@@ -246,12 +246,10 @@ def to_from_llvm_fn_1(fn: Fn) -> R[Fn]:
 @register_context
 @rule
 def build_call_1(fn: Fn, arg: ValueExpr, block_ctx: BlockCtx) -> R[ValueCtx]:
+    target = from_llvm_fn_1(fn)(arg).build(block_ctx)
     arg_v, block_ctx = arg.build(block_ctx).spread
     res = block_ctx.left.call(fn.ref, Vec.create(arg_v))
-    return (
-        from_llvm_fn_1(fn)(arg).build(block_ctx),
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 @register_context
@@ -259,13 +257,11 @@ def build_call_1(fn: Fn, arg: ValueExpr, block_ctx: BlockCtx) -> R[ValueCtx]:
 def build_call_2(
     fn: Fn, arg1: ValueExpr, arg2: ValueExpr, block_ctx: BlockCtx
 ) -> R[ValueCtx]:
+    target = from_llvm_fn_2(fn)(arg1, arg2).build(block_ctx)
     arg1_v, block_ctx = arg1.build(block_ctx).spread
     arg2_v, block_ctx = arg2.build(block_ctx).spread
     res = block_ctx.left.call(fn.ref, Vec.create(arg1_v, arg2_v))
-    return (
-        from_llvm_fn_2(fn)(arg1, arg2).build(block_ctx),
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 @register_context
@@ -273,14 +269,12 @@ def build_call_2(
 def build_call_3(
     fn: Fn, arg1: ValueExpr, arg2: ValueExpr, arg3: ValueExpr, block_ctx: BlockCtx
 ) -> R[ValueCtx]:
+    target = from_llvm_fn_3(fn)(arg1, arg2, arg3).build(block_ctx)
     arg1_v, block_ctx = arg1.build(block_ctx).spread
     arg2_v, block_ctx = arg2.build(block_ctx).spread
     arg3_v, block_ctx = arg3.build(block_ctx).spread
     res = block_ctx.left.call(fn.ref, Vec.create(arg1_v, arg2_v, arg3_v))
-    return (
-        from_llvm_fn_3(fn)(arg1, arg2, arg3).build(block_ctx),
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 @register_context
@@ -291,10 +285,7 @@ def build_add(l_exp: ValueExpr, r_exp: ValueExpr, block_ctx: BlockCtx) -> R[Valu
     l, block_ctx = l_exp.build(block_ctx).spread
     r, block_ctx = r_exp.build(block_ctx).spread
     res = block_ctx.left.add(l, r)
-    return (
-        target,
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 @register_context
@@ -305,10 +296,7 @@ def build_sub(l_exp: ValueExpr, r_exp: ValueExpr, block_ctx: BlockCtx) -> R[Valu
     l, block_ctx = l_exp.build(block_ctx).spread
     r, block_ctx = r_exp.build(block_ctx).spread
     res = block_ctx.left.sub(l, r)
-    return (
-        target,
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 @register_context
@@ -320,10 +308,7 @@ def build_icmp_signed(
     l, block_ctx = l_exp.build(block_ctx).spread
     r, block_ctx = r_exp.build(block_ctx).spread
     res = block_ctx.left.icmp_signed(operator, l, r)
-    return (
-        target,
-        Pair.create(res, block_ctx),
-    )
+    return (target, Pair.create(res, block_ctx))
 
 
 def switch_block(
@@ -376,17 +361,11 @@ def build_cbranch(
         Pair.create(false_res, false_block_ref), Pair.create(true_res, true_block_ref)
     )
 
-    return (
-        target,
-        Pair.create(final_value, block_ctx),
-    )
+    return (target, Pair.create(final_value, block_ctx))
 
 
 @register_context
 @rule
 def build_constant(value: Value, block_ctx: BlockCtx) -> R[ValueCtx]:
-    return (
-        ValueExpr.from_value(value).build(block_ctx),
-        Pair.create(value, block_ctx),
-    )
+    return (ValueExpr.from_value(value).build(block_ctx), Pair.create(value, block_ctx))
 
