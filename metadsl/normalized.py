@@ -90,6 +90,11 @@ class NormalizedExpressions:
     ] = dataclasses.field(default_factory=collections.OrderedDict)
     ids: typing.Dict[ID, Hash] = dataclasses.field(default_factory=dict)
 
+    # keep track of all the IDs we have assigned to each hash previously
+    # so that any hash which has had a previous ID assigned in some older
+    # cycle will keep that same ID.
+    asigned_ids: typing.Dict[Hash, ID] = dataclasses.field(default_factory=dict)
+
     next_id: ID = ID(0)
     # THe first hash  added. Used when adding a new expression, so we can record the left
     # most hash and delete  every hash before that
@@ -188,13 +193,17 @@ class NormalizedExpressions:
         if not self._first_hash:
             self._first_hash = hash
         if hash not in self.expressions:
-            id = self._get_new_id(prev_id)
+            if hash in self.asigned_ids:
+                id = self.asigned_ids[hash]
+            else:
+                id = self._get_new_id(prev_id)
+                self.asigned_ids[hash] = id
             self.expressions[hash] = NormalizedExpression(children, expr, id)
             self.ids[id] = hash
         return hash
 
     def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
-        new_expressions = NormalizedExpressions(next_id=self.next_id)
+        new_expressions = NormalizedExpressions(next_id=self.next_id, asigned_ids=self.asigned_ids)
         if not hash:
             # If we didn't get a hash, we are replacing the root node
             root_hash = next(iter(reversed(self.expressions)))
@@ -355,7 +364,7 @@ class ExpressionReference(typing.Generic[T]):
 
     def verify_integrity(self) -> None:
         """
-        Verifies a number of properties about the data  structures
+        Verifies a number of properties about the data structures
         """
 
         expressions = self.expressions.expressions
