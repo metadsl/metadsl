@@ -9,7 +9,7 @@ import * as React from "react";
 import { ReactWidget } from "@jupyterlab/apputils";
 import { Typez } from "./schema";
 import { ElementsDefinition } from "cytoscape";
-import CytoscapeComponent from './CytoscapeComponent'
+import CytoscapeComponent from "./CytoscapeComponent";
 
 /**
  * The default mime type for the extension.
@@ -72,7 +72,8 @@ export function SelectState({
           value={
             value === 0
               ? "initial"
-              : states!.states![value - 1].label ?? states!.states![value - 1].rule
+              : states!.states![value - 1].label ??
+                states!.states![value - 1].rule
           }
         />
       )}
@@ -80,9 +81,7 @@ export function SelectState({
       valueLabelDisplay="on"
       value={i}
       max={n}
-      onChange={(_, newValue) =>
-        setSelected(n - (newValue as any))
-      }
+      onChange={(_, newValue) => setSelected(n - (newValue as any))}
       marks={[
         { value: 0, label: "initial" },
         ...(states?.states?.map(({ label }, idx) => ({
@@ -94,48 +93,57 @@ export function SelectState({
   );
 }
 
-
-
-function typezToCytoscape(nodes: Typez['nodes'], id: string): ElementsDefinition {
+function typezToCytoscape(
+  nodes: Typez["nodes"],
+  id: string
+): ElementsDefinition {
   if (!nodes) {
-    throw new Error('Must have nodes');
+    throw new Error("Must have nodes");
   }
 
-  const elements: ElementsDefinition = {nodes: [], edges: []}
+  const elements: ElementsDefinition = { nodes: [], edges: [] };
   const seen = new Set<string>();
   const toProcess = new Set([nodes[id]]);
 
   for (const args of toProcess) {
-    toProcess.delete(args)
+    toProcess.delete(args);
 
     const [persistantID, node] = args;
-    seen.add(persistantID)
+    seen.add(persistantID);
 
     let label: string;
     if ("repr" in node) {
-      label = node.repr
+      label = node.repr;
     } else {
       label = node.function;
       for (const [childIndex, childID] of [
         ...Object.entries(node.kwargs || {}),
-        ...(node.args || []).map((argID, index) => [index, argID] as [number, string])
+        ...(node.args || []).map(
+          (argID, index) => [index, argID] as [number, string]
+        )
       ]) {
         const childNode = nodes[childID];
         const childPersistantID = childNode[0];
-        elements.edges.push({data: {source: persistantID, id: `${persistantID}.${childIndex}`, target: childPersistantID}})
+        elements.edges.push({
+          data: {
+            source: persistantID,
+            id: `${persistantID}.${childIndex}`,
+            target: childPersistantID
+          }
+        });
         if (!seen.has(childPersistantID)) {
-          toProcess.add(childNode)
+          toProcess.add(childNode);
         }
       }
     }
-    elements.nodes.push({data: {id: persistantID, label}})
+    elements.nodes.push({ data: { id: persistantID, label } });
   }
-  console.log("Ending with", elements)
-  return elements;}
+  return elements;
+}
 
 export function GraphComponent({ typez }: { typez: Typez }) {
   const [id, setID] = React.useState(typez.states!.initial);
-  const elements = typezToCytoscape(typez['nodes'], id);
+  const elements = typezToCytoscape(typez["nodes"], id);
 
   return (
     <div>
