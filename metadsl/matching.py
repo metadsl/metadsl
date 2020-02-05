@@ -17,6 +17,7 @@ import functools
 import types
 import inspect
 import typing_inspect
+import functools
 
 from .expressions import *
 from .dict_tools import *
@@ -111,7 +112,7 @@ class DefaultRule:
             return None
         with TypeVarScope(*typevars.keys()):
             new_expr = self.inner_fn(*args, **expr.kwargs)
-            result = replace_typevars_expression(new_expr, typevars)
+            result = ReplaceTypevarsExpression(typevars)(new_expr)
         ref.replace(result)
         yield Replacement(str(self))
 
@@ -206,29 +207,40 @@ class MatchRule:
             except NoMatch:
                 continue
             with TypeVarScope(*typevars.keys()):
-                result_expr = replace_typevars_expression(result_expr, typevars)
+                result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
                 ref.replace(result_expr)
             yield Replacement(str(self))
             return
 
 
-def replace_typevars_expression(expression: object, typevars: TypeVarMapping) -> object:
+@dataclasses.dataclass(frozen=True)
+class ReplaceTypevarsExpression:
     """
-    Replaces all typevars found in the classmethods of an expression.
+    Use a class instead of a function so we can partially apply it and have equality based on typevars 
     """
-    if isinstance(expression, Expression):
-        new_args = [replace_typevars_expression(a, typevars) for a in expression.args]
-        new_kwargs = {
-            k: replace_typevars_expression(v, typevars)
-            for k, v in expression.kwargs.items()
-        }
-        new_fn = replace_fn_typevars(expression.function, typevars)
-        return replace_typevars(typevars, typing_inspect.get_generic_type(expression))(
-            new_fn, new_args, new_kwargs
+    typevars: TypeVarMapping
+
+    def __call__(self, expression: object) -> object:
+        """
+        Replaces all typevars found in the classmethods of an expression.
+        """
+        typevars = self.typevars
+        if isinstance(expression, Expression):
+            new_args = [self(a) for a in expression.args]
+            new_kwargs = {
+                k: self(v)
+                for k, v in expression.kwargs.items()
+            }
+            new_fn = replace_fn_typevars(expression.function, typevars)
+            return replace_typevars(typevars, typing_inspect.get_generic_type(expression))(
+                new_fn, new_args, new_kwargs
+            )
+        return replace_fn_typevars(
+            expression,
+            typevars,
+            ReplaceTypevarsExpression(typevars=HashableMapping(typevars)),
         )
-    return replace_fn_typevars(
-        expression, typevars, lambda e: replace_typevars_expression(e, typevars)
-    )
+
 
 
 def match_expression(

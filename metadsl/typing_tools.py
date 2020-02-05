@@ -546,20 +546,22 @@ def infer_return_type(
     final_args = bound.args[1:] if is_classmethod else bound.args
     final_kwargs = bound.kwargs
     for arg in final_args:
-        record_scoped_typevars(arg, matches)
+        record_scoped_typevars(arg, *matches.keys())
     for kwarg in final_kwargs.values():
-        record_scoped_typevars(kwarg, matches)
+        record_scoped_typevars(kwarg, *matches.keys())
     return (final_args, final_kwargs, replace_typevars(matches, return_hint), matches)
 
 
-def record_scoped_typevars(f: object, additional_typevars: TypeVarMapping) -> None:
+def record_scoped_typevars(f: object, *additional_typevars: typing.TypeVar) -> None:  # type: ignore
     if not isinstance(f, types.FunctionType):
         return
-    f.__scoped_typevars__ = {  # type: ignore
-        *get_all_typevars(get_function_type(f)),
-        *get_typevars_in_scope(),
-        *additional_typevars.keys(),
-    }
+    f.__scoped_typevars__ = frozenset(  # type: ignore
+        {
+            *get_all_typevars(get_function_type(f)),
+            *get_typevars_in_scope(),
+            *additional_typevars,
+        }
+    )
 
 
 WrapperType = typing.Callable[
@@ -708,11 +710,9 @@ def match_functions(
 @dataclasses.dataclass(unsafe_hash=True)
 class FunctionReplaceTyping:
     fn: typing.Callable
-    typevars: TypeVarMapping
-    typevars_in_scope: typing.Set[typing.TypeVar]  # type: ignore
-    inner_mapping: typing.Callable[[typing.Any], typing.Any] = dataclasses.field(
-        repr=False
-    )
+    typevars: HashableMapping[typing.TypeVar, typing.Type]  # type: ignore
+    typevars_in_scope: typing.FrozenSet[typing.TypeVar]  # type: ignore
+    inner_mapping: typing.Callable[[typing.Any], typing.Any]
 
     @classmethod
     def create(
@@ -723,11 +723,13 @@ class FunctionReplaceTyping:
     ) -> typing.Callable:
         if isinstance(fn, FunctionReplaceTyping):
             return fn
-        typevars_in_scope: typing.Set[TypeVar] = fn.__scoped_typevars__  # type: ignore
+        typevars_in_scope: typing.FrozenSet[TypeVar] = fn.__scoped_typevars__  # type: ignore
         if not typevars_in_scope:
             return fn
 
-        typevars = {k: v for k, v in typevars.items() if k in typevars_in_scope}
+        typevars = HashableMapping(
+            {k: v for k, v in typevars.items() if k in typevars_in_scope}
+        )
         res = cls(fn, typevars, typevars_in_scope, inner_mapping)
 
         functools.update_wrapper(res, fn)
@@ -744,10 +746,16 @@ class FunctionReplaceTyping:
                 return self.inner_mapping(self.fn(*args, **kwargs))
 
 
+@dataclasses.dataclass(unsafe_hash=True)
+class Identity:
+    def __call__(self, a):
+        return a
+
+
 def replace_fn_typevars(
     fn: T,
     typevars: TypeVarMapping,
-    inner_mapping: typing.Callable[[T], T] = lambda a: a,
+    inner_mapping: typing.Callable[[T], T] = Identity(),
 ) -> T:
     if isinstance(fn, BoundInfer):
         return typing.cast(
