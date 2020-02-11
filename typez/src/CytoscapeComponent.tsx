@@ -122,8 +122,8 @@ const layout = {
     // Enums use the name of the enum e.g.
     // searchOrder: "BFS",
     zoomToFit: true,
-    algorithm: "conn.gmf.layouter.Draw2D"
-    // direction: "DOWN"
+    algorithm: "conn.gmf.layouter.Draw2D",
+    "org.eclipse.elk.direction": "DOWN"
   }
   // priority: function( edge ){ return null; }, // Edges with a non-nil value are skipped when geedy edge cycle breaking is enabled
 };
