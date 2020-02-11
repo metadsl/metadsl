@@ -85,7 +85,7 @@ class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     """
 
     def __iter__(self):
-        return iter((create_iterated_placeholder(self),))
+        return iter((create_iterated_placeholder(self),))  # type: ignore
 
 
 def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:

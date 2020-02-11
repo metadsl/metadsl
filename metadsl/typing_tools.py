@@ -743,7 +743,7 @@ class FunctionReplaceTyping:
     def __call__(self, *args, **kwargs):
         with NewTypeVarScope():
             with TypeVarScope(*self.typevars_in_scope):
-                return self.inner_mapping(self.fn(*args, **kwargs))
+                return self.inner_mapping(self.fn(*args, **kwargs))  # type: ignore
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -762,7 +762,7 @@ def replace_fn_typevars(
             T,
             BoundInfer(  # type: ignore
                 fn=fn.fn,
-                wrapper=fn.wrapper,
+                wrapper=fn.wrapper,  # type: ignore
                 is_classmethod=fn.is_classmethod,
                 owner=replace_typevars(typevars, fn.owner),
             ),

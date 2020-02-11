@@ -160,7 +160,7 @@ class MatchRule:
     # the wildcards that are present in the template
     wildcards: typing.List[Expression] = dataclasses.field(init=False)
 
-    results: R = dataclasses.field(init=False)
+    results: typing.List[R] = dataclasses.field(init=False)
 
     def __str__(self):
         return f"{self.matchfunction.__module__}.{self.matchfunction.__qualname__}"
@@ -173,7 +173,7 @@ class MatchRule:
         # Call the function first to create a template with the wildcards
         result = self.matchfunction(*self.wildcards)
         self.results = (
-            list(result)
+            list(result)  # type: ignore
             if inspect.isgeneratorfunction(self.matchfunction)
             else [result]
         )
@@ -218,6 +218,7 @@ class ReplaceTypevarsExpression:
     """
     Use a class instead of a function so we can partially apply it and have equality based on typevars 
     """
+
     typevars: TypeVarMapping
 
     def __call__(self, expression: object) -> object:
@@ -227,20 +228,16 @@ class ReplaceTypevarsExpression:
         typevars = self.typevars
         if isinstance(expression, Expression):
             new_args = [self(a) for a in expression.args]
-            new_kwargs = {
-                k: self(v)
-                for k, v in expression.kwargs.items()
-            }
+            new_kwargs = {k: self(v) for k, v in expression.kwargs.items()}
             new_fn = replace_fn_typevars(expression.function, typevars)
-            return replace_typevars(typevars, typing_inspect.get_generic_type(expression))(
-                new_fn, new_args, new_kwargs
-            )
+            return replace_typevars(
+                typevars, typing_inspect.get_generic_type(expression)
+            )(new_fn, new_args, new_kwargs)
         return replace_fn_typevars(
             expression,
             typevars,
             ReplaceTypevarsExpression(typevars=HashableMapping(typevars)),
         )
-
 
 
 def match_expression(
