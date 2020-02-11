@@ -103,11 +103,7 @@ class FunctionOne(Expression, typing.Generic[T, U]):
     @expression  # type: ignore
     @property
     def unfix(self) -> Abstraction[FunctionOne[T, U], FunctionOne[T, U]]:
-        @Abstraction.from_fn
-        def inner(fn: FunctionOne[T, U]) -> FunctionOne[T, U]:
-            return FunctionOne.create(self.name, self.abstraction.unfix(fn.abstraction))
-
-        return inner
+        ...
 
 
 class FunctionTwo(Expression, typing.Generic[T, U, V]):
@@ -174,11 +170,7 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
     @expression  # type: ignore
     @property
     def unfix(self) -> Abstraction[FunctionTwo[T, U, V], FunctionTwo[T, U, V]]:
-        @Abstraction.from_fn
-        def inner(fn: FunctionTwo[T, U, V]) -> FunctionTwo[T, U, V]:
-            return FunctionTwo.create(self.name, self.abstraction.unfix(fn.abstraction))
-
-        return inner
+        ...
 
 
 class FunctionThree(Expression, typing.Generic[T, U, V, X]):
@@ -257,13 +249,7 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
     def unfix(
         self,
     ) -> Abstraction[FunctionThree[T, U, V, X], FunctionThree[T, U, V, X]]:
-        @Abstraction.from_fn
-        def inner(fn: FunctionThree[T, U, V, X]) -> FunctionThree[T, U, V, X]:
-            return FunctionThree.create(
-                self.name, self.abstraction.unfix(fn.abstraction)
-            )
-
-        return inner
+        ...
 
 
 register_pre(default_rule(FunctionZero[T].from_fn))
@@ -274,10 +260,6 @@ register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
 register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
 register_pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
 register_pre(default_rule(FunctionThree[T, U, V, X].from_fn_recursive))
-
-register_pre(default_rule(FunctionOne[T, U].unfix))
-register_pre(default_rule(FunctionTwo[T, U, V].unfix))
-register_pre(default_rule(FunctionThree[T, U, V, X].unfix))
 
 
 @register  # type: ignore
@@ -366,3 +348,42 @@ def two_name(_: str, abst: Abstraction[T, Abstraction[U, V]]):
 @rule
 def three_name(_: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]):
     return FunctionThree.create(_, abst).name, _
+
+
+@register_pre  # type: ignore
+@rule
+def one_unfix(name: str, abst: Abstraction[T, U]):
+    def result():
+        @Abstraction.from_fn
+        def inner(fn: FunctionOne[T, U]) -> FunctionOne[T, U]:
+            return FunctionOne.create(name, abst.unfix(fn.abstraction))
+
+        return inner
+
+    return FunctionOne.create(name, abst).unfix, result
+
+
+@register_pre  # type: ignore
+@rule
+def two_unfix(name: str, abst: Abstraction[T, Abstraction[U, V]]):
+    def result():
+        @Abstraction.from_fn
+        def inner(fn: FunctionTwo[T, U, V]) -> FunctionTwo[T, U, V]:
+            return FunctionTwo.create(name, abst.unfix(fn.abstraction))
+
+        return inner
+
+    return FunctionTwo.create(name, abst).unfix, result
+
+
+@register_pre  # type: ignore
+@rule
+def three_unfix(name: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]):
+    def result():
+        @Abstraction.from_fn
+        def inner(fn: FunctionThree[T, U, V, X]) -> FunctionThree[T, U, V, X]:
+            return FunctionThree.create(name, abst.unfix(fn.abstraction))
+
+        return inner
+
+    return FunctionThree.create(name, abst).unfix, result
