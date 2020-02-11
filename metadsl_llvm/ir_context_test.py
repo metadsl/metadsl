@@ -18,9 +18,14 @@ def test_fib():
     mod_ref = ml.ModRef.create("fib")
 
     @ml.llvm_fn(mod_ref, ml.FnType.create(int_type, int_type, int_type, int_type))
-    @mc.FunctionThree.from_fn
-    def fib_more(n: ml.ValueExpr, a: ml.ValueExpr, b: ml.ValueExpr) -> ml.ValueExpr:
-        return (n > one).if_(fib_more(n - one, b, a + b), (n.eq(one).if_(b, a)))
+    @mc.FunctionThree.from_fn_recursive
+    def fib_more(
+        self: mc.FunctionThree[ml.ValueExpr, ml.ValueExpr, ml.ValueExpr, ml.ValueExpr],
+        n: ml.ValueExpr,
+        a: ml.ValueExpr,
+        b: ml.ValueExpr,
+    ) -> ml.ValueExpr:
+        return (n > one).if_(self(n - one, b, a + b), (n.eq(one).if_(b, a)))
 
     @ml.llvm_fn(mod_ref, ml.FnType.create(int_type, int_type))
     @mc.FunctionOne.from_fn
