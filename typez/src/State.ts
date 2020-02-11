@@ -97,7 +97,7 @@ export default class State {
         this.elements.edges.push({
           data: {
             source: parentElementID,
-            id: `${elementID}.${index}`,
+            id: `${parentElementID}.${index}`,
             target: elementID
           }
         });
