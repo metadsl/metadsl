@@ -64,6 +64,22 @@ class Typez:
     def _repr_mimebundle_(self, include=None, exclude=None):
         return {"application/x.typez+json": self.asdict()}
 
+    def __post_init__(self):
+        """
+        Validate that nodes are in topo order, with root at the end.
+        """
+        return
+        if not self.nodes:
+            return
+        seen: Set[str] = set()
+        for node in self.nodes:
+            assert node.id not in seen
+            seen.add(node.id)
+            if not isinstance(node, CallNode):
+                return
+            for child_id in (node.args or []) + list((node.kwargs or {}).values()):
+                assert child_id in seen
+
 
 Definitions = Dict[str, Union["Kind", "Function"]]
 
@@ -101,14 +117,13 @@ class ExternalType:
     repr: str
 
 
-PersistantID = str
-
 # TODO: Rename to expression
-Nodes = Dict[str, Tuple[PersistantID, Union["CallNode", "PrimitiveNode"]]]
+Nodes = List[Union["CallNode", "PrimitiveNode"]]
 
 
 @dataclass(frozen=True)
 class CallNode:
+    id: str
     function: str
     type_params: Optional[Dict[str, TypeInstance]] = None
     args: Optional[List[str]] = None
@@ -116,7 +131,7 @@ class CallNode:
 
     def __post_init__(self):
         """
-        Make the args and kwargs hashable for easy hasing of the node
+        Make the args and kwargs hashable for easy hashing of the node
         to compute its id
         """
         # Use settattr because it is frozen
@@ -130,6 +145,7 @@ class CallNode:
 
 @dataclass(frozen=True)
 class PrimitiveNode:
+    id: str
     type: str
     repr: str
 

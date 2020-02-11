@@ -27,7 +27,7 @@
  * with https://github.com/vega/ts-json-schema-generator/
  */
 
-//  TODO: Mapke typevars keyword mapping instead of arguments
+//  TODO: Make typevars keyword mapping instead of arguments
 
 /**
  * A combination of defintions, nodes, and states.
@@ -96,19 +96,12 @@ type ExternalType = {
 };
 
 /**
- * This ID is used to keep track of nodes accross states. Different
- * nodes may be related to each other, like one turned into the other,
- * so we give them the same persistant ID to aid in visualization.
- */
-type PersistantID = string;
-/**
  * A mapping of node IDs to the functions
  */
-type Nodes = {
-  [id: string]: [PersistantID, CallNode | PrimitiveNode];
-};
+export type Nodes = Array<CallNode | PrimitiveNode>;
 
-type CallNode = {
+export type CallNode = {
+  id: string;
   function: string;
   type_params?: { [name: string]: TypeInstance };
   // An array of the ids of the argument nodes
@@ -120,7 +113,7 @@ type CallNode = {
 /**
  * A primitive node that represents some type in  the host language
  */
-type PrimitiveNode = { type: string; repr: string };
+type PrimitiveNode = { id: string; type: string; repr: string };
 
 /**
  * A type that is passed into a function to set one of its  type
@@ -152,11 +145,9 @@ type State = {
   label?: string;
 };
 
-
 /**
  * Examples
  */
-
 
 // const Natural: Definitions = {
 //   "Natural": {},
@@ -171,7 +162,7 @@ type State = {
 // };
 
 // const Vec: Definitions = {
-  
+
 //   "Vec": ["T"] }
 //   {
 //     function: "Vec.__getitem__",

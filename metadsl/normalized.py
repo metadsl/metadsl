@@ -77,24 +77,18 @@ def compute_hash(value: object, children: typing.Optional[Children]) -> Hash:
 class NormalizedExpression:
     children: typing.Optional[Children]
     value: object
-    id: ID
     parents: typing.Set[Parent] = dataclasses.field(default_factory=set)
 
 
 @dataclasses.dataclass
 class NormalizedExpressions:
     # Expressions, topologically sorted, with the root expression at the end.
-
     expressions: collections.OrderedDict[
         Hash, NormalizedExpression
     ] = dataclasses.field(default_factory=collections.OrderedDict)
 
-    # mapping of IDs to hashes for this set of expression
-    ids: typing.Dict[ID, Hash] = dataclasses.field(default_factory=dict)
-
-    next_id: ID = ID(0)
-    # THe first hash  added. Used when adding a new expression, so we can record the left
-    # most hash and delete  every hash before that
+    # The first hash added. Used when adding a new expression, so we can record the left
+    # most hash and delete every hash before that
     _first_hash: typing.Optional[Hash] = None
 
     def add(
@@ -126,7 +120,6 @@ class NormalizedExpressions:
             prev_hash, prev_expressions = prev
             if prev_hash:
                 prev_ref = prev_expressions[prev_hash]
-                prev_id = prev_ref.id
                 if (
                     isinstance(prev_ref.value, Expression)
                     and isinstance(expr, Expression)
@@ -190,14 +183,11 @@ class NormalizedExpressions:
         if not self._first_hash:
             self._first_hash = hash
         if hash not in self.expressions:
-            id = self._get_new_id(prev_id)
-            self.expressions[hash] = NormalizedExpression(children, expr, id)
-            self.ids[id] = hash
+            self.expressions[hash] = NormalizedExpression(children, expr)
         return hash
 
     def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
         new_expressions = NormalizedExpressions(
-            next_id=self.next_id
         )
         if not hash:
             # If we didn't get a hash, we are replacing the root node
@@ -218,16 +208,7 @@ class NormalizedExpressions:
             root_expr = self.expressions[root_hash].value
         new_expressions.add(root_expr, (root_hash, self.expressions))
         self.expressions = new_expressions.expressions
-        self.ids = new_expressions.ids
-        self.next_id = new_expressions.next_id
 
-    def _get_new_id(self, prev_id: typing.Optional[ID]) -> ID:
-        if prev_id and prev_id not in self.ids:
-            return prev_id
-        id = self.next_id
-        self.next_id = ID(self.next_id + 1)
-        assert id not in self.ids
-        return id
 
     def _get_root(self, hash: Hash) -> Hash:
         parents = list(self.expressions[hash].parents)
@@ -304,10 +285,6 @@ class NormalizedExpressions:
             for k, kwarg in ref.children.kwargs.items():
                 assert self.expressions[kwarg].value is value.kwargs[k]
 
-    def _assert_ids_match(self):
-        for id, hash in self.ids.items():
-            assert self.expressions[hash].id == id
-
 
 T = typing.TypeVar("T")
 
@@ -372,10 +349,6 @@ class ExpressionReference(typing.Generic[T]):
         all_children = self.expressions._all_children(self.root_hash)
         all_keys = set(expressions.keys())
         assert all_children == all_keys
-
-        # IDs
-        assert len(self.expressions.ids) == len(expressions)
-        self.expressions._assert_ids_match()
 
         # Parents
         self.expressions._assert_parents_children_consistant()

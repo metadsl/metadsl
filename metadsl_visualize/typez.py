@@ -46,9 +46,14 @@ class ExpressionDisplay:
 
     def update(self, rule: str, label: typing.Optional[str] = None):
         new_nodes = convert_to_nodes(self.ref)
+        old_nodes = self.typez_display.typez.nodes or []
+        old_node_ids = set(node.id for node in old_nodes)
         self.typez_display.typez = dataclasses.replace(
             self.typez_display.typez,
-            nodes={**(self.typez_display.typez.nodes or {}), **new_nodes},
+            # Must keep in topo order with the root expression at the end
+            nodes=(
+                old_nodes + [node for node in new_nodes if node.id not in old_node_ids]
+            ),
             states=dataclasses.replace(
                 self.typez_display.typez.states,
                 states=[
@@ -70,9 +75,8 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
     Converts an expression into a node mapping and also returns the ID for the top level node.
     """
-    expressions = ref.expressions
-    nodes: Nodes = {}
-    for hash_, expr in expressions.expressions.items():
+    nodes: Nodes = []
+    for hash_, expr in ref.expressions.expressions.items():
         node: typing.Union[CallNode, PrimitiveNode]
         value = expr.value
         if isinstance(value, metadsl.Expression):
@@ -80,6 +84,7 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             assert children
             func_str = function_or_type_repr(value.function)
             node = CallNode(
+                id=str(hash_),
                 type_params=typevars_to_typeparams(
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
@@ -90,9 +95,11 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             )
         else:
             node = PrimitiveNode(
-                type=function_or_type_repr(type(value)), repr=metadsl_str(value)
+                id=str(hash_),
+                type=function_or_type_repr(type(value)),
+                repr=metadsl_str(value),
             )
-        nodes[str(hash_)] = [str(expr.id), node]  # type: ignore
+        nodes.append(node)
     return nodes
 
 
@@ -157,4 +164,5 @@ def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     module = inspect.getmodule(o)
     if module == _builtins:
         return name
+    assert module
     return f"{module.__name__}.{name}"
