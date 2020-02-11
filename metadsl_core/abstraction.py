@@ -70,7 +70,7 @@ class Abstraction(Expression, typing.Generic[T, U]):
         """
         Extracts the inner function created from a fixed point operator.
 
-        If its not a fixed point funciton, just returns an identity function.
+        If its not a fixed point funciton, returns a function that always returns the original.
         """
         ...
 
@@ -141,12 +141,13 @@ def beta_reduce(var: T, body: U, arg: T) -> R[U]:
 @register
 @rule
 def unfix_normal(
-    var: T, body: U, arg: T
+    var: T, body: U
 ) -> R[Abstraction[Abstraction[T, U], Abstraction[T, U]]]:
-    # If this is a normal abstraction, then just return identity for the unfix operator
+    original = Abstraction.create(var, body)
+    # If this is a normal abstraction, then just return the original
     return (
-        Abstraction.create(var, body).unfix,
-        Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(lambda a: a),
+        original.unfix,
+        Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(lambda _: original),
     )
 
 

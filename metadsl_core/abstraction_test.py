@@ -105,4 +105,4 @@ class TestAbstraction:
             return i + one + one
 
         assert execute(Abstraction.unfix(add_one)(add_one)(zero)) == one
-        assert execute(Abstraction.unfix(add_one)(add_two)(zero)) == two
+        assert execute(Abstraction.unfix(add_two)(add_one)(zero)) == two
