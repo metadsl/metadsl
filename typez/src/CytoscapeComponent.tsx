@@ -158,6 +158,12 @@ const style: Stylesheet[] = [
       "target-arrow-fill": "filled",
       opacity: "0.5"
     } as any
+  },
+  {
+    selector: ".hidden",
+    style: {
+      display: "none"
+    }
   }
 ];
 
@@ -169,7 +175,25 @@ export default function CytoscapeComponent({
   const ref = React.useRef(null);
   const cy = React.useRef<Cytoscape.Core | null>(null);
 
-  // Setup cytoscape
+  /**
+   * Only show descendents of selected nodes.
+   */
+  const updateSelection = () => {
+    const current = cy.current!;
+    const selected = current.$(":selected");
+    let shown: cytoscape.CollectionReturnValue;
+    if (selected.length === 0) {
+      // If none selected, set all nodes to visible
+      shown = current.$("");
+    } else {
+      // Otherwise only set those as successors of selected
+      shown = selected.union(selected.successors());
+    }
+    shown.classes("");
+    shown.absoluteComplement().classes("hidden");
+    shown.layout(layout as any).run();
+  };
+
   React.useEffect(() => {
     if (!ref) {
       return;
@@ -179,6 +203,12 @@ export default function CytoscapeComponent({
       style
       // pixelRatio: 1.0
       // hideEdgesOnViewport: true
+    });
+    cy.current.on("select", () => {
+      updateSelection();
+    });
+    cy.current.on("unselect", () => {
+      updateSelection();
     });
     return () => {
       if (cy.current) {
@@ -193,7 +223,7 @@ export default function CytoscapeComponent({
       return;
     }
     cy.current.json({ elements });
-    cy.current.layout(layout as any).run();
+    updateSelection();
   }, [cy.current, elements]);
 
   return <div style={{ height: "500px" }} ref={ref} />;
