@@ -220,28 +220,29 @@ class NormalizedExpressions:
         """
         All expressions should be after their children
         """
-        for i, expr in enumerate(self.expressions.values()):
+        seen: typing.Set[Hash] = set()
+        for hash, expr in self.expressions.items():
+            seen.add(hash)
             if not expr.children:
                 continue
             for _, child_hash in expr.children.references():
                 # Children should be to the left of their parents
-                assert self._index_of_hash(child_hash) < i
-
-    def _index_of_hash(self, hash: Hash) -> int:
-
-        for i, hash_ in enumerate(self.expressions.keys()):
-            if hash_ == hash:
-                return i
-        raise RuntimeError()
+                assert child_hash in seen
 
     def _all_children(self, hash: Hash) -> typing.Set[Hash]:
-        ref = self.expressions[hash]
-        s = {hash}
-        if not ref.children:
-            return s
-        for _, child_hash in ref.children.references():
-            s.update(self._all_children(child_hash))
-        return s
+        processed: typing.Set[Hash] = set()
+        to_process = {hash}
+        while to_process:
+            hash = to_process.pop()
+            processed.add(hash)
+            ref = self.expressions[hash]
+            if not ref.children:
+                continue
+            for _, child_hash in ref.children.references():
+                if child_hash in processed:
+                    continue
+                to_process.add(child_hash)
+        return processed
 
     def _assert_parents_children_consistant(self) -> None:
         """
