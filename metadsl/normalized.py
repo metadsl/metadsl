@@ -61,6 +61,7 @@ class Children:
 def compute_hash(value: object, children: typing.Optional[Children]) -> Hash:
     if children:
         assert isinstance(value, Expression)
+        # We have already computed hashes for the children, so we can just take the hash of their fashes
         return Hash(
             hash(
                 (
@@ -91,16 +92,7 @@ class NormalizedExpressions:
     # most hash and delete every hash before that
     _first_hash: typing.Optional[Hash] = None
 
-    def add(
-        self,
-        expr: object,
-        prev: typing.Optional[
-            typing.Tuple[
-                typing.Optional[Hash],
-                collections.OrderedDict[Hash, NormalizedExpression],
-            ]
-        ] = None,
-    ) -> Hash:
+    def add(self, expr: object) -> Hash:
         """
         Does a depth addition of the expression to the graph, keeping all the nodes
         added in topological order, because the children will all be visisted after
@@ -108,65 +100,16 @@ class NormalizedExpressions:
         """
 
         children: typing.Optional[Children]
-
-        prev_id: typing.Optional[ID]
-        prev_args: typing.Optional[typing.List[Hash]]
-        prev_kwargs: typing.Optional[typing.Dict[str, Hash]]
-        prev_expressions: typing.Optional[
-            collections.OrderedDict[Hash, NormalizedExpression]
-        ]
-
-        if prev:
-            prev_hash, prev_expressions = prev
-            if prev_hash:
-                prev_ref = prev_expressions[prev_hash]
-                if (
-                    isinstance(prev_ref.value, Expression)
-                    and isinstance(expr, Expression)
-                    and prev_ref.value.function == expr.function
-                ):
-                    assert prev_ref.children
-                    prev_args = prev_ref.children.args
-                    prev_kwargs = prev_ref.children.kwargs
-                else:
-                    prev_args = None
-                    prev_kwargs = None
-            else:
-                prev_id = None
-                prev_args = None
-                prev_kwargs = None
-        else:
-            prev_expressions = None
-            prev_id = None
-            prev_args = None
-            prev_kwargs = None
-
         if isinstance(expr, Expression):
             children = Children([], {})
             for i, arg in enumerate(expr.args):
-                arg_hash = self.add(
-                    arg,
-                    (
-                        prev_args[i] if prev_args and i < len(prev_args) else None,
-                        prev_expressions,
-                    )
-                    if prev_expressions
-                    else None,
-                )
+                arg_hash = self.add(arg,)
                 children.args.append(arg_hash)
 
                 # Update expression with child, so that points to same one
                 expr.args[i] = self.expressions[arg_hash].value
             for k, v in expr.kwargs.items():
-                kwarg_hash = self.add(
-                    v,
-                    (
-                        prev_kwargs.get(k, None) if prev_kwargs else None,
-                        prev_expressions,
-                    )
-                    if prev_expressions
-                    else None,
-                )
+                kwarg_hash = self.add(v,)
                 children.kwargs[k] = kwarg_hash
 
                 # Update expression with child, so that points to same one
@@ -187,8 +130,7 @@ class NormalizedExpressions:
         return hash
 
     def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
-        new_expressions = NormalizedExpressions(
-        )
+        new_expressions = NormalizedExpressions()
         if not hash:
             # If we didn't get a hash, we are replacing the root node
             root_hash = next(iter(reversed(self.expressions)))
@@ -206,9 +148,8 @@ class NormalizedExpressions:
 
             root_hash = self._get_root(hash)
             root_expr = self.expressions[root_hash].value
-        new_expressions.add(root_expr, (root_hash, self.expressions))
+        new_expressions.add(root_expr)
         self.expressions = new_expressions.expressions
-
 
     def _get_root(self, hash: Hash) -> Hash:
         parents = list(self.expressions[hash].parents)
