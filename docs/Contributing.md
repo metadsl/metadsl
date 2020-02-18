@@ -11,9 +11,8 @@ repo2docker -E .
 Or get started with Conda/flit:
 
 ```bash
-conda create -n metadsl jupyterlab llvmlite
+conda env create -f binder/environment.yml
 conda activate metadsl
-pip install flit
 flit -f typez.pyproject.toml install --symlink
 flit install --symlink
 flit -f core.pyproject.toml install --symlink
@@ -61,4 +60,20 @@ python -m pudb Notebook.py
 
 ```bash
 sphinx-autobuild docs docs/_build/html/
+```
+
+### Requirements
+
+You can generate a new `environment.yml` from our project dependencies with:
+
+```bash
+beni pyproject.toml *.pyproject.toml --ignore \
+    typing_extensions\
+    typing_inspect \
+    pytest \
+    pytest-mypy \
+    pytest-xdist \
+    pytest-cov \
+    pytest-testmo \
+> binder/environment.yml
 ```

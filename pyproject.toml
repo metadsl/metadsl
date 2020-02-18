@@ -9,9 +9,10 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "typing_extensions",
-    "typing_inspect"
+    "typing_inspect",
+    "python-igraph>=0.8.0"
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
@@ -22,12 +23,11 @@ classifiers = [
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest",
+    "pytest>=3.6.0",
     "pytest-cov",
     "pytest-mypy",
     "pytest-randomly",
     "pytest-xdist",
-    "pytest-testmon",
     "pytest-pudb",
     "mypy"
 ]
@@ -44,5 +44,6 @@ doc = [
 dev = [
     "jupyterlab>=1.0.0",
     "nbconvert",
-    "pudb"
+    "pudb",
+    "beni"
 ]

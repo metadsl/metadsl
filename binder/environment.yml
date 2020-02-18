@@ -1,0 +1,27 @@
+channels:
+- conda-forge
+dependencies:
+- pip:
+  - flit
+- black
+- jsonschema
+- pudb
+- numpy
+- pytest-testmon
+- recommonmark
+- sphinx_rtd_theme
+- pip
+- jupyterlab>=1.0.0
+- nbsphinx
+- IPython
+- nbconvert
+- sphinx-autodoc-typehints
+- sphinx-autobuild
+- ipykernel
+- python-igraph>=0.8.0
+- llvmlite
+- python>=3.8
+- mypy
+- sphinx
+name: metadsl
+
