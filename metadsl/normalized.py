@@ -230,12 +230,12 @@ class ExpressionReference:
 
         If this is the root node, will return them in topo order, otherwise will be arbitrary
         """
-        # If we are the root node return all topological with root nodes first
+        # If we are the root node return all topological with root nodes last
         if not self._optional_hash:
-            indices = self._graph.topological_sorting()
+            indices = self._graph.topological_sorting(igraph.IN)
         # Otherwise return all subcomponents
         else:
-            indices = self._graph.subcomponent(self.hash, "OUT")
+            indices = self._graph.subcomponent(self.hash, igraph.OUT)
         return map(self._copy, indices)
 
     def _copy(self, new_vertex_index: int) -> ExpressionReference:
