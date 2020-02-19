@@ -78,7 +78,7 @@ class DefaultRule:
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
-        expr = ref.normalized_expression.value
+        expr = ref.expression
         if not isinstance(expr, Expression):
             return
 
@@ -179,7 +179,7 @@ class MatchRule:
         )
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
-        expr = ref.normalized_expression.value
+        expr = ref.expression
         for i, result in enumerate(self.results):
             template, _ = result
             try:

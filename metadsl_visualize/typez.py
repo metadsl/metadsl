@@ -73,18 +73,17 @@ class ExpressionDisplay:
 
 def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
-    Converts an expression into a node mapping and also returns the ID for the top level node.
+    Converts an expression into a node mapping.
     """
     nodes: Nodes = []
-    for hash_, expr in ref.expressions.expressions.items():
+    for ref in ref.descendents:
         node: typing.Union[CallNode, PrimitiveNode]
-        value = expr.value
+        value = ref.expression
         if isinstance(value, metadsl.Expression):
-            children = expr.children
-            assert children
+            children = ref.children
             func_str = function_or_type_repr(value.function)
             node = CallNode(
-                id=str(hash_),
+                id=str(ref.hash),
                 type_params=typevars_to_typeparams(
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
@@ -95,7 +94,7 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             )
         else:
             node = PrimitiveNode(
-                id=str(hash_),
+                id=str(ref.hash),
                 type=function_or_type_repr(type(value)),
                 repr=metadsl_str(value),
             )

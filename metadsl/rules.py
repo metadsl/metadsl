@@ -75,7 +75,7 @@ def _execute_all(ref: ExpressionReference, rule: Rule) -> object:
     """
     for replacement in rule(ref):
         pass
-    return ref.normalized_expression.value
+    return ref.expression
 
 
 # Execute should be called on an expression to get the result
@@ -233,7 +233,7 @@ class RuleFold:
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Replacement]:
         rule: Rule = self.rule  # type: ignore
-        for child_ref in expr.children:
+        for child_ref in expr.descendents:
             for replacement in rule(child_ref):
                 yield replacement
                 return

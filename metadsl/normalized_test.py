@@ -11,8 +11,7 @@ from .expressions_test import TEST_EXPRESSIONS
 @pytest.mark.parametrize("expr", TEST_EXPRESSIONS)
 def test_expression_reference_identity(expr):
     ref = ExpressionReference.from_expression(expr)
-    ref.verify_integrity()
-    assert ref.normalized_expression.value == expr
+    assert ref.expression == expr
 
 
 @expression
@@ -37,52 +36,43 @@ def d() -> typing.Any:
 
 def test_replace():
     ref = ExpressionReference.from_expression(a(b(c())))
-    ref.verify_integrity()
-    original_hashes, original_expr = zip(
-        *((child.hash, child.normalized_expression.value,) for child in ref.children)
-    )
 
-    assert original_expr == (a(b(c())), b(c()), c())
+    assert tuple(child.expression for child in ref.descendents) == (
+        a(b(c())),
+        b(c()),
+        c(),
+    )
 
     ref.replace(a(b(d())))
-    ref.verify_integrity()
 
-    new_hashes, new_expr = zip(
-        *((child.hash, child.normalized_expression.value,) for child in ref.children)
+    assert ref.expression == a(b(d()))
+
+    assert tuple(child.expression for child in ref.descendents) == (
+        a(b(d())),
+        b(d()),
+        d(),
     )
-
-    assert new_expr == (a(b(d())), b(d()), d())
-
-    # None of the hashes should be the same
-    for i in (0, 1, 2):
-        assert original_hashes[i] != new_hashes[i]
 
 
 def test_replace_child():
     ref = ExpressionReference.from_expression(a(b(c())))
 
-    ref.verify_integrity()
-
-    original_hashes, original_expr = zip(
-        *((child.hash, child.normalized_expression.value,) for child in ref.children)
+    assert tuple(child.expression for child in ref.descendents) == (
+        a(b(c())),
+        b(c()),
+        c(),
     )
 
-    assert original_expr == (a(b(c())), b(c()), c())
-    child_ref = list(ref.children)[-1]
+    child_ref = list(ref.descendents)[-1]
     child_ref.replace(d())
-    child_ref.verify_integrity()
 
-    ref.verify_integrity()
+    assert ref.expression == a(b(d()))
 
-    new_hashes, new_expr = zip(
-        *((child.hash, child.normalized_expression.value,) for child in ref.children)
+    assert tuple(child.expression for child in ref.descendents) == (
+        a(b(d())),
+        b(d()),
+        d(),
     )
-
-    assert new_expr == (a(b(d())), b(d()), d())
-
-    # None of the hashes should be the same
-    for i in (0, 1, 2):
-        assert original_hashes[i] != new_hashes[i]
 
 
 @expression
@@ -106,16 +96,12 @@ def test_graph_subtree():
     """
     orig = e(f(g(d())), d())
     ref = ExpressionReference.from_expression(orig)
-    ref.verify_integrity()
-    assert ref.normalized_expression.value == orig
+    assert ref.expression == orig
 
 
 def test_doesnt_remember_replacements():
     ref = ExpressionReference.from_expression(a(b(c())))
-    ref.verify_integrity()
     ref.replace(a(b(d())))
-    ref.verify_integrity()
     ref.replace(a(b(c())))
-    ref.verify_integrity()
 
-    assert ref.normalized_expression.value == a(b(c()))
+    assert ref.expression == a(b(c()))

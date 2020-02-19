@@ -27,7 +27,7 @@ def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
     # Update the typez display as we execute the rules
     for replacement in rule(ref):
         expression_display.update(replacement.rule, replacement.label)
-    return ref.normalized_expression.value
+    return ref.expression
 
 
 def monkeypatch():
