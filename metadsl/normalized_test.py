@@ -38,9 +38,9 @@ def test_replace():
     ref = ExpressionReference.from_expression(a(b(c())))
 
     assert tuple(child.expression for child in ref.descendents) == (
-        a(b(c())),
-        b(c()),
         c(),
+        b(c()),
+        a(b(c())),
     )
 
     ref.replace(a(b(d())))
@@ -48,9 +48,9 @@ def test_replace():
     assert ref.expression == a(b(d()))
 
     assert tuple(child.expression for child in ref.descendents) == (
-        a(b(d())),
-        b(d()),
         d(),
+        b(d()),
+        a(b(d())),
     )
 
 
@@ -58,20 +58,20 @@ def test_replace_child():
     ref = ExpressionReference.from_expression(a(b(c())))
 
     assert tuple(child.expression for child in ref.descendents) == (
-        a(b(c())),
-        b(c()),
         c(),
+        b(c()),
+        a(b(c())),
     )
 
-    child_ref = list(ref.descendents)[-1]
+    child_ref = list(ref.descendents)[0]
     child_ref.replace(d())
 
     assert ref.expression == a(b(d()))
 
     assert tuple(child.expression for child in ref.descendents) == (
-        a(b(d())),
-        b(d()),
         d(),
+        b(d()),
+        a(b(d())),
     )
 
 

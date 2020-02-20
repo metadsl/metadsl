@@ -51,22 +51,18 @@ class Graph(igraph.Graph):
             self,
             layout=self.layout_sugiyama(),
             vertex_label=[
-                str(
-                    v["expression"].function
-                    if isinstance(v["expression"], Expression)
-                    else v["expression"]
-                )
+                f'{v.index}: {v["expression"].function if isinstance(v["expression"], Expression) else v["expression"]}'
                 for v in self.vs
             ],
             edge_label=self.es["index"],
-            vertex_shape="hidden",
+            # vertex_shape="hidden",
         )
 
     def fully_add_expression(
         self,
         expr: object,
         replace: typing.Optional[typing.Tuple[Hash, object]],
-        *parent_ids: int
+        *parent_ids: int,
     ) -> Hash:
         # should never be a child of one of its parents, or else we have a cycle
         assert id(expr) not in parent_ids
@@ -113,21 +109,28 @@ class Graph(igraph.Graph):
     def lookup(self, hash_: Hash) -> igraph.Vertex:
         return self.vs.find(name=hash_)
 
-    def replace_expression(
-        self, expr: object, prev_hash: typing.Optional[Hash]
-    ) -> None:
-        root_expression = self.lookup(self.root_hash)["expression"]
+    def replace_root(self, expr: object):
+        self.delete_vertices(self.vs)
+        self.fully_add_expression(expr, None)
+        self.assert_integrity()
 
+    def replace_child(self, expr: object, prev_index: int) -> None:
+        # Compute previous hash on the fly instead of passing it in b/c even though previous index
+        # must stay constant, the previous hash could have changed between we created this sub-graph
+        # and after the rule when we are replacing the expression
+        root_expression = self.root_vertex["expression"]
+
+        prev_expr = self.vs[prev_index]["expression"]
         # clear graph
         self.delete_vertices(self.vs)
-        if prev_hash:
-            new_hash = self.fully_add_expression(root_expression, (prev_hash, expr))
-            # Remove all vertice not children of new root node
-            self.delete_vertices(
-                set(self.vs.indices) - set(self.subcomponent(new_hash, igraph.OUT))
-            )
-        else:
-            self.fully_add_expression(expr, None)
+        prev_hash = self.fully_add_expression(prev_expr, None)
+
+        self.delete_vertices(self.vs)
+        new_hash = self.fully_add_expression(root_expression, (prev_hash, expr))
+        # Remove all vertice not children of new root node
+        self.delete_vertices(
+            set(self.vs.indices) - set(self.subcomponent(new_hash, igraph.OUT))
+        )
         self.assert_integrity()
 
     def assert_integrity(self):
@@ -152,8 +155,8 @@ class Graph(igraph.Graph):
                 assert id(child_expr) == id(e.target_vertex["expression"])
 
     @property
-    def root_hash(self) -> Hash:
-        return self.vs.select(_indegree_eq=0)[0]["name"]
+    def root_vertex(self) -> igraph.Vertex:
+        return self.vs.select(_indegree_eq=0)[0]
 
 
 @dataclasses.dataclass
@@ -165,7 +168,7 @@ class ExpressionReference:
 
     _graph: Graph
     # Top level vertex if the top level is not root, else None
-    _optional_hash: typing.Optional[Hash]
+    _optional_index: typing.Optional[int]
 
     @classmethod
     def from_expression(cls, expr: object) -> ExpressionReference:
@@ -176,23 +179,39 @@ class ExpressionReference:
         # top level expression will be first added vertex
         return cls(graph, None)
 
+    @property
+    def _is_root(self):
+        return self._optional_index is None
+
     def replace(self, new_expression: object) -> None:
         """
         Replace this expression with a new one
         """
-        self._graph.replace_expression(new_expression, self._optional_hash)
-        self._optional_hash = None
+
+        if self._is_root:
+            self._graph.replace_root(new_expression)
+        else:
+            self._graph.replace_child(
+                new_expression, typing.cast(int, self._optional_index)
+            )
+            # Reset index after replacing b/c we don't know index of newly replaced child
+            # (we could, but not sure we need it since we only replace once then through this object away)
+            self._optional_index = None
+
+    @property
+    def _index(self) -> int:
+        return self._graph.root_vertex.index if self._is_root else self._optional_index
 
     @property
     def _vertex(self) -> igraph.Vertex:
-        return self._graph.lookup(self.hash)
+        return self._graph.vs[self._index]
 
     @property
     def hash(self) -> Hash:
         """
         Returns the Hash of the top level expression
         """
-        return Hash(self._optional_hash or self._graph.root_hash)
+        return Hash(self._vertex["name"])
 
     @property
     def expression(self) -> object:
@@ -231,17 +250,12 @@ class ExpressionReference:
         If this is the root node, will return them in topo order, otherwise will be arbitrary
         """
         # If we are the root node return all topological with root nodes last
-        if not self._optional_hash:
+        if self._is_root:
             indices = self._graph.topological_sorting(igraph.IN)
         # Otherwise return all subcomponents
         else:
-            indices = self._graph.subcomponent(self.hash, igraph.OUT)
-        return map(self._copy, indices)
-
-    def _copy(self, new_vertex_index: int) -> ExpressionReference:
-        return ExpressionReference(
-            self._graph, self._graph.vs[new_vertex_index]["name"]
-        )
+            indices = self._graph.subcomponent(self._optional_index, igraph.OUT)
+        return [ExpressionReference(self._graph, i) for i in indices]
 
 
 @dataclasses.dataclass(frozen=True)
