@@ -226,5 +226,5 @@ export default function CytoscapeComponent({
     updateSelection();
   }, [cy.current, elements]);
 
-  return <div style={{ height: "500px" }} ref={ref} />;
+  return <div style={{ height: "800px" }} ref={ref} />;
 }
