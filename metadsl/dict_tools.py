@@ -2,7 +2,7 @@ import collections.abc
 import dataclasses
 import typing
 
-__all__ = ["safe_merge", "Item", "UnhashableMapping"]
+__all__ = ["safe_merge", "Item", "UnhashableMapping", "HashableMapping"]
 
 T = typing.TypeVar("T")
 V = typing.TypeVar("V")
@@ -12,6 +12,36 @@ V = typing.TypeVar("V")
 class Item(typing.Generic[T, V]):
     key: T
     value: V
+
+
+@dataclasses.dataclass(init=False, frozen=True)
+class HashableMapping(collections.abc.Mapping, typing.Generic[T, V]):
+    """
+    Like a dictionary, but immutable and hashable.
+    """
+
+    _items: typing.Tuple[typing.Tuple[T, V], ...]
+
+    def __init__(self, mapping: typing.Mapping[T, V]):
+        object.__setattr__(
+            self, "_items", tuple((k, v) for k, v in mapping.items())
+        )
+
+    def __hash__(self):
+        return hash(self._items)
+
+    def __getitem__(self, key: T) -> V:
+        for item in self._items:
+            if item[0] == key:
+                return item[1]
+        raise KeyError()
+
+    def __iter__(self):
+        for item in self._items:
+            yield item[0]
+
+    def __len__(self):
+        return len(self._items)
 
 
 @dataclasses.dataclass(init=False)
@@ -52,7 +82,7 @@ class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
             yield item.key
 
     def __len__(self):
-        return len(self.items)
+        return len(self._items)
 
 
 def safe_merge(

@@ -1,10 +1,107 @@
 {
-  "$ref": "#/definitions/Typez",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "CallNode": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "function": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kwargs": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "type_params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "params": {
+                    "additionalProperties": {
+                      "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4561391487194"
+                    },
+                    "type": "object"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "repr": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "repr"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A type that is passed into a function to set one of its  type"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "function"
+      ],
+      "type": "object"
+    },
+    "Nodes": {
+      "description": "A mapping of node IDs to the functions",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/CallNode"
+          },
+          {
+            "additionalProperties": false,
+            "description": "A primitive node that represents some type in  the host language",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "repr": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "repr"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "type": "array"
+    },
     "Typez": {
       "additionalProperties": false,
-      "description": "OK the idea here is to be able to represent our types and functions in JSON.\n\nWhy? Good question, well I think it makes the core system a lot smaller.\nYou can also more easily generate JSON then generate Python code.\n\nThe idea would be to use this JSON to generate `metadsl` code.\n\nThis type system is pretty much like System F, because types can take\nparameters, except it doesn't allow functions to take functions as parameters,\nonly values. Why this restriction? Not sure exactly, I just came to this\nsetup when building from the top down. We actually build an untyped lambda\ncalculus *embedded* in this system, so we use that pass functions to other functions.\n\nIt's a system for building DSLs, so the functions that you pass around are not first\nclass, they are just data structures that represent functions aka the simply typed\nlambda calculus. It seems to work!\n\nTakes a look at the `metadsl_core` package next to this one, if you wanna see\nwhat these things look like in Python land. \n First we start with some definitions of our type system itself.\n\nThe idea is these typescript types could be translated into JSON schema\nwith https://github.com/vega/ts-json-schema-generator/ \n A combination of defintions, nodes, and states.\n\nThe nodes should refer to types in the definitions, and  the states\nshould refer to the nodes.",
+      "description": "A combination of defintions, nodes, and states.\n\nThe nodes should refer to types in the definitions, and  the states\nshould refer to the nodes.",
       "properties": {
         "definitions": {
           "additionalProperties": {
@@ -50,7 +147,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                                    "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
                                   },
                                   "type": "object"
                                 },
@@ -115,7 +212,7 @@
                                 "properties": {
                                   "params": {
                                     "additionalProperties": {
-                                      "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                                      "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
                                     },
                                     "type": "object"
                                   },
@@ -176,7 +273,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                              "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
                             },
                             "type": "object"
                           },
@@ -227,102 +324,7 @@
           "type": "object"
         },
         "nodes": {
-          "additionalProperties": {
-            "items": [
-              {
-                "description": "This ID is used to keep track of nodes accross states. Different\nnodes may be related to each other, like one turned into the other,\nso we give them the same persistant ID to aid in visualization.",
-                "type": "string"
-              },
-              {
-                "anyOf": [
-                  {
-                    "additionalProperties": false,
-                    "properties": {
-                      "args": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      "function": {
-                        "type": "string"
-                      },
-                      "kwargs": {
-                        "additionalProperties": {
-                          "type": "string"
-                        },
-                        "type": "object"
-                      },
-                      "type_params": {
-                        "additionalProperties": {
-                          "anyOf": [
-                            {
-                              "additionalProperties": false,
-                              "properties": {
-                                "params": {
-                                  "additionalProperties": {
-                                    "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
-                                  },
-                                  "type": "object"
-                                },
-                                "type": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "type"
-                              ],
-                              "type": "object"
-                            },
-                            {
-                              "additionalProperties": false,
-                              "properties": {
-                                "repr": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "repr"
-                              ],
-                              "type": "object"
-                            }
-                          ],
-                          "description": "A type that is passed into a function to set one of its  type"
-                        },
-                        "type": "object"
-                      }
-                    },
-                    "required": [
-                      "function"
-                    ],
-                    "type": "object"
-                  },
-                  {
-                    "additionalProperties": false,
-                    "description": "A primitive node that represents some type in  the host language",
-                    "properties": {
-                      "repr": {
-                        "type": "string"
-                      },
-                      "type": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "repr"
-                    ],
-                    "type": "object"
-                  }
-                ]
-              }
-            ],
-            "maxItems": 2,
-            "minItems": 2,
-            "type": "array"
-          },
-          "description": "A mapping of node IDs to the functions",
-          "type": "object"
+          "$ref": "#/definitions/Nodes"
         },
         "states": {
           "additionalProperties": false,
@@ -362,7 +364,7 @@
       },
       "type": "object"
     },
-    "alias-src/schema.ts-2495-2601-src/schema.ts-0-4797": {
+    "alias-src/schema.ts-2494-2600-src/schema.ts-0-4561328996174": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -381,7 +383,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src/schema.ts-2495-2601-src/schema.ts-0-4797"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
               },
               "type": "object"
             },
@@ -413,14 +415,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-src/schema.ts-3573-3712-src/schema.ts-0-4797": {
+    "alias-src/schema.ts-3340-3479-src/schema.ts-0-4561391487194": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src/schema.ts-3573-3712-src/schema.ts-0-4797"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4561391487194"
               },
               "type": "object"
             },

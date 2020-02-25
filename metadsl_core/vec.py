@@ -50,6 +50,81 @@ class Vec(Expression, typing.Generic[T]):
                 return ret
         """
 
+    @expression
+    def __add__(self, other: Vec[T]) -> Vec[T]:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def length(self) -> Integer:
+        ...
+
+    @expression
+    def take(self, i: Integer) -> Vec[T]:
+        ...
+
+    @expression
+    def drop(self, i: Integer) -> Vec[T]:
+        ...
+
+    @expression
+    @classmethod
+    def create_fn(cls, length: Integer, fn: Abstraction[Integer, T]) -> Vec[T]:
+        ...
+
+
+@register
+@rule
+def create_fn_rules(
+    l: Integer,
+    fn: Abstraction[Integer, T],
+    x: T,
+    l1: Integer,
+    fn1: Abstraction[Integer, T],
+    n: Integer,
+):
+    v = Vec.create_fn(l, fn)
+    v1 = Vec.create_fn(l1, fn1)
+    one = Integer.from_int(1)
+    yield v[l], fn(l)
+    yield v.append(x), Vec.create_fn(
+        l + one, Abstraction[Integer, T].from_fn(lambda i: (i < l).if_(fn(i), x))
+    )
+    yield v + v1, Vec.create_fn(
+        l + l1,
+        Abstraction[Integer, T].from_fn(lambda i: (i < l).if_(fn(i), fn1(i - l1))),
+    )
+    yield v.length, l
+    yield v.take(n), Vec.create_fn(l - n, fn)
+    yield v.drop(n), Vec.create_fn(
+        l - n, Abstraction[Integer, T].from_fn(lambda i: fn(i + n)),
+    )
+
+
+@register  # type: ignore
+@rule
+def length_rule(xs: typing.Sequence[T]) -> R[Integer]:
+    return (Vec[T].create(*xs).length, lambda: Integer.from_int(len(xs)))
+
+
+@register  # type: ignore
+@rule
+def take_drop_rule(xs: typing.Sequence[T], i: int) -> R[Vec[T]]:
+    yield (
+        Vec[T].create(*xs).take(Integer.from_int(i)),
+        lambda: Vec[T].create(*xs[:i]),
+    )
+    yield (
+        Vec[T].create(*xs).drop(Integer.from_int(i)),
+        lambda: Vec[T].create(*xs[i:]),
+    )
+
+
+@register  # type: ignore
+@rule
+def add_rule(ls: typing.Sequence[T], rs: typing.Sequence[T]) -> R[Vec[T]]:
+    return (Vec[T].create(*ls) + Vec[T].create(*rs), Vec[T].create(*ls, *rs))
+
 
 @register  # type: ignore
 @rule

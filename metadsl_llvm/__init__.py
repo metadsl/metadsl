@@ -5,7 +5,10 @@ LLVM support.
 __version__ = "0.1.0"
 
 
-from .rules import *
-from .llvmlite_ir import *
-from .llvmlite_binding import *
 from .ctypes import *
+from .integration import *
+from .ir_llvmlite import *
+from .ir import *
+from .llvmlite_binding import *
+from .ir_context import *
+from . import rules as __llvmlite_rules  # NOQA

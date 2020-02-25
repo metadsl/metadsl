@@ -3,15 +3,30 @@ Integeration with typez, to translate a "Rule" into a something that takes retur
 typez object we can use to display as we go.
 """
 
-from typez import *
-import metadsl
-import typing
-import inspect
 import dataclasses
-import typing_inspect
+import functools
+import inspect
+import types
+import typing
 import warnings
 
+import metadsl
+import typing_inspect
+from typez import *
+
 __all__ = ["ExpressionDisplay", "SHOW_MODULE"]
+
+
+@functools.singledispatch
+def metadsl_str(value: object) -> str:
+    return str(value)
+
+
+@metadsl_str.register
+def metadsl_str_fn(fn: types.FunctionType) -> str:
+    if not SHOW_TYPES or not hasattr(fn, "__scoped_typevars__"):
+        return str(fn)
+    return f"{fn} (scoped_typevars={fn.__scoped_typevars__})"  # type: ignore
 
 
 @dataclasses.dataclass
@@ -31,9 +46,14 @@ class ExpressionDisplay:
 
     def update(self, rule: str, label: typing.Optional[str] = None):
         new_nodes = convert_to_nodes(self.ref)
+        old_nodes = self.typez_display.typez.nodes or []
+        old_node_ids = set(node.id for node in old_nodes)
         self.typez_display.typez = dataclasses.replace(
             self.typez_display.typez,
-            nodes={**(self.typez_display.typez.nodes or {}), **new_nodes},
+            # Must keep in topo order with the root expression at the end
+            nodes=(
+                old_nodes + [node for node in new_nodes if node.id not in old_node_ids]
+            ),
             states=dataclasses.replace(
                 self.typez_display.typez.states,
                 states=[
@@ -53,18 +73,17 @@ class ExpressionDisplay:
 
 def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
-    Converts an expression into a node mapping and also returns the ID for the top level node.
+    Converts an expression into a node mapping.
     """
-    expressions = ref.expressions
-    nodes: Nodes = {}
-    for hash_, expr in expressions.expressions.items():
+    nodes: Nodes = []
+    for ref in ref.descendents:
         node: typing.Union[CallNode, PrimitiveNode]
-        value = expr.value
+        value = ref.expression
         if isinstance(value, metadsl.Expression):
-            children = expr.children
-            assert children
+            children = ref.children
             func_str = function_or_type_repr(value.function)
             node = CallNode(
+                id=str(ref.hash),
                 type_params=typevars_to_typeparams(
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
@@ -75,14 +94,16 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
             )
         else:
             node = PrimitiveNode(
-                type=function_or_type_repr(type(value)), repr=str(value)
+                id=str(ref.hash),
+                type=function_or_type_repr(type(value)),
+                repr=metadsl_str(value),
             )
-        nodes[str(hash_)] = [str(expr.id), node]  # type: ignore
+        nodes.append(node)
     return nodes
 
 
 def typevars_to_typeparams(
-    typevars: metadsl.typing_tools.TypeVarMapping
+    typevars: metadsl.typing_tools.TypeVarMapping,
 ) -> typing.Dict[str, TypeInstance]:
     return {
         var.__name__: type_to_typeinstance(tp)  # type: ignore
@@ -142,4 +163,5 @@ def function_or_type_repr(o: typing.Union[typing.Type, typing.Callable]) -> str:
     module = inspect.getmodule(o)
     if module == _builtins:
         return name
+    assert module
     return f"{module.__name__}.{name}"

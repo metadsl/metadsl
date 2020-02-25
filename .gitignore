@@ -27,3 +27,5 @@ Demo.py
 *.prof
 tmp.py
 .DS_Store
+Untitled*.ipynb
+explorations/Untitled*.ipynb

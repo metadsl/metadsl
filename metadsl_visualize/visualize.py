@@ -16,11 +16,18 @@ def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
     Returns the replaced version of this expression and also displays the execution trace.
     """
     expression_display = ExpressionDisplay(ref)
-    IPython.core.display.display(expression_display)
+
+    # Only display expressions if in notebook, not in shell
+    if (
+        IPython.get_ipython()
+        and IPython.get_ipython().__class__.__name__ == "ZMQInteractiveShell"
+    ):
+        IPython.core.display.display(expression_display)
+
     # Update the typez display as we execute the rules
     for replacement in rule(ref):
         expression_display.update(replacement.rule, replacement.label)
-    return ref.normalized_expression.value
+    return ref.expression
 
 
 def monkeypatch():

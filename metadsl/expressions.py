@@ -85,7 +85,7 @@ class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
     """
 
     def __iter__(self):
-        return iter((create_iterated_placeholder(self),))
+        return iter((create_iterated_placeholder(self),))  # type: ignore
 
 
 def extract_expression_type(t: typing.Type) -> typing.Type[Expression]:
@@ -117,7 +117,7 @@ class IteratedPlaceholder(Expression, ExpandedType, typing.Generic[T]):
 
 @expression
 def create_iterated_placeholder(
-    i: PlaceholderExpression[typing.Sequence[T]]
+    i: PlaceholderExpression[typing.Sequence[T]],
 ) -> IteratedPlaceholder[T]:
     """
     If a placeholder is of an iterable T, calling iter on it should return an iterable placeholder of the inner type.
@@ -145,7 +145,7 @@ class ExpressionFolder:
             return fn(
                 (replace_fn_typevars(expr.function, self.typevars))(
                     *(self(arg) for arg in expr.args),
-                    **{k: self(v) for k, v in expr.kwargs},
+                    **{k: self(v) for k, v in expr.kwargs.items()},
                 )
             )
         return fn(expr)

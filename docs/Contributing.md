@@ -11,7 +11,7 @@ repo2docker -E .
 Or get started with Conda/flit:
 
 ```bash
-conda create -n metadsl python=3.7 jupyterlab llvmlite flit
+conda env create -f binder/environment.yml
 conda activate metadsl
 flit -f typez.pyproject.toml install --symlink
 flit install --symlink
@@ -40,6 +40,12 @@ You can also test that the documentation notebooks run correctly, but this
 pytest docs/*.ipynb --nbval
 ```
 
+You can also run tests through ipython, to test if the custom visualizations all work:
+
+```bash
+ipython -m pytest
+```
+
 ### Debugging
 
 If you have a notebook that isn't working, one way to debug it is to convert it to a Python
@@ -54,4 +60,20 @@ python -m pudb Notebook.py
 
 ```bash
 sphinx-autobuild docs docs/_build/html/
+```
+
+### Requirements
+
+You can generate a new `environment.yml` from our project dependencies with:
+
+```bash
+beni pyproject.toml *.pyproject.toml --ignore \
+    typing_extensions\
+    typing_inspect \
+    pytest \
+    pytest-mypy \
+    pytest-xdist \
+    pytest-cov \
+    pytest-testmo \
+> binder/environment.yml
 ```

@@ -1,7 +1,5 @@
 """
 Normalized expressions, for deduping and single replacements.
-
-IDs should be consistant accross replacements.
 """
 from __future__ import annotations
 import dataclasses
@@ -9,30 +7,266 @@ import typing
 import itertools
 import collections
 import functools
-
+import IPython.core.display
+import igraph
 
 from .expressions import *
 
 
 __all__ = [
     "ExpressionReference",
-    "NormalizedExpression",
-    "NormalizedExpressions",
-    "Parent",
     "Children",
-    "hash_value",
     "Hash",
-    "ID",
+    "hash_value",
 ]
 
-ID = typing.NewType("ID", int)
-Hash = typing.NewType("Hash", int)
+Hash = typing.NewType("Hash", str)
+
+
+class Graph(igraph.Graph):
+    """
+    Graph of all expression
+
+
+
+    Vertex attributes:
+    * `name`: string of hash of expression or None if not computed yet
+    * `expression`: expression object
+
+    Edge Attributes:
+    * `index`: int or string
+    """
+
+    def __init__(self, expr: object):
+        super().__init__(directed=True)
+
+        self.fully_add_expression(expr, None)
+        self.assert_integrity()
+
+    def _repr_svg_(self):
+        return self.plot_custom()._repr_svg_()
+
+    def plot_custom(self):
+        return igraph.plot(
+            self,
+            layout=self.layout_sugiyama(),
+            vertex_label=[
+                f'{v.index}: {v["expression"].function if isinstance(v["expression"], Expression) else v["expression"]}'
+                for v in self.vs
+            ],
+            edge_label=self.es["index"],
+            # vertex_shape="hidden",
+        )
+
+    def fully_add_expression(
+        self,
+        expr: object,
+        replace: typing.Optional[typing.Tuple[Hash, object]],
+        *parent_ids: int,
+    ) -> Hash:
+        # should never be a child of one of its parents, or else we have a cycle
+        assert id(expr) not in parent_ids
+        children = frozenset(
+            (
+                index,
+                self.fully_add_expression(
+                    child_expression, replace, id(expr), *parent_ids
+                ),
+            )
+            for index, child_expression in expression_children(expr)
+        )
+        hash_ = Hash(
+            str(
+                hash(
+                    (
+                        expr.function
+                        if isinstance(expr, Expression)
+                        else hash_value(expr),
+                        children,
+                    )
+                )
+            )
+        )
+        # If we are replacing a hash with a new expression and this is the hash of current expression, use the new one instead
+        # This means we have added a bunch of nodes we dont need possibly, so we can delete those at the end
+        if replace and hash_ == replace[0]:
+            return self.fully_add_expression(replace[1], None, *parent_ids)
+        try:
+            self.lookup(hash_)
+        except ValueError:
+            v = self.add_vertex(expression=expr, name=hash_)
+
+            for index, child_hash in children:
+                assert isinstance(expr, Expression)
+                child_v = self.lookup(child_hash)
+                self.add_edge(v, child_v, index=index)
+                if isinstance(index, int):
+                    expr.args[index] = child_v["expression"]
+                else:
+                    expr.kwargs[index] = child_v["expression"]
+        return Hash(hash_)
+
+    def lookup(self, hash_: Hash) -> igraph.Vertex:
+        return self.vs.find(name=hash_)
+
+    def replace_root(self, expr: object):
+        self.delete_vertices(self.vs)
+        self.fully_add_expression(expr, None)
+        self.assert_integrity()
+
+    def replace_child(self, expr: object, prev_index: int) -> None:
+        # Compute previous hash on the fly instead of passing it in b/c even though previous index
+        # must stay constant, the previous hash could have changed between we created this sub-graph
+        # and after the rule when we are replacing the expression
+        root_expression = self.root_vertex["expression"]
+
+        prev_expr = self.vs[prev_index]["expression"]
+        # clear graph
+        self.delete_vertices(self.vs)
+        prev_hash = self.fully_add_expression(prev_expr, None)
+
+        self.delete_vertices(self.vs)
+        new_hash = self.fully_add_expression(root_expression, (prev_hash, expr))
+        # Remove all vertice not children of new root node
+        self.delete_vertices(
+            set(self.vs.indices) - set(self.subcomponent(new_hash, igraph.OUT))
+        )
+        self.assert_integrity()
+
+    def assert_integrity(self):
+        assert self.is_dag()
+        # Verify that this is one connected graph (not multiple roots)
+        assert self.is_connected(igraph.WEAK)
+
+        # Assert hashes and ids are unique
+        hashes = self.vs["name"]
+        assert len(hashes) == len(set(hashes))
+        # assert edges are unique, with respect to source
+        edges = [(e.source, e["index"]) for e in self.es]
+        assert len(edges) == len(set(edges))
+
+        for v in self.vs:
+            expr = v["expression"]
+            for e in v.out_edges():
+                idx = e["index"]
+                child_expr = (
+                    expr.args[idx] if isinstance(idx, int) else expr.kwargs[idx]
+                )
+                assert id(child_expr) == id(e.target_vertex["expression"])
+
+    @property
+    def root_vertex(self) -> igraph.Vertex:
+        return self.vs.select(_indegree_eq=0)[0]
+
+
+@dataclasses.dataclass
+class ExpressionReference:
+    """
+    This is a data structure that holds onto a graph of expression
+    and has a pointer to one node, to represent it.
+    """
+
+    _graph: Graph
+    # Top level vertex if the top level is not root, else None
+    _optional_index: typing.Optional[int]
+
+    @classmethod
+    def from_expression(cls, expr: object) -> ExpressionReference:
+        """
+        Create a new reference from an expression
+        """
+        graph = Graph(expr)
+        # top level expression will be first added vertex
+        return cls(graph, None)
+
+    @property
+    def _is_root(self):
+        return self._optional_index is None
+
+    def replace(self, new_expression: object) -> None:
+        """
+        Replace this expression with a new one
+        """
+
+        if self._is_root:
+            self._graph.replace_root(new_expression)
+        else:
+            self._graph.replace_child(
+                new_expression, typing.cast(int, self._optional_index)
+            )
+            # Reset index after replacing b/c we don't know index of newly replaced child
+            # (we could, but not sure we need it since we only replace once then through this object away)
+            self._optional_index = None
+
+    @property
+    def _index(self) -> int:
+        return self._graph.root_vertex.index if self._is_root else self._optional_index
+
+    @property
+    def _vertex(self) -> igraph.Vertex:
+        return self._graph.vs[self._index]
+
+    @property
+    def hash(self) -> Hash:
+        """
+        Returns the Hash of the top level expression
+        """
+        return Hash(self._vertex["name"])
+
+    @property
+    def expression(self) -> object:
+        """
+        Returns the expression this references
+        """
+        return self._vertex["expression"]
+
+    @property
+    def children(self) -> Children:
+        """
+        Returns the direct children of this node if it has any.
+        """
+        args = {}
+        kwargs = {}
+        for e in self._graph.es[self._graph.incident(self.hash, igraph.OUT)]:
+            index = e["index"]
+            target_hash = e.target_vertex["name"]
+            if isinstance(index, int):
+                args[index] = target_hash
+            else:
+                kwargs[index] = target_hash
+        return Children(
+            kwargs=kwargs,
+            args=tuple(
+                id_ for index, id_ in sorted(args.items(), key=lambda kv: kv[0])
+            ),
+        )
+
+    @property
+    def descendents(self) -> typing.Iterable[ExpressionReference]:
+        """
+        Returns all nodes of this expression reference. If any of them
+        get their expression replaced, it will replace that sub-node of this expression.
+
+        If this is the root node, will return them in topo order, otherwise will be arbitrary
+        """
+        # If we are the root node return all topological with root nodes last
+        if self._is_root:
+            indices = self._graph.topological_sorting(igraph.IN)
+        # Otherwise return all subcomponents
+        else:
+            indices = self._graph.subcomponent(self._optional_index, igraph.OUT)
+        return [ExpressionReference(self._graph, i) for i in indices]
 
 
 @dataclasses.dataclass(frozen=True)
-class Parent:
-    hash: Hash
-    key: typing.Union[str, int]
+class Children:
+    args: typing.Tuple[Hash, ...]
+    kwargs: typing.Dict[str, Hash]
+
+    def _references(
+        self,
+    ) -> typing.Iterable[typing.Tuple[typing.Union[str, int], Hash]]:
+        return itertools.chain(enumerate(self.args), self.kwargs.items())
 
 
 @functools.singledispatch
@@ -44,340 +278,15 @@ def hash_value(value: object) -> int:
     It's a single dispatch function so that you can register custom hashes for objects you don't control.
     """
     try:
-        return Hash(hash((type(value), value)))
+        return hash((type(value), value))
     except TypeError:
-        return Hash(hash((type(value), id(value))))
+        return hash((type(value), id(value)))
 
 
-@dataclasses.dataclass
-class Children:
-    args: typing.List[Hash]
-    kwargs: typing.Dict[str, Hash]
-
-    def references(self) -> typing.Iterable[typing.Tuple[typing.Union[str, int], Hash]]:
-        return itertools.chain(enumerate(self.args), self.kwargs.items())
-
-
-def compute_hash(value: object, children: typing.Optional[Children]) -> Hash:
-    if children:
-        assert isinstance(value, Expression)
-        return Hash(
-            hash(
-                (
-                    value.function,
-                    tuple(children.args),
-                    frozenset(children.kwargs.items()),
-                )
-            )
-        )
-    return Hash(hash_value(value))
-
-
-@dataclasses.dataclass
-class NormalizedExpression:
-    children: typing.Optional[Children]
-    value: object
-    id: ID
-    parents: typing.Set[Parent] = dataclasses.field(default_factory=set)
-
-
-@dataclasses.dataclass
-class NormalizedExpressions:
-    # Expressions, topologically sorted, with the root expression at the end.
-
-    expressions: collections.OrderedDict[
-        Hash, NormalizedExpression
-    ] = dataclasses.field(default_factory=collections.OrderedDict)
-    ids: typing.Dict[ID, Hash] = dataclasses.field(default_factory=dict)
-
-    next_id: ID = ID(0)
-    # THe first hash  added. Used when adding a new expression, so we can record the left
-    # most hash and delete  every hash before that
-    _first_hash: typing.Optional[Hash] = None
-
-    def add(
-        self,
-        expr: object,
-        prev: typing.Optional[
-            typing.Tuple[
-                typing.Optional[Hash],
-                collections.OrderedDict[Hash, NormalizedExpression],
-            ]
-        ] = None,
-    ) -> Hash:
-        """
-        Does a depth addition of the expression to the graph, keeping all the nodes
-        added in topological order, because the children will all be visisted after
-        the parent.
-        """
-
-        children: typing.Optional[Children]
-
-        prev_id: typing.Optional[ID]
-        prev_args: typing.Optional[typing.List[Hash]]
-        prev_kwargs: typing.Optional[typing.Dict[str, Hash]]
-        prev_expressions: typing.Optional[
-            collections.OrderedDict[Hash, NormalizedExpression]
-        ]
-
-        if prev:
-            prev_hash, prev_expressions = prev
-            if prev_hash:
-                prev_ref = prev_expressions[prev_hash]
-                prev_id = prev_ref.id
-                if (
-                    isinstance(prev_ref.value, Expression)
-                    and isinstance(expr, Expression)
-                    and prev_ref.value.function == expr.function
-                ):
-                    assert prev_ref.children
-                    prev_args = prev_ref.children.args
-                    prev_kwargs = prev_ref.children.kwargs
-                else:
-                    prev_args = None
-                    prev_kwargs = None
-            else:
-                prev_id = None
-                prev_args = None
-                prev_kwargs = None
-        else:
-            prev_expressions = None
-            prev_id = None
-            prev_args = None
-            prev_kwargs = None
-
-        if isinstance(expr, Expression):
-            children = Children([], {})
-            for i, arg in enumerate(expr.args):
-                arg_hash = self.add(
-                    arg,
-                    (
-                        prev_args[i] if prev_args and i < len(prev_args) else None,
-                        prev_expressions,
-                    )
-                    if prev_expressions
-                    else None,
-                )
-                children.args.append(arg_hash)
-
-                # Update expression with child, so that points to same one
-                expr.args[i] = self.expressions[arg_hash].value
-            for k, v in expr.kwargs.items():
-                kwarg_hash = self.add(
-                    v,
-                    (
-                        prev_kwargs.get(k, None) if prev_kwargs else None,
-                        prev_expressions,
-                    )
-                    if prev_expressions
-                    else None,
-                )
-                children.kwargs[k] = kwarg_hash
-
-                # Update expression with child, so that points to same one
-                expr.kwargs[k] = self.expressions[kwarg_hash].value
-        else:
-            children = None
-
-        hash = compute_hash(expr, children)
-
-        if children:
-            for key, child_hash in children.references():
-                self.expressions[child_hash].parents.add(Parent(hash, key))
-
-        if not self._first_hash:
-            self._first_hash = hash
-        if hash not in self.expressions:
-            id = self._get_new_id(prev_id)
-            self.expressions[hash] = NormalizedExpression(children, expr, id)
-            self.ids[id] = hash
-        return hash
-
-    def replace(self, hash: typing.Optional[Hash], expr: object) -> None:
-        new_expressions = NormalizedExpressions(next_id=self.next_id)
-        if not hash:
-            # If we didn't get a hash, we are replacing the root node
-            root_hash = next(iter(reversed(self.expressions)))
-            root_expr = expr
-        else:
-            # Otherwise, we are replacing a child node
-            # In which case, we update its parents, and get the root noode
-            for parent in self.expressions[hash].parents:
-                value = self.expressions[parent.hash].value
-                assert isinstance(value, Expression)
-                if isinstance(parent.key, str):
-                    value.kwargs[parent.key] = expr
-                else:
-                    value.args[parent.key] = expr
-
-            root_hash = self._get_root(hash)
-            root_expr = self.expressions[root_hash].value
-        new_expressions.add(root_expr, (root_hash, self.expressions))
-        self.expressions = new_expressions.expressions
-        self.ids = new_expressions.ids
-        self.next_id = new_expressions.next_id
-
-    def _get_new_id(self, prev_id: typing.Optional[ID]) -> ID:
-        if prev_id and prev_id not in self.ids:
-            return prev_id
-        id = self.next_id
-        self.next_id = ID(self.next_id + 1)
-        assert id not in self.ids
-        return id
-
-    def _get_root(self, hash: Hash) -> Hash:
-        parents = list(self.expressions[hash].parents)
-        if parents:
-            return self._get_root(parents[0].hash)
-        return hash
-
-    def _assert_expressions_topological_sorted(self) -> None:
-        """
-        All expressions should be after their children
-        """
-        for i, expr in enumerate(self.expressions.values()):
-            if not expr.children:
-                continue
-            for _, child_hash in expr.children.references():
-                # Children should be to the left of their parents
-                assert self._index_of_hash(child_hash) < i
-
-    def _index_of_hash(self, hash: Hash) -> int:
-
-        for i, hash_ in enumerate(self.expressions.keys()):
-            if hash_ == hash:
-                return i
-        raise RuntimeError()
-
-    def _all_children(self, hash: Hash) -> typing.Set[Hash]:
-        ref = self.expressions[hash]
-        s = {hash}
-        if not ref.children:
-            return s
-        for _, child_hash in ref.children.references():
-            s.update(self._all_children(child_hash))
-        return s
-
-    def _assert_parents_children_consistant(self) -> None:
-        """
-        Asserts that parents match the children.
-
-        For each expression, verifies that all children have this node as a parent, and all parents
-        have this node as a child.
-        """
-
-        for hash, ref in self.expressions.items():
-            for parent in ref.parents:
-                key = parent.key
-                parent_ref = self.expressions[parent.hash]
-                assert parent_ref.children
-                if isinstance(key, str):
-                    assert parent_ref.children.kwargs[key] == hash
-                else:
-                    assert parent_ref.children.args[key] == hash
-
-            if not ref.children:
-                continue
-            for key, child_hash in ref.children.references():
-                child_ref = self.expressions[child_hash]
-                assert Parent(key=key, hash=hash) in child_ref.parents
-
-    def _assert_hashes_accurate(self):
-        for hash, ref in self.expressions.items():
-            assert hash == compute_hash(ref.value, ref.children)
-
-    def _assert_children_match_values(self):
-        for hash, ref in self.expressions.items():
-            value = ref.value
-            if not ref.children:
-                assert not isinstance(value, Expression)
-                continue
-            assert isinstance(value, Expression)
-
-            for h, arg in zip(ref.children.args, value.args):
-                assert self.expressions[h].value is arg
-
-            for k, v in ref.children.kwargs.items():
-                assert value.kwargs[k] is self.expressions[k].value
-
-    def _assert_ids_match(self):
-        for id, hash in self.ids.items():
-            assert self.expressions[hash].id == id
-
-
-T = typing.TypeVar("T")
-
-
-@dataclasses.dataclass
-class ExpressionReference(typing.Generic[T]):
-    # Hash that we refer to. If it is None, then it is the last  expression by default
-    expressions: NormalizedExpressions
-    _hash: typing.Optional[Hash] = dataclasses.field(default=None, repr=False)
-
-    def __post_init__(self):
-        self.verify_integrity()
-
-    @property
-    def hash(self) -> Hash:
-        return self._hash or self.root_hash
-
-    @property
-    def root_hash(self) -> Hash:
-        return next(iter(reversed(self.expressions.expressions)))
-
-    @classmethod
-    def from_expression(cls, expr: T) -> ExpressionReference:
-        expressions = NormalizedExpressions()
-        expressions.add(expr)
-        return cls(expressions)
-
-    @property
-    def normalized_expression(self) -> NormalizedExpression:
-        return self.expressions.expressions[self.hash]
-
-    def replace(self, new_expr: T) -> None:
-        self.expressions.replace(self._hash, new_expr)
-        self._hash = None
-
-        # Optional, this could be disabled to improve performance
-        self.verify_integrity()
-
-    @property
-    def children(self) -> typing.Iterable[ExpressionReference]:
-        """
-        Returns all the children of the graph, starting from the root node
-        and ending in the leaf nodes.
-        """
-        root_node = True
-        for k, v in reversed(self.expressions.expressions.items()):
-            yield ExpressionReference(self.expressions, None if root_node else k)
-            root_node = False
-
-    def verify_integrity(self) -> None:
-        """
-        Verifies a number of properties about the data  structures
-        """
-
-        expressions = self.expressions.expressions
-
-        assert self.hash in expressions
-
-        # Order
-        self.expressions._assert_expressions_topological_sorted()
-
-        all_children = self.expressions._all_children(self.root_hash)
-        all_keys = set(expressions.keys())
-        assert all_children == all_keys
-
-        # IDs
-        assert len(self.expressions.ids) == len(expressions)
-        self.expressions._assert_ids_match()
-
-        # Parents
-        self.expressions._assert_parents_children_consistant()
-
-        # Hashes
-        self.expressions._assert_hashes_accurate()
-
-        # Children
-        self.expressions._assert_children_match_values()
+def expression_children(
+    expr: object,
+) -> typing.Iterable[typing.Tuple[typing.Union[int, str], object]]:
+    if not isinstance(expr, Expression):
+        return
+    yield from enumerate(expr.args)
+    yield from expr.kwargs.items()

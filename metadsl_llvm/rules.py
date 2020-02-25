@@ -1,28 +1,22 @@
-from metadsl import *
-from metadsl_core import *
+import typing
+from metadsl_core import rule_groups
 
-__all__ = [
-    "register_llvmlite_ir_ref",
-    "register_llvmlite_ir",
-    "register_llvmlite_binding",
-    "register_ctypes",
-]
+from .ctypes import ctypes_rules
+from .integration import llvm_integration_rules
+from .ir_llvmlite import ir_llvmlite_rules
+from .llvmlite_binding import llvmlite_binding_rules
+from .ir_context import ir_context_rules
 
-llvmlite_ir_ref_rules = RulesRepeatFold()
-register_llvmlite_ir_ref = llvmlite_ir_ref_rules.append
-rule_groups["llvmlite.ir (reference)"] = llvmlite_ir_ref_rules
+__all__: typing.List[str] = []
 
 
-llvmlite_ir_rules = RulesRepeatFold()
-register_llvmlite_ir = llvmlite_ir_rules.append
-rule_groups["llvmlite.ir"] = llvmlite_ir_rules
-
-
-llvmlite_binding_rules = RulesRepeatFold()
-register_llvmlite_binding = llvmlite_binding_rules.append
-rule_groups["llvmlite.binding"] = llvmlite_binding_rules
-
-
-ctypes_rules = RulesRepeatFold()
-register_ctypes = ctypes_rules.append
-rule_groups["ctypes"] = ctypes_rules
+# First do higher level context rules
+rule_groups["llvmlite.context"] = ir_context_rules
+# First do integration rules so that all functions are created
+rule_groups["llvmlite.integration"] = llvm_integration_rules
+# Then create the llvm modules
+rule_groups["llvmlite.ir_llvmlite"] = ir_llvmlite_rules
+# Finally you can create the ctypes
+rule_groups["llvmlite.ctypes"] = ctypes_rules
+# And then compile into a function
+rule_groups["llvmlite.llvmlite_binding"] = llvmlite_binding_rules
