@@ -5,7 +5,7 @@ To install:
 
 ```sh
 conda create -c conda-forge jupyterlab
-pip install metadsl_core metadsl metadsl_visualize
+pip install metadsl_core metadsl metadsl_visualize metadsl_llvm
 jupyter labextension install typez
 ```
 
