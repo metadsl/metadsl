@@ -2,7 +2,7 @@
 Library to help create DSLs in Python.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .expressions import *
 from .matching import *

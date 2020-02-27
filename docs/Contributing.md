@@ -77,3 +77,20 @@ beni pyproject.toml *.pyproject.toml --ignore \
     pytest-testmo \
 > binder/environment.yml
 ```
+
+
+### Publishing
+
+First bump all versions in Python and JS packages.
+
+
+```bash
+cd typez
+npm publish
+cd ..
+flit -f typez.pyproject.toml publish
+flit -f pyproject.toml publish
+flit -f core.pyproject.toml   publish
+flit -f llvm.pyproject.toml   publish
+flit -f visualize.pyproject.toml    publish
+```
