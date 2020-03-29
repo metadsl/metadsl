@@ -95,6 +95,7 @@ def guess_int(b: int) -> typing.Type[IntCompat]:
 def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
 
+
 @register_convert
 @rule
 def convert_to_int_compat(x: object) -> R[Maybe[IntCompat]]:
@@ -102,6 +103,7 @@ def convert_to_int_compat(x: object) -> R[Maybe[IntCompat]]:
         Converter[IntCompat].convert(x),
         Maybe.just(IntCompat.from_maybe_integer(Converter[Integer].convert(x))),
     )
+
 
 @register_convert
 @rule
