@@ -81,4 +81,4 @@ def integer_comparison(l: int, r: int) -> R[Boolean]:
 @register_convert
 @rule
 def convert_integer(i: int) -> R[Maybe[Integer]]:
-    return Converter[Integer].convert(i), lambda: Maybe.just(Integer.from_int(i))
+    return Converter[Integer].convert(i), Maybe.just(Integer.from_int(i))
