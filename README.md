@@ -4,3 +4,8 @@
 
 A framework for creating domain specific language in Python.
 
+# Todo
+
+1. Return NotImplemented when you pass in a type that isn't supported in an int
+   https://docs.python.org/3/reference/datamodel.html#id10
+   instead of raising type error.

@@ -28,6 +28,14 @@ class Integer(Expression):
         ...
 
     @expression
+    def __floordiv__(self, other: Integer) -> Integer:
+        ...
+
+    @expression
+    def __mod__(self, other: Integer) -> Integer:
+        ...
+
+    @expression
     def eq(self, other: Integer) -> Boolean:
         ...
 
@@ -54,6 +62,8 @@ def integer_math(l: int, r: int) -> R[Integer]:
     yield Integer.from_int(l) + Integer.from_int(r), lambda: Integer.from_int(l + r)
     yield Integer.from_int(l) - Integer.from_int(r), lambda: Integer.from_int(l - r)
     yield Integer.from_int(l) * Integer.from_int(r), lambda: Integer.from_int(l * r)
+    yield Integer.from_int(l) // Integer.from_int(r), lambda: Integer.from_int(l // r)
+    yield Integer.from_int(l) % Integer.from_int(r), lambda: Integer.from_int(l % r)
 
 
 @register

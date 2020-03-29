@@ -3,6 +3,11 @@ from __future__ import annotations
 import numpy
 from metadsl import *
 
+
+# TODO: Move to seperate numpy repo
+# inherit from ndarray like
+# but use "compat" types for shape etc.
+# Each should have a `to_xxx` method.
 from .vec import *
 from .integer import *
 from .conversion import *
@@ -90,9 +95,13 @@ class NDArray(Expression):
 
     @expression
     @classmethod
-    def from_ndarray(self, n: numpy.ndarray) -> NDArray:
+    def from_ndarray(cls, n: numpy.ndarray) -> NDArray:
         ...
 
+    @expression
+    @classmethod
+    def from_ndarray(cls, n: numpy.ndarray) -> NDArray:
+        ...
 
 @register_unbox
 @rule
@@ -126,6 +135,13 @@ class NDArrayCompat(Expression):
     @expression
     def to_ndarray(self) -> numpy.ndarray:
         ...
+
+
+def ndarray_getitem()
+
+@register
+@rule
+
 
 
 @register_unbox

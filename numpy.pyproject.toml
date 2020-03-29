@@ -3,12 +3,14 @@ requires = ["flit"]
 build-backend = "flit.buildapi"
 
 [tool.flit.metadata]
-module = "metadsl_core"
+module = "metadsl_numpy"
 author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
-    "metadsl"
+    "metadsl",
+    "metadsl_core",
+    "numpy"
 ]
 classifiers = [
     "Intended Audience :: Developers",

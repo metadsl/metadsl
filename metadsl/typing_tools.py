@@ -653,6 +653,34 @@ class Infer(typing.Generic[T, U]):
         return getattr(self.fn, "__name__", str(self.fn))
 
 
+SPECIAL_BINARY_METHODS = {
+    f"__{n}__"
+    for n in [
+        # comparison
+        "lt",
+        "le",
+        "eq",
+        "ne",
+        "gt",
+        "ge",
+        # numeric
+        "add",
+        "sub",
+        "mul",
+        "matmul",
+        "truediv",
+        "mod",
+        "divmod",
+        "pow",
+        "lshift",
+        "rshift",
+        "and",
+        "xor",
+        "or",
+    ]
+}
+
+
 @dataclasses.dataclass(unsafe_hash=True)
 class BoundInfer(typing.Generic[T, U]):
     fn: typing.Callable[..., T]
@@ -664,9 +692,17 @@ class BoundInfer(typing.Generic[T, U]):
         functools.update_wrapper(self, self.fn)
 
     def __call__(self, *args, **kwargs) -> U:
-        *wrapper_args, typevars = infer_return_type(
-            self.fn, self.owner, self.is_classmethod, args, kwargs
-        )
+        try:
+            *wrapper_args, typevars = infer_return_type(
+                self.fn, self.owner, self.is_classmethod, args, kwargs
+            )
+        except TypeError:
+            # Return NotImplemented from special methods
+            # if it cannot handle the types, instead of throwing
+            # https://docs.python.org/3/library/constants.html#NotImplemented
+            if self.fn.__name__ in SPECIAL_BINARY_METHODS:
+                return NotImplemented
+            raise
         with TypeVarScope(*typevars.keys()):
             res = self.wrapper(self, *wrapper_args)  # type: ignore
         return res
