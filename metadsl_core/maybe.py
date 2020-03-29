@@ -6,7 +6,7 @@ from .abstraction import *
 from .rules import *
 from .pair import *
 
-__all__ = ["Maybe"]
+__all__ = ["Maybe", "collapse_maybe"]
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
@@ -62,7 +62,15 @@ class Maybe(Expression, typing.Generic[T]):
         ...
 
 
+@expression
+def collapse_maybe(x: Maybe[Maybe[T]]) -> Maybe[T]:
+    return x.match(
+        Maybe[T].nothing(), Abstraction[Maybe[T], Maybe[T]].from_fn(lambda m: m)
+    )
+
+
 register(default_rule(Maybe[T].map))
+register(default_rule(collapse_maybe))
 
 
 @register  # type: ignore

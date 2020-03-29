@@ -79,35 +79,34 @@ def and_if(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     )
 
 
-class BoolCompatIf(Expression, typing.Generic[T, U]):
+class BoolCompatIf(Expression, typing.Generic[T]):
     """
     Create a new class for the if operation, so we can instatiate it with
-    a constructor that takes a Maybe[T] and gives a U.
+    a constructor that takes a Maybe[object] and gives a U.
 
     Otherwise, if wouldn't work in maybe false use case
-
-    >>> if_bool(injest(True), True, False) == injest(True)
-    True
-    >>> if_bool(injest(False), True, False) == injest(False)
-    True
     """
 
     @expression
     @classmethod
-    def create(cls, fn: Abstraction[Maybe[T], U]) -> BoolCompatIf[T, U]:
+    def create(cls, fn: Abstraction[Maybe[object], T]) -> BoolCompatIf[T]:
         ...
 
     @expression
-    def __call__(self, cond: BoolCompat, true: T, false: T) -> U:
+    def __call__(self, cond: object, true: U, false: U) -> T:
         ...
 
 
 @register  # type: ignore
 @rule
-def if_(fn: Abstraction[Maybe[T], U], cond: Maybe[Boolean], true: T, false: T) -> R[U]:
+def if_(fn: Abstraction[Maybe[object], U], cond: object, true: T, false: T) -> R[U]:
     return (
-        BoolCompatIf.create(fn)(BoolCompat.from_maybe_boolean(cond), true, false),
-        fn(cond.map(Abstraction[Boolean, T].from_fn(lambda b: b.if_(true, false)))),
+        BoolCompatIf.create(fn)(cond, true, false),
+        fn(
+            Converter[Boolean]
+            .convert(cond)
+            .map(Abstraction[Boolean, object].from_fn(lambda b: b.if_(true, false)))
+        ),
     )
 
 

@@ -7,9 +7,11 @@ import typing
 from metadsl import *
 from .maybe import *
 from .rules import *
+from .abstraction import *
 
 __all__ = ["Converter", "convert_identity_rule", "convert_to_maybe"]
 T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
 
 class Converter(Expression, typing.Generic[T]):
@@ -40,5 +42,16 @@ def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
         Converter[Maybe[T]].convert(x),
         lambda: Maybe.just(
             Maybe[T].nothing() if x is None else Converter[T].convert(x)
+        ),
+    )
+
+
+@register_convert
+@rule
+def convert_from_maybe(x: Maybe[T]) -> R[Maybe[U]]:
+    return (
+        Converter[U].convert(x),
+        collapse_maybe(
+            x.map(Abstraction[T, Maybe[U]].from_fn(lambda t: Converter[U].convert(t)))
         ),
     )
