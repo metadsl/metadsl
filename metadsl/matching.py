@@ -198,14 +198,22 @@ class MatchRule:
                 if inspect.isgeneratorfunction(self.matchfunction)
                 else self.matchfunction(*args)
             )
-            try:
-                result_expr: object = (
-                    expression_thunk()
-                    if isinstance(expression_thunk, types.FunctionType)
-                    else expression_thunk
-                )
-            except NoMatch:
-                continue
+            if isinstance(expression_thunk, types.FunctionType):
+                # If it's a function, make sure we have real values instead of placeholders
+                # for any of the nodes that are placeholders for something more specific
+                # than a typevar, object, or any
+                if any(
+                    isinstance(node, PlaceholderExpression)
+                    and not is_vague_type(wildcard_inner_type(wildcard))
+                    for wildcard, node in wildcards_to_nodes.items()
+                ):
+                    continue
+                try:
+                    result_expr: object = expression_thunk()
+                except NoMatch:
+                    continue
+            else:
+                result_expr = expression_thunk
             with TypeVarScope(*typevars.keys()):
                 result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
                 ref.replace(result_expr)
@@ -240,6 +248,20 @@ class ReplaceTypevarsExpression:
         )
 
 
+def wildcard_inner_type(wildcard: object) -> typing.Type:
+    """
+    Return inner type for a wildcard
+    """
+    return typing_inspect.get_args(typing_inspect.get_generic_type(wildcard))[0]
+
+
+def is_vague_type(t: typing.Type) -> bool:
+    """
+    Returns true if the type is a typevar, object or typing.
+    """
+    return typing_inspect.is_typevar(t) or t == object or t == typing.Any
+
+
 def match_expression(
     wildcards: typing.List[Expression], template: object, expr: object
 ) -> typing.Tuple[TypeVarMapping, WildcardMapping]:
@@ -252,16 +274,6 @@ def match_expression(
     A wildcard can match either an expression or a value. If it matches two nodes, they must be equal.
     """
     if template in wildcards:
-        # If we are matching against a placeholder and the expression is not resolved to that placeholder, don't match.
-        if (
-            isinstance(template, PlaceholderExpression)
-            and isinstance(expr, Expression)
-            and not typing_inspect.is_typevar(
-                typing_inspect.get_args(typing_inspect.get_generic_type(template))[0]
-            )
-        ):
-            raise NoMatch
-
         # Match type of wildcard with type of expression
         try:
             return (
