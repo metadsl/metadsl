@@ -24,11 +24,6 @@ class BoolCompat(Expression):
     def from_maybe_boolean(cls, i: Maybe[Boolean]) -> BoolCompat:
         ...
 
-    @expression  # type: ignore
-    @property
-    def to_maybe_boolean(self) -> Maybe[Boolean]:
-        ...
-
     @expression
     def and_(self, other: object) -> BoolCompat:
         ...
@@ -45,12 +40,6 @@ class BoolCompat(Expression):
     @expression
     def if_maybe(self, l: Maybe[T], r: Maybe[T]) -> Maybe[T]:
         ...
-
-
-@register_convert
-@rule
-def from_to_bool(b: Maybe[Boolean]) -> R[Maybe[Boolean]]:
-    return BoolCompat.from_maybe_boolean(b).to_maybe_boolean, b
 
 
 @guess.register(BoolCompat)
