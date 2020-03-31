@@ -86,9 +86,11 @@ class IntCompat(Expression):
         ...
 
 
-@guess_type.register
-def guess_int(b: int):
-    return IntCompat, Integer
+@guess.register(IntCompat)
+@guess.register(Integer)
+@guess.register(int)
+def guess_int(i: object) -> Guess[Integer, IntCompat]:
+    return Converter[Integer].convert(i), IntCompat.from_maybe_integer
 
 
 @register_convert
