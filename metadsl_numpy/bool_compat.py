@@ -6,8 +6,9 @@ from metadsl import *
 from metadsl_core import *
 
 from .injest import *
+from .boxing import *
 
-__all__ = ["BoolCompat", "BoolCompatIf", "if_bool"]
+__all__ = ["BoolCompat", "If", "if_guess"]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
@@ -33,9 +34,8 @@ class BoolCompat(Expression):
 
 
 @guess_type.register
-def guess_bool(b: bool) -> typing.Type[BoolCompat]:
-    return BoolCompat
-
+def guess_bool(b: bool):
+    return BoolCompat, Boolean
 
 @register_convert
 @rule
@@ -43,13 +43,10 @@ def convert_to_boolean(i: Maybe[Boolean]) -> R[Maybe[Boolean]]:
     return Converter[Boolean].convert(BoolCompat.from_maybe_boolean(i)), i
 
 
-@register_convert
+@register
 @rule
-def convert_to_bool_compat(x: object) -> R[Maybe[BoolCompat]]:
-    return (
-        Converter[BoolCompat].convert(x),
-        Maybe.just(BoolCompat.from_maybe_boolean(Converter[Boolean].convert(x))),
-    )
+def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
+    return Boxer[BoolCompat, Boolean].box(b), BoolCompat.from_maybe_boolean(b)
 
 
 @register_convert
@@ -79,39 +76,39 @@ def and_if(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     )
 
 
-class BoolCompatIf(Expression, typing.Generic[T]):
+class If(Expression, typing.Generic[T, U]):
     """
-    Create a new class for the if operation, so we can instatiate it with
-    a constructor that takes a Maybe[object] and gives a U.
-
-    Otherwise, if wouldn't work in maybe false use case
+    Create a new class for If so we can pass a typevar to it.
     """
 
     @expression
     @classmethod
-    def create(cls, fn: Abstraction[Maybe[object], T]) -> BoolCompatIf[T]:
+    def if_(cls, cond: object, true: object, false: object) -> T:
         ...
 
-    @expression
-    def __call__(self, cond: object, true: U, false: U) -> T:
-        ...
+
+def if_guess(cond: object, l: object, r: object) -> typing.Any:
+    compat_tp, inner_tp = guess_first_type(l, r)
+    return If[
+        compat_tp, inner_tp  # type: ignore
+    ].if_(
+        cond, l, r
+    )
 
 
 @register  # type: ignore
 @rule
-def if_(fn: Abstraction[Maybe[object], U], cond: object, true: T, false: T) -> R[U]:
+def if_(cond: object, true: object, false: object) -> R[T]:
     return (
-        BoolCompatIf.create(fn)(cond, true, false),
-        fn(
-            Converter[Boolean]
-            .convert(cond)
-            .map(Abstraction[Boolean, object].from_fn(lambda b: b.if_(true, false)))
+        If[T, U].if_(cond, true, false),
+        Boxer[T, U].box(
+            (
+                Boxer[T, U].convert(cond)
+                & (Boxer[T, U].convert(true) & Boxer[T, U].convert(false))
+            ).map(
+                Abstraction[Pair[Boolean, Pair[U, U]], U].from_fn(
+                    lambda p: p.left.if_(*p.right.spread)
+                )
+            )
         ),
     )
-
-
-if_bool = BoolCompatIf.create(
-    Abstraction[Maybe[object], BoolCompat].from_fn(
-        lambda o: BoolCompat.from_maybe_boolean(Converter[Boolean].convert(o))
-    )
-)
