@@ -47,5 +47,7 @@ __version__ = "0.0.0"
 
 
 from .injest import *
+from .boxing import *
 from .bool_compat import *
 from .int_compat import *
+from .tuple_compat import *

@@ -21,36 +21,6 @@ from .either import *
 __all__ = ["arange", "IndxType", "NDArray"]
 
 
-class IntCompat(Expression):
-    """
-    API should be work like Python's `int` type.
-    """
-
-    @expression
-    def __add__(self, other: object) -> IntCompat:
-        return IntCompat.from_maybe_integer(
-            (Converter[Integer].convert(self) & Converter[Integer].convert(other)).map(
-                Abstraction[Pair[Integer, Integer], Integer].from_fn(
-                    lambda p: p.left + p.right
-                )
-            )
-        )
-
-    @expression
-    @classmethod
-    def from_maybe_integer(cls, i: Maybe[Integer]) -> IntCompat:
-        ...
-
-
-register_convert(default_rule(IntCompat.__add__))
-
-
-@register_convert
-@rule
-def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
-    return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
-
-
 class TupleIntCompat(Expression):
     @expression
     def __getitem__(self, i: object) -> IntCompat:
