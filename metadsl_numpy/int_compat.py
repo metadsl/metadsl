@@ -6,6 +6,7 @@ from metadsl import *
 from metadsl_core import *
 from .bool_compat import *
 from .injest import *
+from .boxing import *
 
 __all__ = ["IntCompat"]
 
@@ -86,8 +87,8 @@ class IntCompat(Expression):
 
 
 @guess_type.register
-def guess_int(b: int) -> typing.Type[IntCompat]:
-    return IntCompat
+def guess_int(b: int):
+    return IntCompat, Integer
 
 
 @register_convert
@@ -98,10 +99,10 @@ def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
 
 @register_convert
 @rule
-def convert_to_int_compat(x: object) -> R[Maybe[IntCompat]]:
+def box_int_compat(x: Maybe[Integer]) -> R[IntCompat]:
     return (
-        Converter[IntCompat].convert(x),
-        Maybe.just(IntCompat.from_maybe_integer(Converter[Integer].convert(x))),
+        Boxer[IntCompat, Integer].box(x),
+        IntCompat.from_maybe_integer(x),
     )
 
 
