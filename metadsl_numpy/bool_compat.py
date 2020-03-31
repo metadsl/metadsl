@@ -68,6 +68,12 @@ def convert_to_boolean(i: Maybe[Boolean]) -> R[Maybe[Boolean]]:
     return Converter[Boolean].convert(BoolCompat.from_maybe_boolean(i)), i
 
 
+@register_convert
+@rule
+def from_to_bool(b: Maybe[Boolean]) -> R[Maybe[Boolean]]:
+    return BoolCompat.from_maybe_boolean(b).to_maybe_boolean, b
+
+
 @register
 @rule
 def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
