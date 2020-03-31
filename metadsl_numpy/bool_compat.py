@@ -8,7 +8,7 @@ from metadsl_core import *
 from .injest import *
 from .boxing import *
 
-__all__ = ["BoolCompat", "If", "if_guess"]
+__all__ = ["BoolCompat"]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
@@ -24,6 +24,11 @@ class BoolCompat(Expression):
     def from_maybe_boolean(cls, i: Maybe[Boolean]) -> BoolCompat:
         ...
 
+    @expression  # type: ignore
+    @property
+    def to_maybe_boolean(self) -> Maybe[Boolean]:
+        ...
+
     @expression
     def and_(self, other: object) -> BoolCompat:
         ...
@@ -32,10 +37,30 @@ class BoolCompat(Expression):
     def or_(self, other: object) -> BoolCompat:
         ...
 
+    def if_(self, l: object, r: object) -> object:
+        maybes: typing.List[Maybe]
+        wrap, maybes = guess_all(l, r)
+        return wrap(self.if_maybe(*maybes))
 
-@guess_type.register
-def guess_bool(b: bool):
-    return BoolCompat, Boolean
+    @expression
+    def if_maybe(self, l: Maybe[T], r: Maybe[T]) -> Maybe[T]:
+        ...
+
+
+@guess.register
+def guess_bool_compat(b: BoolCompat) -> Guess[Boolean, BoolCompat]:
+    return b.to_maybe_boolean, BoolCompat.from_maybe_boolean
+
+
+@guess.register
+def guess_boolean(b: Boolean) -> Guess[Boolean, BoolCompat]:
+    return Maybe.just(b), BoolCompat.from_maybe_boolean
+
+
+@guess.register
+def guess_bool(b: bool) -> Guess[Boolean, BoolCompat]:
+    return Maybe.just(Boolean.create(b)), BoolCompat.from_maybe_boolean
+
 
 @register_convert
 @rule
@@ -51,7 +76,7 @@ def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
 
 @register_convert
 @rule
-def and_if(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
+def and_or(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     maybe_r = Converter[Boolean].convert(r)
     maybe = maybe_l & maybe_r
     compat_l = BoolCompat.from_maybe_boolean(maybe_l)
@@ -76,39 +101,14 @@ def and_if(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     )
 
 
-class If(Expression, typing.Generic[T, U]):
-    """
-    Create a new class for If so we can pass a typevar to it.
-    """
-
-    @expression
-    @classmethod
-    def if_(cls, cond: object, true: object, false: object) -> T:
-        ...
-
-
-def if_guess(cond: object, l: object, r: object) -> typing.Any:
-    compat_tp, inner_tp = guess_first_type(l, r)
-    return If[
-        compat_tp, inner_tp  # type: ignore
-    ].if_(
-        cond, l, r
-    )
-
-
 @register  # type: ignore
 @rule
-def if_(cond: object, true: object, false: object) -> R[T]:
+def if_maybes(cond: Maybe[Boolean], true: Maybe[T], false: Maybe[T]) -> R[Maybe[T]]:
     return (
-        If[T, U].if_(cond, true, false),
-        Boxer[T, U].box(
-            (
-                Boxer[T, U].convert(cond)
-                & (Boxer[T, U].convert(true) & Boxer[T, U].convert(false))
-            ).map(
-                Abstraction[Pair[Boolean, Pair[U, U]], U].from_fn(
-                    lambda p: p.left.if_(*p.right.spread)
-                )
+        BoolCompat.from_maybe_boolean(cond).if_maybe(true, false),
+        (cond & (true & false)).map(
+            Abstraction[Pair[Boolean, Pair[T, T]], T].from_fn(
+                lambda p: p.left.if_(*p.right.spread)
             )
         ),
     )
