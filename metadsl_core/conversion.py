@@ -44,14 +44,3 @@ def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
             Maybe[T].nothing() if x is None else Converter[T].convert(x)
         ),
     )
-
-
-@register_convert
-@rule
-def convert_from_maybe(x: Maybe[T]) -> R[Maybe[U]]:
-    return (
-        Converter[U].convert(x),
-        collapse_maybe(
-            x.map(Abstraction[T, Maybe[U]].from_fn(lambda t: Converter[U].convert(t)))
-        ),
-    )
