@@ -53,7 +53,7 @@ class Maybe(Expression, typing.Generic[T]):
     def map(self, just: Abstraction[T, U]) -> Maybe[U]:
         return self.match(
             Maybe[U].nothing(),
-            Abstraction.from_fn(Maybe[U].just) + just,  # type: ignore
+            Abstraction[U, Maybe[U]].from_fn(lambda v: Maybe.just(v)) + just,  # type: ignore
         )
 
 
