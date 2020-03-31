@@ -56,11 +56,6 @@ class Maybe(Expression, typing.Generic[T]):
             Abstraction.from_fn(Maybe[U].just) + just,  # type: ignore
         )
 
-    @expression  # type: ignore
-    @property
-    def assert_(self) -> T:
-        ...
-
 
 @expression
 def collapse_maybe(x: Maybe[Maybe[T]]) -> Maybe[T]:
@@ -96,9 +91,3 @@ def maybe_and(left: Maybe[T], right: Maybe[U], left_v: T, right_v: U) -> R[Pair[
     yield Maybe.just(left_v) & Maybe.just(right_v), Maybe.just(
         Pair.create(left_v, right_v)
     )
-
-
-@register
-@rule
-def maybe_assert(v: T) -> R[T]:
-    return Maybe.just(v).assert_, v
