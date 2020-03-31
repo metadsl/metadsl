@@ -47,37 +47,29 @@ class BoolCompat(Expression):
         ...
 
 
-@guess.register
-def guess_bool_compat(b: BoolCompat) -> Guess[Boolean, BoolCompat]:
-    return b.to_maybe_boolean, BoolCompat.from_maybe_boolean
-
-
-@guess.register
-def guess_boolean(b: Boolean) -> Guess[Boolean, BoolCompat]:
-    return Maybe.just(b), BoolCompat.from_maybe_boolean
-
-
-@guess.register
-def guess_bool(b: bool) -> Guess[Boolean, BoolCompat]:
-    return Maybe.just(Boolean.create(b)), BoolCompat.from_maybe_boolean
-
-
-@register_convert
-@rule
-def convert_to_boolean(i: Maybe[Boolean]) -> R[Maybe[Boolean]]:
-    return Converter[Boolean].convert(BoolCompat.from_maybe_boolean(i)), i
-
-
 @register_convert
 @rule
 def from_to_bool(b: Maybe[Boolean]) -> R[Maybe[Boolean]]:
     return BoolCompat.from_maybe_boolean(b).to_maybe_boolean, b
 
 
+@guess.register(BoolCompat)
+@guess.register(Boolean)
+@guess.register(bool)
+def guess_bool_compat(b: object) -> Guess[Boolean, BoolCompat]:
+    return Converter[Boolean].convert(b), BoolCompat.from_maybe_boolean
+
+
 @register
 @rule
 def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
     return Boxer[BoolCompat, Boolean].box(b), BoolCompat.from_maybe_boolean(b)
+
+
+@register
+@rule
+def convert_bool_compat(b: Maybe[Boolean]) -> R[Maybe[Boolean]]:
+    return Converter[Boolean].convert(BoolCompat.from_maybe_boolean(b)), b
 
 
 @register_convert
