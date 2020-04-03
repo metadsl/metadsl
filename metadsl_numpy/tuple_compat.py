@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing
+import dataclasses
 
 
 from metadsl import *
@@ -60,6 +61,15 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
     @expression
     def getitem_slice(self, idx: object) -> HomoTupleCompat[T, U]:
         ...
+
+    def __setitem__(self, idx: object, value: object) -> None:
+        # clone initial so that it wont be self referential
+        clone_self = dataclasses.replace(self)
+        res = clone_self.setitem(idx, value)
+
+        self.function = res.function  # type: ignore
+        self.args = res.args
+        self.kwargs = res.kwargs
 
     @expression
     def setitem(self, idx: object, value: object) -> HomoTupleCompat[T, U]:
