@@ -38,7 +38,7 @@ def guess(o: object) -> Guess:
 
 def guess_all(
     o: object, *os: object
-) -> typing.Tuple[typing.Callable[[Maybe[T]], object], typing.List[Maybe[T]]]:
+) -> typing.Tuple[typing.Callable[[Maybe[T]], typing.Any], typing.List[Maybe[T]]]:
     """
     Guesses all and makes sure they have the same callable.
     """

@@ -30,12 +30,25 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
     @expression
     @classmethod
     def from_maybe_vec(cls, v: Maybe[Vec[U]]) -> HomoTupleCompat[T, U]:
-
         ...
 
+    @expression  # type: ignore
+    @property
+    def to_maybe_vec(self) -> Maybe[Vec[U]]:
+        ...
+
+    # TODO: allow multiple? how do we know if we are slicing or not?
+
+    # Should the getitem return a union?
+
+    # i.e. how does it know which one to use?
     @expression
     def __getitem__(self, idx: object) -> T:
         ...
+
+    #     compat_tp, inner_tp = guess_type(idx)
+    #     # If the idx
+    #     if compat_tp == IntCompat
 
     @expression  # type: ignore
     @property
@@ -51,10 +64,36 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
         ...
 
 
-@guess_type.register
-def guess_homo_tuple(b: tuple):
-    compat_type, inner_type = guess_first_type(*b)
-    return HomoTupleCompat[compat_type, inner_type], Vec[inner_type]  # type: ignore
+@guess.register(HomoTupleCompat)
+def guess_homo_tuple(ht: HomoTupleCompat[T, U]) -> Guess[Vec[U], HomoTupleCompat[T, U]]:
+    return ht.to_maybe_vec, ht.from_maybe_vec
+
+
+@expression
+def _homo_tuple_example(outer: T, inner: Maybe[U]) -> HomoTupleCompat[T, U]:
+    ...
+
+
+@guess.register
+def guess_homo_tuple_tuple(b: tuple) -> Guess[Vec[T], HomoTupleCompat[object, T]]:
+    maybes: typing.List[Maybe[T]]
+    wrap: typing.Callable[[Maybe[T]], object]
+    wrap, maybes = guess_all(*b)
+    maybe_vec = Vec.lift_maybe(Vec.create(*maybes))
+
+    # Create a homo tuple of the right type, so we can grab the `from_maybe_vec`
+    # classmethod off of it
+    inner_instance = maybes[0]
+    outer_instance = wrap(inner_instance)
+    ht = _homo_tuple_example(outer_instance, inner_instance)
+
+    return maybe_vec, ht.from_maybe_vec
+
+
+@register_convert
+@rule
+def to_from_maybe_vec(v: Maybe[Vec[U]]) -> R[Maybe[Vec[U]]]:
+    return HomoTupleCompat[T, U].from_maybe_vec(v).to_maybe_vec, v
 
 
 @register_convert
