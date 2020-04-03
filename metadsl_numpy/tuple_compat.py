@@ -37,18 +37,25 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
     def to_maybe_vec(self) -> Maybe[Vec[U]]:
         ...
 
-    # TODO: allow multiple? how do we know if we are slicing or not?
+    def __getitem__(self, idx: object) -> typing.Union[T, HomoTupleCompat[T, U]]:
+        # If we infer it to an int, then use the getitem int
+        # otherwise use the slice
+        try:
+            maybe_inner, make_outer = guess(idx)
+        except NotImplementedError:
+            pass
+        else:
+            if isinstance(make_outer(maybe_inner), IntCompat):
+                return self.getitem_int(idx)
+        return self.getitem_slice(idx)
 
-    # Should the getitem return a union?
-
-    # i.e. how does it know which one to use?
     @expression
-    def __getitem__(self, idx: object) -> T:
+    def getitem_int(self, idx: object) -> T:
         ...
 
-    #     compat_tp, inner_tp = guess_type(idx)
-    #     # If the idx
-    #     if compat_tp == IntCompat
+    @expression
+    def getitem_slice(self, idx: object) -> HomoTupleCompat[T, U]:
+        ...
 
     @expression  # type: ignore
     @property
@@ -71,6 +78,10 @@ def guess_homo_tuple(ht: HomoTupleCompat[T, U]) -> Guess[Vec[U], HomoTupleCompat
 
 @expression
 def _homo_tuple_example(outer: T, inner: Maybe[U]) -> HomoTupleCompat[T, U]:
+    """
+    Just used to create a version for type inference so we can grab the from_maybe_vec
+    method off of it
+    """
     ...
 
 
@@ -113,12 +124,12 @@ def box_homo_tuple(v: Maybe[Vec[U]]) -> R[HomoTupleCompat[T, U]]:
 
 @register_convert
 @rule
-def getitem(v: Maybe[Vec[U]], idx: object) -> R[T]:
+def getitem_int(v: Maybe[Vec[U]], idx: object) -> R[T]:
     """
     Try to convert getitem to integer and index
     """
     return (
-        HomoTupleCompat[T, U].from_maybe_vec(v)[idx],
+        HomoTupleCompat[T, U].from_maybe_vec(v).getitem_int(idx),
         Boxer[T, U].box(
             (v & Converter[Integer].convert(idx)).map(
                 Abstraction[Pair[Vec[U], Integer], U].from_fn(
