@@ -52,12 +52,17 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
                 return self.getitem_int(idx)
         return self.getitem_slice(idx)
 
+    # TODO: Rename to single and selection
     @expression
     def getitem_int(self, idx: object) -> T:
         ...
 
     @expression
     def getitem_slice(self, idx: object) -> HomoTupleCompat[T, U]:
+        ...
+
+    @expression
+    def setitem(self, idx: object, value: object) -> HomoTupleCompat[T, U]:
         ...
 
     @expression  # type: ignore
@@ -122,6 +127,39 @@ def box_homo_tuple(v: Maybe[Vec[U]]) -> R[HomoTupleCompat[T, U]]:
     return (
         Boxer[HomoTupleCompat[T, U], Vec[U]].box(v),
         HomoTupleCompat[T, U].from_maybe_vec(v),
+    )
+
+
+@register_convert
+@rule
+def setitem(v: Maybe[Vec[U]], idx: object, value: object) -> R[HomoTupleCompat[T, U]]:
+    """
+    Convert setitem to eiter integer and single item, or selection and vector
+    """
+    return (
+        HomoTupleCompat[T, U].from_maybe_vec(v).setitem(idx, value),
+        HomoTupleCompat[T, U].from_maybe_vec(
+            (
+                v
+                & Converter[Either[Pair[Integer, U], Pair[Selection, Vec[U]]]].convert(
+                    Pair.create(idx, value)
+                )
+            ).map(
+                Abstraction[
+                    Pair[Vec[U], Either[Pair[Integer, U], Pair[Selection, Vec[U]]]],
+                    Vec[U],
+                ].from_fn(
+                    lambda xs: xs.right.match(
+                        Abstraction[Pair[Integer, U], Vec[U]].from_fn(
+                            lambda ys: xs.left.set(ys.left, ys.right)
+                        ),
+                        Abstraction[Pair[Selection, Vec[U]], Vec[U]].from_fn(
+                            lambda ys: xs.left.set_selection(ys.left, ys.right)
+                        ),
+                    )
+                )
+            )
+        ),
     )
 
 

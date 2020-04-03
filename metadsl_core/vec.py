@@ -29,6 +29,11 @@ class NoValue(Expression, typing.Generic[T]):
 
 
 class Selection(Expression):
+    """
+    A selection represents a mapping from a vector to a new vector, that includes some subset of the old
+    values, but in new positions. Old values can be duplicated.
+    """
+
     @expression
     @classmethod
     def create_slice(cls, start: Integer, stop: Integer, step: Integer) -> Selection:
@@ -49,9 +54,31 @@ class Selection(Expression):
         )
 
     @expression
-    def __call__(self, idx: Integer) -> Boolean:
+    @classmethod
+    def create_indices(cls, indices: Vec[Integer]) -> Selection:
         """
-        Returns whether an index is selected by an index.
+        Selection indices from this vector.
+        """
+        ...
+
+    @expression
+    def old_to_new(self, idx: Integer) -> Vec[Integer]:
+        """
+        Map from old index to where it shows up in new vector.
+        """
+        ...
+
+    @expression
+    def new_to_old(self, idx: Integer) -> Integer:
+        """
+        Map from new index to the old index it came from.
+        """
+        ...
+
+    @expression
+    def length(self, old_length: Integer) -> Integer:
+        """
+        Length of new parts.
         """
         ...
 
@@ -130,6 +157,28 @@ class Vec(Expression, typing.Generic[T]):
     def lift_maybe(cls, vec: Vec[Maybe[T]]) -> Maybe[Vec[T]]:
         ...
 
+    @expression
+    def set(self, i: Integer, value: T) -> Vec[T]:
+        ...
+
+    @expression
+    def set_selection(self, s: Selection, values: Vec[T]) -> Vec[T]:
+        ...
+
+    @expression  # type: ignore
+    @property
+    def empty(self) -> Boolean:
+        return self.length.eq(Integer.zero())
+
+    @expression  # type: ignore
+    @property
+    def first(self) -> Maybe[T]:
+        return self.empty.if_(Maybe[T].nothing(), Maybe.just(self[Integer.zero()]))
+
+
+register(default_rule(Vec[T].empty))
+register(default_rule(Vec[T].first))
+
 
 @register
 @rule
@@ -158,30 +207,39 @@ def create_fn_rules(
     yield v.drop(n), Vec.create_fn(
         l - n, Abstraction[Integer, T].from_fn(lambda i: fn(i + n)),
     )
-    yield v.select(s), l.fold(
-        Vec.create_fn(
-            Integer.from_int(0),
-            Abstraction[Integer, T].from_fn(lambda _: NoValue[T].create()),
-        ),
-        Abstraction[Integer, Abstraction[Vec[T], Vec[T]]].from_fn(
-            lambda i: Abstraction[Vec[T], Vec[T]].from_fn(
-                # if the selection is true for this index, then append the
-                # value that was at the previous vec, otherwise keep it the same
-                lambda new_v: s(i).if_(new_v.append(v[i]), new_v)
-            )
+    yield v.select(s), Vec.create_fn(
+        s.length(l), Abstraction[Integer, T].from_fn(lambda i: v[s.new_to_old(i)]),
+    )
+    yield v.set(n, x), Vec.create_fn(
+        l, Abstraction[Integer, T].from_fn(lambda i: i.eq(n).if_(x, fn(i)))
+    )
+    # set selection maps each old index, looking up the first new one on the new v, if there
+    # are any, otherwise, use old v
+    yield v.set_selection(s, v1), Vec.create_fn(
+        l,
+        Abstraction[Integer, T].from_fn(
+            lambda i: s.old_to_new(i).first.match(fn(i), fn1)
         ),
     )
 
 
 @register
 @rule
-def select_slice(
-    start: Integer, stop: Integer, step: Integer, i: Integer
-) -> R[Boolean]:
-    return (
-        Selection.create_slice(start, stop, step)(i),
-        (start <= i).and_(i < stop).and_((i % step).eq(start)),
+def select_slice(start: Integer, stop: Integer, step: Integer, i: Integer):
+    s = Selection.create_slice(start, stop, step)
+    yield (
+        s.old_to_new(i),
+        # If the index is less than the stop index, and is on the step from the start,
+        # return the new one, otherwise return none
+        (i < stop)
+        .and_((i % step).eq(start))
+        .if_(Vec.create((i - start) // step), Vec[Integer].create()),
     )
+
+    yield (s.new_to_old(i), start + (i * step))
+    # Compute the actual stop if one is specified, by taking min of stop and old length "i"
+    actual_stop = (i < stop).if_(i, stop)
+    yield (s.length(i), (stop - actual_stop) // step)
 
 
 @register  # type: ignore
@@ -233,15 +291,26 @@ def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
 @register
 @rule
 def vec_select(xs: typing.Sequence[T], s: Selection) -> R[Vec[T]]:
-    def inner() -> Vec[T]:
-        result = Vec[T].create()
-        for i, x in enumerate(xs):
-            included = s(Integer.from_int(i))
-            #
-            result = included.if_(result.append(x), result)
-        return result
+    v = Vec[T].create(*xs)
 
-    return Vec[T].create(*xs).select(s), inner
+    def inner() -> Vec[T]:
+        # contains a list of of indices that we should lookup in the current vec
+        result_idxs = Vec[Integer].create()
+        for i in range(len(xs)):
+            result_idxs += s.old_to_new(Integer.from_int(i))
+        # naw just do a fold here, oh well!
+
+        # TODO: Should this just be a Vector.from_fn instead?
+        return result_idxs.fold(
+            Vec[T].create(),
+            Abstraction[Vec[T], Abstraction[Integer, Vec[T]]].from_fn(
+                lambda result: Abstraction[Integer, Vec[T]].from_fn(
+                    lambda i: result.append(v[i])
+                )
+            ),
+        )
+
+    return v.select(s), inner
 
 
 # def tuple_all(t: Vec[Maybe[T]]) -> Maybe[Vec[T]]:
