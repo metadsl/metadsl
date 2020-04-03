@@ -55,8 +55,7 @@ class TestVec:
         assert e(Converter[Vec[Int]].convert(())) == Maybe.just(Vec[Int].create())
 
     def test_convert_items(self):
-        # TODO: Figure out why I need to manually annotate the maybe
-        assert e(Converter[Vec[Int]].convert((1, 2))) == Maybe[Vec[Int]].just(
+        assert e(Converter[Vec[Int]].convert((1, 2))) == Maybe.just(
             Vec.create(Int.from_int(1), Int.from_int(2))
         )
 

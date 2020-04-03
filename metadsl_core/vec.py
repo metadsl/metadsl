@@ -72,6 +72,11 @@ class Vec(Expression, typing.Generic[T]):
     def create_fn(cls, length: Integer, fn: Abstraction[Integer, T]) -> Vec[T]:
         ...
 
+    @expression
+    @classmethod
+    def lift_maybe(cls, vec: Vec[Maybe[T]]) -> Maybe[Vec[T]]:
+        ...
+
 
 @register
 @rule
@@ -173,22 +178,52 @@ def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
 #     return t.fold(Maybe.just(Vec[T].create()), fn)
 
 
-@register_convert
+@register
 @rule
-def convert_vec(xs: object) -> R[Maybe[Vec[T]]]:
-    def replacement() -> Maybe[Vec[T]]:
-        res = Maybe.just(Vec[T].create())
-        # Only convert tuples
-        if not isinstance(xs, tuple):
-            raise NoMatch
-        for x in xs:  # type: ignore
-
-            @Abstraction.from_fn
-            def fn(b: Pair[Vec[T], T]) -> Vec[T]:
-                return b.left.append(b.right)
-
-            res = (res & Converter[T].convert(x)).map(fn)  # type: ignore
+def fold_vec(
+    xs: typing.Sequence[T], initial: U, fn: Abstraction[U, Abstraction[T, U]]
+) -> R[U]:
+    def inner() -> U:
+        res = initial
+        for x in xs:
+            res = fn(res)(x)
         return res
 
-    return Converter[Vec[T]].convert(xs), replacement
+    return (Vec.create(*xs).fold(initial, fn), inner)
 
+
+@register_convert
+@rule
+def convert_vec(xs: typing.Sequence[object]) -> R[Maybe[Vec[T]]]:
+    def inner() -> Maybe[Vec[T]]:
+        if not isinstance(xs, tuple):
+            raise NoMatch
+        return Vec[T].lift_maybe(
+            Vec[Maybe[T]].create(*(Converter[T].convert(x) for x in xs))
+        )
+
+    return (
+        Converter[Vec[T]].convert(xs),
+        inner,
+    )
+
+
+@register
+@rule
+def lift_maybe(v: Vec[Maybe[T]]) -> R[Maybe[Vec[T]]]:
+
+    return (
+        Vec.lift_maybe(v),
+        v.fold(
+            Maybe.just(Vec[T].create()),
+            Abstraction[Maybe[Vec[T]], Abstraction[Maybe[T], Maybe[Vec[T]]]].from_fn(
+                lambda xs: Abstraction[Maybe[T], Maybe[Vec[T]]].from_fn(
+                    lambda x: (xs & x).map(
+                        Abstraction[Pair[Vec[T], T], Vec[T]].from_fn(
+                            lambda both: both.left.append(both.right)
+                        )
+                    )
+                )
+            ),
+        ),
+    )
