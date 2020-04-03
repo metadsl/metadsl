@@ -38,6 +38,9 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
         ...
 
     def __getitem__(self, idx: object) -> typing.Union[T, HomoTupleCompat[T, U]]:
+        """
+        Don't use in strongly typed code.
+        """
         # If we infer it to an int, then use the getitem int
         # otherwise use the slice
         try:
@@ -134,6 +137,21 @@ def getitem_int(v: Maybe[Vec[U]], idx: object) -> R[T]:
             (v & Converter[Integer].convert(idx)).map(
                 Abstraction[Pair[Vec[U], Integer], U].from_fn(
                     lambda xs: xs.left[xs.right]
+                )
+            )
+        ),
+    )
+
+
+@register_convert
+@rule
+def getitem_slice(v: Maybe[Vec[U]], idx: object) -> R[HomoTupleCompat[T, U]]:
+    return (
+        HomoTupleCompat[T, U].from_maybe_vec(v).getitem_slice(idx),
+        HomoTupleCompat[T, U].from_maybe_vec(
+            (v & Converter[Selection].convert(idx)).map(
+                Abstraction[Pair[Vec[U], Selection], Vec[U]].from_fn(
+                    lambda xs: xs.left.select(xs.right)
                 )
             )
         ),

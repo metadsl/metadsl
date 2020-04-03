@@ -31,6 +31,10 @@ class Maybe(Expression, typing.Generic[T]):
         ...
 
     @expression
+    def default(self, value: T) -> T:
+        return self.match(value, Abstraction[T, T].from_fn(lambda i: i))
+
+    @expression
     def __or__(self, other: Maybe[T]) -> Maybe[T]:
         """
         Like the <|> function https://en.wikibooks.org/wiki/Haskell/Alternative_and_MonadPlus
@@ -65,6 +69,7 @@ def collapse_maybe(x: Maybe[Maybe[T]]) -> Maybe[T]:
 
 
 register(default_rule(Maybe[T].map))
+register(default_rule(Maybe[T].default))
 register(default_rule(collapse_maybe))
 
 

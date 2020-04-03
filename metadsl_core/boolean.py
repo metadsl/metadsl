@@ -13,6 +13,7 @@ T = typing.TypeVar("T")
 
 
 class Boolean(Expression):
+    # TODO: Remove this
     @expression
     @classmethod
     def create(cls, b: bool) -> Boolean:
@@ -29,6 +30,20 @@ class Boolean(Expression):
     @expression
     def or_(self, other: Boolean) -> Boolean:
         ...
+
+    @expression
+    @classmethod
+    def true(cls) -> Boolean:
+        return Boolean.create(True)
+
+    @expression
+    @classmethod
+    def false(cls) -> Boolean:
+        return Boolean.create(False)
+
+
+register(default_rule(Boolean.true))
+register(default_rule(Boolean.false))
 
 
 @register  # type: ignore
