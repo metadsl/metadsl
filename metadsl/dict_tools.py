@@ -23,9 +23,7 @@ class HashableMapping(collections.abc.Mapping, typing.Generic[T, V]):
     _items: typing.Tuple[typing.Tuple[T, V], ...]
 
     def __init__(self, mapping: typing.Mapping[T, V]):
-        object.__setattr__(
-            self, "_items", tuple((k, v) for k, v in mapping.items())
-        )
+        object.__setattr__(self, "_items", tuple((k, v) for k, v in mapping.items()))
 
     def __hash__(self):
         return hash(self._items)
@@ -98,7 +96,9 @@ def safe_merge(
         for key, value in mapping.items():
             if key in res:
                 if res[key] != value:
-                    raise ValueError()
+                    raise ValueError(
+                        f"for key {key}, first value {res[key]} not equal to second value {value} when merging {mappings}"
+                    )
             else:
                 res[key] = value
     return res
