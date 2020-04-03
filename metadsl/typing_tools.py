@@ -650,9 +650,12 @@ class Infer(typing.Generic[T, U]):
             method = BoundInfer(  # type: ignore
                 fn, self.wrapper, get_type(instance), is_classmethod  # type: ignore
             )
+            # if this is not a classmethod we are calling on an instance, bind the first value to self
+            if not is_classmethod:
+                method = functools.partial(method, instance)  # type: ignore
             if is_property:
-                return method(instance)  # type: ignore
-            return functools.partial(method, instance)  # type: ignore
+                return method()  # type: ignore
+            return method  # type: ignore
         return BoundInfer(  # type: ignore
             fn, self.wrapper, owner, is_classmethod  # type: ignore
         )
