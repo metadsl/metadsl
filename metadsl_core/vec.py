@@ -55,7 +55,9 @@ class Selection(Expression):
         """
         ...
 
+
 register(default_rule(Selection.create_slice_optional))
+
 
 class Vec(Expression, typing.Generic[T]):
     """
