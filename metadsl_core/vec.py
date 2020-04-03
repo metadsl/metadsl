@@ -187,6 +187,7 @@ def create_fn_rules(
     fn: Abstraction[Integer, T],
     x: T,
     l1: Integer,
+    i: Integer,
     fn1: Abstraction[Integer, T],
     n: Integer,
     s: Selection,
@@ -194,7 +195,7 @@ def create_fn_rules(
     v = Vec.create_fn(l, fn)
     v1 = Vec.create_fn(l1, fn1)
     one = Integer.from_int(1)
-    yield v[l], fn(l)
+    yield v[i], fn(i)
     yield v.append(x), Vec.create_fn(
         l + one, Abstraction[Integer, T].from_fn(lambda i: (i < l).if_(fn(i), x))
     )
