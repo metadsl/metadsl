@@ -140,23 +140,3 @@ U = typing.TypeVar("U")
 def test_fold_typevars_identity():
     assert ExpressionFolder()(Generic[T].create()) == Generic[T].create()
     assert ExpressionFolder()(Generic[U].create()) == Generic[U].create()
-
-
-def test_fold_typevars_replace():
-    assert (
-        ExpressionFolder(typevars={T: int})(Generic[T].create())
-        == Generic[int].create()
-    )
-    assert (
-        ExpressionFolder(typevars={U: int})(Generic[U].create())
-        == Generic[int].create()
-    )
-
-
-def test_fold_typevars_replace_skip_missing():
-    assert (
-        ExpressionFolder(typevars={U: int})(Generic[T].create()) == Generic[T].create()
-    )
-    assert (
-        ExpressionFolder(typevars={T: int})(Generic[U].create()) == Generic[U].create()
-    )

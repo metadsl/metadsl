@@ -99,7 +99,9 @@ T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 def wrapper(fn, args, kwargs, return_type):
     expr_return_type = extract_expression_type(return_type)
-    return expr_return_type(fn, list(args), kwargs)
+    # Clone expression when returning it, so if if we mutate child expression
+    # those one won't be mutated
+    return ExpressionFolder()(expr_return_type(fn, list(args), kwargs))
 
 
 def expression(fn: T_callable) -> T_callable:
@@ -137,17 +139,19 @@ class ExpressionFolder:
     """
 
     fn: typing.Callable[[object], object] = lambda e: e
-    typevars: TypeVarMapping = dataclasses.field(default_factory=dict)
 
     def __call__(self, expr: object) -> object:
         fn: typing.Callable[[object], object] = self.fn  # type: ignore
         if isinstance(expr, Expression):
-            return fn(
-                (replace_fn_typevars(expr.function, self.typevars))(
-                    *(self(arg) for arg in expr.args),
-                    **{k: self(v) for k, v in expr.kwargs.items()},
-                )
+            new_expr = dataclasses.replace(
+                expr,
+                args=[self(arg) for arg in expr.args],
+                kwargs={k: self(v) for k, v in expr.kwargs.items()},
             )
+            # copy generic class
+            if hasattr(expr, "__orig_class__"):
+                new_expr.__orig_class__ = expr.__orig_class__  # type: ignore
+            return fn(new_expr)
         return fn(expr)
 
 
