@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import inspect
-import typing
-import copy
-import typing_inspect
 import collections.abc
+import copy
 import dataclasses
 import functools
+import inspect
+import logging
 import types
+import typing
+
+import typing_inspect
+
 from .dict_tools import *
 
 __all__ = [
@@ -33,6 +36,8 @@ __all__ = [
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
+
+logger = logging.getLogger(__name__)
 
 
 class GenericCheckType(type):
@@ -493,6 +498,9 @@ def infer_return_type(
     typing.Type[T],
     TypeVarMapping,
 ]:
+    logger.debug(
+        "infer_return_type fn=%s owner=%s args=%s kwargs=%s", fn, owner, args, kwargs
+    )
     hints = copy.copy(typing_get_type_hints(fn))
     signature = inspect_signature(fn)
 
