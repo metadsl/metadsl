@@ -18,6 +18,7 @@ import types
 import inspect
 import typing_inspect
 import functools
+import logging
 
 from .expressions import *
 from .dict_tools import *
@@ -35,6 +36,7 @@ R = typing.Union[typing.Generator[R_single[T], None, None], R_single[T]]
 # Mapping from wildcards to the matching pattern and replacement
 MatchFunctionType = typing.Callable[..., R[T]]
 
+logger = logging.getLogger(__name__)
 
 class NoMatch(Exception):
     pass
@@ -180,13 +182,16 @@ class MatchRule:
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
         expr = ref.expression
+        logging.debug('MatchRule.__call__ expr=%s', expr)
         for i, result in enumerate(self.results):
             template, _ = result
             try:
+                logging.debug('Trying to match against %s', template)
                 typevars, wildcards_to_nodes = match_expression(  # type: ignore
                     self.wildcards, template, expr
                 )
             except NoMatch:
+                logging.debug('Not a match', template)
                 continue
 
             args = [
