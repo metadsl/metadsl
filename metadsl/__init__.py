@@ -9,3 +9,4 @@ from .matching import *
 from .rules import *
 from .dict_tools import *
 from .normalized import *
+from .logging import *
