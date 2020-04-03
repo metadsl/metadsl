@@ -125,7 +125,7 @@ def to_from_maybe_vec(v: Maybe[Vec[U]]) -> R[Maybe[Vec[U]]]:
 @register_convert
 @rule
 def convert_to_vec(v: Maybe[Vec[U]]) -> R[Maybe[Vec[U]]]:
-    return Converter[Vec[T]].convert(HomoTupleCompat[T, U].from_maybe_vec(v)), v
+    return Converter[Vec[U]].convert(HomoTupleCompat[T, U].from_maybe_vec(v)), v
 
 
 @register_convert
