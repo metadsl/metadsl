@@ -75,4 +75,3 @@ def pair_set(l: T, r: U, new_l: T, new_r: U) -> R[Pair[T, U]]:
     """
     yield Pair.create(l, r).set_left(new_l), Pair.create(new_l, r)
     yield Pair.create(l, r).set_right(new_r), Pair.create(l, new_r)
-

@@ -288,6 +288,7 @@ def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
     return (Vec[T].create(*xs).append(x), lambda: Vec.create(*xs, x))
 
 
+# TODO: Replace with exact replacement for slice
 @register
 @rule
 def vec_select(xs: typing.Sequence[T], s: Selection) -> R[Vec[T]]:
@@ -311,6 +312,55 @@ def vec_select(xs: typing.Sequence[T], s: Selection) -> R[Vec[T]]:
         )
 
     return v.select(s), inner
+
+
+@register
+@rule
+def vec_set(xs: typing.Sequence[T], i: int, value: T) -> R[Vec[T]]:
+    return (
+        Vec[T].create(*xs).set(Integer.from_int(i), value),
+        lambda: Vec[T].create(*(value if i == i_ else v for i_, v in enumerate(xs))),
+    )
+
+
+@register
+@rule
+def vec_set_selection(
+    xs: typing.Sequence[T], start: int, stop: int, step: int, values: typing.Sequence[T]
+) -> R[Vec[T]]:
+    def inner() -> Vec[T]:
+        l = list(xs)
+        l[start:stop:step] = list(values)
+        return Vec[T].create(*l)
+
+    yield (
+        Vec[T]
+        .create(*xs)
+        .set_selection(
+            Selection.create_slice(
+                Integer.from_int(start), Integer.from_int(stop), Integer.from_int(step)
+            ),
+            Vec[T].create(*values),
+        ),
+        inner,
+    )
+
+    def inner_inf() -> Vec[T]:
+        l = list(xs)
+        l[start::step] = list(values)
+        return Vec[T].create(*l)
+
+    yield (
+        Vec[T]
+        .create(*xs)
+        .set_selection(
+            Selection.create_slice(
+                Integer.from_int(start), Integer.infinity(), Integer.from_int(step)
+            ),
+            Vec[T].create(*values),
+        ),
+        inner,
+    )
 
 
 # def tuple_all(t: Vec[Maybe[T]]) -> Maybe[Vec[T]]:

@@ -2,14 +2,18 @@
 Useful for to convert object to boxed types.
 """
 from __future__ import annotations
+
 import typing
 
 from metadsl import *
-from .maybe import *
-from .rules import *
+
 from .abstraction import *
+from .maybe import *
+from .pair import *
+from .rules import *
 
 __all__ = ["Converter", "convert_identity_rule", "convert_to_maybe"]
+
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
@@ -43,4 +47,13 @@ def convert_to_maybe(x: object) -> R[Maybe[Maybe[T]]]:
         lambda: Maybe.just(
             Maybe[T].nothing() if x is None else Converter[T].convert(x)
         ),
+    )
+
+
+@register_convert
+@rule
+def convert_to_pair(l: object, r: object) -> R[Maybe[Pair[T, U]]]:
+    return (
+        Converter[Pair[T, U]].convert(Pair.create(l, r)),
+        Converter[T].convert(l) & Converter[U].convert(r),
     )
