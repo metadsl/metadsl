@@ -53,7 +53,9 @@ class Expression(GenericCheck):
     @property
     def _type_str(self):
         t = get_type(self)
-        return str(t)
+        if isinstance(t, typing._GenericAlias):  # type: ignore
+            return repr(t)
+        return typing._type_repr(t)  # type: ignore
 
     def __repr__(self):
         return (

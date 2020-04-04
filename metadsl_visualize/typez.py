@@ -9,6 +9,7 @@ import inspect
 import types
 import typing
 import warnings
+import black
 
 import metadsl
 import typing_inspect
@@ -71,6 +72,9 @@ class ExpressionDisplay:
         self.typez_display._ipython_display_()
 
 
+black_file_mode = black.FileMode(line_length=40)
+
+
 def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
     """
     Converts an expression into a node mapping.
@@ -88,7 +92,10 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
                 or None,
-                function=f"{func_str}: {value._type_str}" if SHOW_TYPES else func_str,
+                function=black.format_str(
+                    f"{func_str}\n{value._type_str}" if SHOW_TYPES else func_str,
+                    mode=black_file_mode
+                ),
                 args=[str(a) for a in children.args] or None,
                 kwargs={k: str(v) for k, v in children.kwargs.items()} or None,
             )
