@@ -64,7 +64,7 @@ class Executor:
         return typing.cast(
             T,
             execute(
-                ExpressionReference.from_expression(ExpressionFolder()(expr)), rule
+                ExpressionReference.from_expression(clone_expression(expr)), rule
             ),
         )
 
