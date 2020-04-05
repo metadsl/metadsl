@@ -94,7 +94,7 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
                 or None,
                 function=black.format_str(
                     f"{func_str}\n{value._type_str}" if SHOW_TYPES else func_str,
-                    mode=black_file_mode
+                    mode=black_file_mode,
                 ),
                 args=[str(a) for a in children.args] or None,
                 kwargs={k: str(v) for k, v in children.kwargs.items()} or None,
