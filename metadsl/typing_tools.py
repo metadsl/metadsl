@@ -794,6 +794,12 @@ class FunctionReplaceTyping:
             with TypeVarScope(*self.typevars_in_scope):
                 return self.inner_mapping(self.fn(*args, **kwargs))  # type: ignore
 
+    def __repr__(self):
+        return repr(self.fn)
+
+    def __str__(self):
+        return str(self.fn)
+
 
 @dataclasses.dataclass(unsafe_hash=True)
 class Identity:
