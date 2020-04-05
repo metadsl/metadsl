@@ -5,11 +5,12 @@ from metadsl import *
 from .rules import *
 from .conversion import *
 from .maybe import *
-
+from .abstraction import *
 
 __all__ = ["Boolean"]
 
 T = typing.TypeVar("T")
+U = typing.TypeVar("U")
 
 
 class Boolean(Expression):
@@ -72,3 +73,24 @@ def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     []
     """
     return Converter[Boolean].convert(b), Maybe.just(Boolean.create(b))
+
+
+@register
+@rule
+def pull_if_above_maybe(
+    b: Boolean,
+    maybe_true: Maybe[T],
+    maybe_false: Maybe[T],
+    nothing: U,
+    just: Abstraction[T, U],
+):
+    """
+    Pull up if opreator around match... maybe could also pull this up generically on other operators?
+
+    Do we want to pull if up always?
+    """
+
+    return (
+        b.if_(maybe_true, maybe_false).match(nothing, just),
+        b.if_(maybe_true.match(nothing, just), maybe_false.match(nothing, just)),
+    )

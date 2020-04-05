@@ -1,7 +1,9 @@
-from metadsl import execute, ExpressionReference
+import itertools
+from metadsl import *
 from .conversion import *
 from .maybe import *
 from .rules import *
+from .abstraction import *
 
 
 class TestConvertIdentity:
@@ -31,3 +33,90 @@ class TestConvertToMaybe:
         assert execute(Converter[Maybe[int]].convert(None)) == Maybe.just(
             Maybe[int].nothing()
         )
+
+
+class T(Expression):
+    ...
+
+
+class U(Expression):
+    ...
+
+
+class V(Expression):
+    ...
+
+
+class X(Expression):
+    ...
+
+
+@expression
+def t_to_u(t: T) -> U:
+    ...
+
+
+@expression
+def v() -> V:
+    ...
+
+
+@expression
+def v_to_t(v: V) -> T:
+    ...
+
+
+@expression
+def u_to_x(u: U) -> X:
+    ...
+
+
+class TestConvertToAbstraction:
+    def test_from_abstraction(self) -> None:
+        original_a = Abstraction[T, U].from_fn(lambda t: t_to_u(t))
+        converted_a = Converter[Abstraction[V, X]].convert(original_a)
+        called_with_v: Maybe[X] = converted_a.map(
+            Abstraction[Abstraction[V, X], X].from_fn(lambda a: a(v()))
+        )
+
+        desired_result: Maybe[X] = (
+            Converter[T]
+            .convert(v())
+            .flat_map(
+                Abstraction[T, Maybe[X]].from_fn(
+                    lambda t: Converter[X].convert(t_to_u(t))
+                )
+            )
+        )
+
+        # Verify that if this conversion fails or succeeds, then the result
+        # will be right.
+        # We could just compare them directly, but abstractions won't compare
+        # currently, since we haven't implemented alpha conversion
+        @rule
+        def convert_v_to_t_just(v: V) -> R[Maybe[T]]:
+            return Converter[T].convert(v), Maybe.just(v_to_t(v))
+
+        @rule
+        def convert_v_to_t_nothing(v: V) -> R[Maybe[T]]:
+            return Converter[T].convert(v), Maybe[T].nothing()
+
+        @rule
+        def convert_u_to_x_just(u: U) -> R[Maybe[X]]:
+            return Converter[X].convert(u), Maybe.just(u_to_x(u))
+
+        @rule
+        def convert_u_to_x_nothing(u: U) -> R[Maybe[X]]:
+            return Converter[X].convert(u), Maybe[X].nothing()
+
+        for new_rules in itertools.product(
+            [convert_v_to_t_just, convert_v_to_t_nothing],
+            [convert_u_to_x_just, convert_u_to_x_nothing],
+        ):
+
+            new_all_rules = RulesRepeatSequence(all_rules, RulesRepeatFold(*new_rules))
+
+            assert execute(called_with_v, new_all_rules) == execute(
+                desired_result, new_all_rules
+            )
+

@@ -27,6 +27,7 @@ class I(Expression):
         ...
 
 
+
 class TestAbstraction:
     def test_from_fn(self):
         a = execute(Abstraction[typing.Any, int].from_fn(lambda i: i), from_fn_rule)
