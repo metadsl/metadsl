@@ -122,7 +122,7 @@ def generic_subclasscheck(self, cls):
     Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
     """
     cls = getattr(cls, "__origin__", cls)
-    return issubclass(self.__origin__, cls)
+    return issubclass(cls, self.__origin__)
 
 
 # Allow isinstance and issubclass calls on special forms like union
@@ -285,10 +285,15 @@ TypeVarMapping = typing.Mapping[typing.TypeVar, typing.Type]  # type: ignore
 
 
 def match_values(hint_value: T, value: T) -> TypeVarMapping:
-    return match_type(get_type(hint_value), value)
+    logger.debug("match_values hint_value=%s value=%s", hint_value, value)
+    hint_type = get_type(hint_value)
+    logger.debug("hint_type=%s", hint_type)
+    return match_type(hint_type, value)
 
 
 def match_type(hint: typing.Type[T], value: T) -> TypeVarMapping:
+    logger.debug("match_type hint=%s value=%s", hint, value)
+
     if typing_inspect.get_origin(hint) == type:
         (inner_hint,) = typing_inspect.get_args(hint)
         return match_types(inner_hint, typing.cast(typing.Type, value))
@@ -366,6 +371,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
     """
+    logger.debug("match_types hint=%s type=%s", hint, t)
     if hint == t:
         return {}
 
@@ -419,7 +425,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         else:
             raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
 
+    logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
     if not issubclass(t, hint):
+        logger.debug("not subclass")
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return merge_typevars(
         *(
