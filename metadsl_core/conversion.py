@@ -101,3 +101,14 @@ def convert_to_abstraction(a: Abstraction[T, U]) -> R[Maybe[Abstraction[V, X]]]:
             )
         ),
     )
+
+
+@register_convert
+@rule
+def convert_fn_to_abstraction(
+    a: typing.Callable[[T], U]
+) -> R[Maybe[Abstraction[V, X]]]:
+    return (
+        Converter[Abstraction[V, X]].convert(a),
+        Converter[Abstraction[V, X]].convert(Abstraction.from_fn(a)),
+    )
