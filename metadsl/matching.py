@@ -182,16 +182,16 @@ class MatchRule:
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
         expr = ref.expression
-        logging.debug('MatchRule.__call__ expr=%s', expr)
+        logger.debug('MatchRule.__call__ expr=%s', expr)
         for i, result in enumerate(self.results):
             template, _ = result
             try:
-                logging.debug('Trying to match against %s', template)
+                logger.debug('Trying to match against %s', template)
                 typevars, wildcards_to_nodes = match_expression(  # type: ignore
                     self.wildcards, template, expr
                 )
             except NoMatch:
-                logging.debug('Not a match', template)
+                logger.debug('Not a match', template)
                 continue
 
             args = [
