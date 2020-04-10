@@ -38,6 +38,7 @@ MatchFunctionType = typing.Callable[..., R[T]]
 
 logger = logging.getLogger(__name__)
 
+
 class NoMatch(Exception):
     pass
 
@@ -182,17 +183,18 @@ class MatchRule:
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
         expr = ref.expression
-        logger.debug('MatchRule.__call__ expr=%s', expr)
+        logger.debug("MatchRule.__call__ expr=%s", expr)
         for i, result in enumerate(self.results):
             template, _ = result
             try:
-                logger.debug('Trying to match against %s', template)
+                logger.debug("Trying to match against %s", template)
                 typevars, wildcards_to_nodes = match_expression(  # type: ignore
                     self.wildcards, template, expr
                 )
             except NoMatch:
-                logger.debug('Not a match', template)
+                logger.debug("Not a match", template)
                 continue
+            logger.debug("Matched expr=%s typevars=%s", typevars, wildcards_to_nodes)
 
             args = [
                 wildcards_to_nodes.get(wildcard, wildcard)
@@ -278,18 +280,29 @@ def match_expression(
 
     A wildcard can match either an expression or a value. If it matches two nodes, they must be equal.
     """
+    logger.debug(
+        "match_expression wildcards=%s template=%s expr=%s", wildcards, template, expr
+    )
     if template in wildcards:
+        logger.debug(
+            "template is a wildcard, matching expr to template to get typevars"
+        )
         # Match type of wildcard with type of expression
         try:
-            return (
+            res = (
                 match_values(template, expr),
                 UnhashableMapping(Item(typing.cast(Expression, template), expr)),
             )
+            logger.debug("got wildcard mapping %s", res)
+            return res
         except TypeError:
+            logger.debug("could not match types")
             raise NoMatch
 
     if isinstance(expr, Expression):
+        logger.debug("value is expression")
         if not isinstance(template, Expression):
+            logger.debug("...but template isn't so no match")
             raise NoMatch
         # Any typevars in the template that are unbound should be matched with their
         # versions in the expr
@@ -299,9 +312,11 @@ def match_expression(
                 template.function, expr.function
             )
         except TypeError:
+            logger.debug("could not match functions")
             raise NoMatch
-
+        logger.debug("matched functions to get typevar_apping=%s", fn_type_mapping)
         if set(expr.kwargs.keys()) != set(template.kwargs.keys()):
+            logger.debug("No match because typevars not same keys")
             raise TypeError("Wrong kwargs in match")
 
         template_args: typing.Iterable[object]
@@ -359,6 +374,7 @@ def match_expression(
                 ),
             )
         ) or ((), ())
+        logger.debug("Matched args and kwargs")
         try:
             merged_typevars: TypeVarMapping = merge_typevars(
                 fn_type_mapping, *type_mappings
