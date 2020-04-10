@@ -63,6 +63,13 @@ def convert_to_pair(l: object, r: object) -> R[Maybe[Pair[T, U]]]:
 
 @expression
 def lift_abstraction_maybe(a: Abstraction[T, Maybe[U]]) -> Maybe[Abstraction[T, U]]:
+    """
+    Deprecated: This is a bad idea.
+
+    This would require some kinda of global match context. i.e. imagine matchign on the result,
+    in the just case, then you have a fn you call on two args... One ends up resulting in true, the other false,
+    then you need to know that whole match body was false, and to actually match on the nothing result.
+    """
     ...
 
 
@@ -82,14 +89,14 @@ def lift_abstraction_maybe_rule(v: T, b: U) -> R[Maybe[Abstraction[T, U]]]:
 
 @register_convert
 @rule
-def convert_to_abstraction(a: Abstraction[T, U]) -> R[Maybe[Abstraction[V, X]]]:
+def convert_to_abstraction(a: Abstraction[T, U]) -> R[Maybe[Abstraction[V, Maybe[X]]]]:
     """
     Converting from one abstraction to another means putting a convert on the input and the output.
     """
 
     return (
-        Converter[Abstraction[V, X]].convert(a),
-        lift_abstraction_maybe(
+        Converter[Abstraction[V, Maybe[X]]].convert(a),
+        Maybe.just(
             Abstraction[V, Maybe[X]].from_fn(
                 lambda v: Converter[T]
                 .convert(v)
@@ -107,8 +114,8 @@ def convert_to_abstraction(a: Abstraction[T, U]) -> R[Maybe[Abstraction[V, X]]]:
 @rule
 def convert_fn_to_abstraction(
     a: typing.Callable[[T], U]
-) -> R[Maybe[Abstraction[V, X]]]:
+) -> R[Maybe[Abstraction[V, Maybe[X]]]]:
     return (
-        Converter[Abstraction[V, X]].convert(a),
-        Converter[Abstraction[V, X]].convert(Abstraction.from_fn(a)),
+        Converter[Abstraction[V, Maybe[X]]].convert(a),
+        Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
     )

@@ -74,9 +74,9 @@ def u_to_x(u: U) -> X:
 class TestConvertToAbstraction:
     def test_from_abstraction(self) -> None:
         original_a = Abstraction[T, U].from_fn(lambda t: t_to_u(t))
-        converted_a = Converter[Abstraction[V, X]].convert(original_a)
-        called_with_v: Maybe[X] = converted_a.map(
-            Abstraction[Abstraction[V, X], X].from_fn(lambda a: a(v()))
+        converted_a = Converter[Abstraction[V, Maybe[X]]].convert(original_a)
+        called_with_v: Maybe[X] = converted_a.flat_map(
+            Abstraction[Abstraction[V, Maybe[X]], Maybe[X]].from_fn(lambda a: a(v()))
         )
 
         desired_result: Maybe[X] = (
