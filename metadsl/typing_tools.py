@@ -32,6 +32,7 @@ __all__ = [
     "match_types",
     "get_origin_type",
     "get_fn_typevars",
+    "ToCallable",
 ]
 
 T = typing.TypeVar("T")
@@ -121,8 +122,17 @@ def generic_subclasscheck(self, cls):
     """
     Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
     """
-    cls = getattr(cls, "__origin__", cls)
-    return issubclass(cls, self.__origin__)
+    self_origin = self.__origin__
+    cls_origin = getattr(cls, "__origin__", cls)
+
+    # If we are a callable type and other cls is is not an actualy callable
+    # type, match against the ToCallable type instead
+    if (
+        self_origin == collections.abc.Callable
+        and cls_origin != collections.abc.Callable
+    ):
+        self_origin = ToCallable
+    return issubclass(cls_origin, self_origin)
 
 
 # Allow isinstance and issubclass calls on special forms like union
@@ -136,6 +146,51 @@ def special_form_subclasscheck(self, cls):
 
 typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
 typing._SpecialForm.__subclasscheck__ = special_form_subclasscheck  # type: ignore
+
+
+class ToCallableMeta(type):
+    """
+    Type of type that can be used in isubclass to determine whether
+    it wil be understood as a callable from the typing_tools perspective.
+
+    Basically whatever is coerced in `get_type` to a callable.
+
+    Need to switch typing.Callable for this, because that uses anything that works
+    like a callable, which is not waht we want
+    """
+
+    def __instancecheck__(cls, inst):
+        return isinstance(
+            inst,
+            (
+                functools.partial,
+                Infer,
+                BoundInfer,
+                FunctionReplaceTyping,
+                types.FunctionType,
+            ),
+        )
+
+    def __subclasscheck__(cls, sub):
+        """Implement issubclass(sub, cls)."""
+        return (
+            issubclass(
+                sub,
+                (
+                    functools.partial,
+                    Infer,
+                    BoundInfer,
+                    FunctionReplaceTyping,
+                    types.FunctionType,
+                ),
+            )
+            or typing_inspect.get_origin(sub) == collections.abc.Callable
+        )
+
+
+class ToCallable(metaclass=ToCallableMeta):
+    def __call__(*__args, **__kwargs):
+        ...
 
 
 def get_origin(t: typing.Type) -> typing.Type:
