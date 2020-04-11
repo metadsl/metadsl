@@ -101,7 +101,7 @@ def _replace(body: U, var: T, arg: T) -> U:
     # If is  a `from_fn` node with the same  var bound, don't try replacing its children
     if is_abstraction and body.args[0] == var:
         return body  # type: ignore
-    return body._map(lambda e: _replace(e, var, arg))
+    return body._map(lambda e: _replace(e, var, arg))  # type: ignore
 
 
 @register
