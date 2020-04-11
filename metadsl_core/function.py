@@ -399,13 +399,7 @@ def function_zero_convert(
     value: T,
     # callable_one: typing.Callable[[T], U],
     # abs_one: Abstraction[T, U],
-):
-    """
-    Convert python functions (callables) to typed functions
-    and convert from typed functions to other typed functions
-    """
-
-    # FunctionZero
+) -> R[Maybe[FunctionZero[Maybe[U]]]]:
     # From callable -> function
     yield (
         Converter[FunctionZero[Maybe[U]]].convert(callable_zero),
@@ -417,21 +411,26 @@ def function_zero_convert(
         Maybe.just(FunctionZero.create(name, Converter[U].convert(value))),
     )
 
-    # # FunctionOne
-    # yield (
-    #     Converter[FunctionOne[V, Maybe[X]]].convert(callable_one),
-    #     Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.from_fn(callable_one)),
-    # )
-    # yield (
-    #     Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.create(name, abs_one)),
-    #     Converter[Abstraction[V, Maybe[X]]]
-    #     .convert(abs_one)
-    #     .map(
-    #         Abstraction[Abstraction[V, Maybe[X]], FunctionOne[V, Maybe[X]]].from_fn(
-    #             lambda converted_abs: FunctionOne.create(name, converted_abs)
-    #         )
-    #     ),
-    # )
+
+@register_convert
+@rule
+def function_one_convert(
+    name: str, callable_one: typing.Callable[[T], U], abs_one: Abstraction[T, U],
+) -> R[Maybe[FunctionOne[V, Maybe[X]]]]:
+    yield (
+        Converter[FunctionOne[V, Maybe[X]]].convert(callable_one),
+        Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.from_fn(callable_one)),
+    )
+    yield (
+        Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.create(name, abs_one)),
+        Converter[Abstraction[V, Maybe[X]]]
+        .convert(abs_one)
+        .map(
+            Abstraction[Abstraction[V, Maybe[X]], FunctionOne[V, Maybe[X]]].from_fn(
+                lambda converted_abs: FunctionOne.create(name, converted_abs)
+            )
+        ),
+    )
 
 
 @register_convert
