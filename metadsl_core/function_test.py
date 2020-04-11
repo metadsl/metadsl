@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from metadsl import *
 import metadsl.typing_tools
+import pytest
+from metadsl import *
+
+from .abstraction import *
+from .conversion import *
 from .function import *
 from .integer import *
-from .abstraction import *
+from .maybe import *
+from .rules import *
 
 one = Integer.from_int(1)
 zero = Integer.from_int(0)
@@ -83,3 +88,85 @@ class TestFunction:
         assert execute(fib(zero)) == zero
         assert execute(fib(one)) == one
         assert execute(fib(Integer.from_int(8))) == Integer.from_int(21)
+
+
+class T(Expression):
+    ...
+
+
+class U(Expression):
+    ...
+
+
+# class V(Expression):
+#     ...
+
+
+# class X(Expression):
+#     ...
+
+
+@expression
+def t_to_u(t: T) -> U:
+    ...
+
+
+@expression
+def t() -> T:
+    ...
+
+
+@rule
+def convert_t_to_u_just(t: T) -> R[Maybe[U]]:
+    return Converter[U].convert(t), Maybe.just(t_to_u(t))
+
+
+@rule
+def convert_t_to_u_nothing(t: T) -> R[Maybe[U]]:
+    return Converter[U].convert(t), Maybe[U].nothing()
+
+
+# @rule
+# def convert_u_to_x_just(u: U) -> R[Maybe[X]]:
+#     return Converter[X].convert(u), Maybe.just(u_to_x(u))
+
+# @rule
+# def convert_u_to_x_nothing(u: U) -> R[Maybe[X]]:
+#     return Converter[X].convert(u), Maybe[X].nothing()
+
+# @expression
+# def v() -> V:
+#     ...
+
+
+# @expression
+# def v_to_t(v: V) -> T:
+#     ...
+
+
+# @expression
+# def u_to_x(u: U) -> X:
+#     ...
+
+
+def fn() -> T:
+    return t()
+
+
+class TestFunctionConversion:
+    @pytest.mark.parametrize(
+        "t_to_u_rule",
+        [convert_t_to_u_just, convert_t_to_u_nothing],
+        ids=["just", "nothing"],
+    )
+    @pytest.mark.parametrize(
+        "input",
+        [fn, FunctionZero[T].from_fn(fn)],
+        ids=["python function", "FunctionZero"],
+    )
+    def test_fn_zero_from_fn_zero(self, input, t_to_u_rule):
+        result = Converter[FunctionZero[Maybe[U]]].convert(input)
+        desired = Maybe.just(FunctionZero.create("fn", Converter[U].convert(t())))
+        new_all_rules = RulesRepeatSequence(all_rules, RulesRepeatFold(t_to_u_rule))
+
+        assert execute(result, new_all_rules) == execute(desired, new_all_rules,)

@@ -12,6 +12,8 @@ from __future__ import annotations
 from metadsl import *
 from .rules import *
 from .abstraction import *
+from .conversion import *
+from .maybe import *
 import typing
 
 __all__ = ["FunctionZero", "FunctionOne", "FunctionTwo", "FunctionThree"]
@@ -387,3 +389,57 @@ def three_unfix(name: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]
         return inner
 
     return FunctionThree.create(name, abst).unfix, result
+
+
+@register_convert
+@rule
+def function_zero_convert(
+    name: str,
+    callable_zero: typing.Callable[[], T],
+    value: T,
+    # callable_one: typing.Callable[[T], U],
+    # abs_one: Abstraction[T, U],
+):
+    """
+    Convert python functions (callables) to typed functions
+    and convert from typed functions to other typed functions
+    """
+
+    # FunctionZero
+    # From callable -> function
+    yield (
+        Converter[FunctionZero[Maybe[U]]].convert(callable_zero),
+        Converter[FunctionZero[Maybe[U]]].convert(FunctionZero.from_fn(callable_zero)),
+    )
+    # from function -> value
+    yield (
+        Converter[FunctionZero[Maybe[U]]].convert(FunctionZero.create(name, value)),
+        Maybe.just(FunctionZero.create(name, Converter[U].convert(value))),
+    )
+
+    # # FunctionOne
+    # yield (
+    #     Converter[FunctionOne[V, Maybe[X]]].convert(callable_one),
+    #     Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.from_fn(callable_one)),
+    # )
+    # yield (
+    #     Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.create(name, abs_one)),
+    #     Converter[Abstraction[V, Maybe[X]]]
+    #     .convert(abs_one)
+    #     .map(
+    #         Abstraction[Abstraction[V, Maybe[X]], FunctionOne[V, Maybe[X]]].from_fn(
+    #             lambda converted_abs: FunctionOne.create(name, converted_abs)
+    #         )
+    #     ),
+    # )
+
+
+@register_convert
+@rule
+def convert_fn_to_abstraction(
+    a: typing.Callable[[T], U]
+) -> R[Maybe[Abstraction[V, Maybe[X]]]]:
+    return (
+        Converter[Abstraction[V, Maybe[X]]].convert(a),
+        Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
+    )
