@@ -224,7 +224,10 @@ class MatchRule:
             with TypeVarScope(*typevars.keys()):
                 result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
                 ref.replace(result_expr)
-            yield Replacement(str(self))
+            yield Replacement(
+                # if there is more than one possible match from this rule, also put the index of the match
+                rule=str(self) if len(self.results) == 1 else f"{self}[{i}]"
+            )
             return
 
 
