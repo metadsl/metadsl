@@ -62,8 +62,10 @@ class FunctionOne(Expression, typing.Generic[T, U]):
 
     @expression
     @classmethod
-    def from_fn(cls, fn: typing.Callable[[T], U]) -> FunctionOne[T, U]:
-        return cls.create(fn.__name__, Abstraction.from_fn(fn))
+    def from_fn(
+        cls, fn: typing.Callable[[T], U], name=Maybe[str].nothing()
+    ) -> FunctionOne[T, U]:
+        return cls.create(name.default(fn.__name__), Abstraction.from_fn(fn))
 
     @expression
     @classmethod
@@ -258,6 +260,7 @@ register_pre(default_rule(FunctionZero[T].from_fn))
 register_pre(default_rule(FunctionOne[T, U].from_fn))
 register_pre(default_rule(FunctionTwo[T, U, V].from_fn))
 register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
+
 
 register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
 register_pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
