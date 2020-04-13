@@ -6,13 +6,13 @@ import typing
 from metadsl import *
 from metadsl_core import *
 
-__all__ = ["injest", "guess", "guess_all", "Guess"]
+from .boxing import *
+
+__all__ = ["injest", "guess_type", "guess_types", "guess_type_of_type"]
 
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
-
-Guess = typing.Tuple[Maybe[T], typing.Callable[[Maybe[T]], U]]
 
 
 def injest(o: object) -> object:
@@ -21,32 +21,49 @@ def injest(o: object) -> object:
 
     Shouldn't be used in real code.
     """
-    inner_version, to_outer_version = guess(o)
-    return to_outer_version(inner_version)
+    compat_tp, inner_tp = guess_type(o)
+    return Boxer[compat_tp, inner_tp].convert_and_box(o)
 
 
 @functools.singledispatch
-def guess(o: object) -> Guess:
+def guess_type(o: object) -> typing.Tuple[typing.Type, typing.Type]:
     """
-    Takes in an object and returns the guessed inner type, and a callable that takes
-    that and returns the compat type
+    Takes in an object and returns a typle of the outer compat type and inner type.
     """
     raise NotImplementedError(
         f"Don't know how to guess type {type(o)}, provide an explicit type to injest."
     )
 
 
-def guess_all(
-    o: object, *os: object
-) -> typing.Tuple[typing.Callable[[Maybe[T]], typing.Any], typing.List[Maybe[T]]]:
+def guess_types(o: object, *os: object) -> typing.Tuple[typing.Type, typing.Type]:
     """
-    Guesses all and makes sure they have the same callable.
+    Guesses all and makes sure they have they have the same types
     """
-    result, make_outer = guess(o)
-    results = [result]
+    compat_tp, inner_tp = guess_type(o)
     for o in os:
-        result, new_make_outer = guess(o)
-        if new_make_outer != make_outer:
+        new_compat_tp, new_inner_tp = guess_type(o)
+        if (compat_tp != new_compat_tp) or (inner_tp != new_inner_tp):
             raise NotImplementedError(f"different guesses for {(o,) + os}")
-        results.append(result)
-    return make_outer, results
+    return compat_tp, inner_tp
+
+
+class CreateInstance(Expression, typing.Generic[T]):
+    @expression
+    @classmethod
+    def create(cls) -> T:
+        ...
+
+
+def create_instance(tp: typing.Type[T]) -> T:
+    return CreateInstance[tp].create()
+
+
+def guess_type_of_type(tp: typing.Type) -> typing.Tuple[typing.Type, typing.Type]:
+    """
+    Guesses the type of a type, by creating a dummy instance of it and guessing the type of that.
+
+    We need this b/c functools.singledispatch doesn't really work at the type level, so we just make
+    dummy instances instead.
+    """
+    return guess_type(create_instance(tp))
+

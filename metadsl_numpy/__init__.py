@@ -51,3 +51,4 @@ from .boxing import *
 from .bool_compat import *
 from .int_compat import *
 from .tuple_compat import *
+from .function_compat import *

@@ -33,20 +33,20 @@ class BoolCompat(Expression):
         ...
 
     def if_(self, l: object, r: object) -> object:
-        maybes: typing.List[Maybe]
-        wrap, maybes = guess_all(l, r)
-        return wrap(self.if_maybe(*maybes))
+        compat_tp, inner_tp = guess_types(l, r)
+        boxer = Boxer[compat_tp, inner_tp]
+        return boxer.box(boxer.convert(l), boxer.convert(r))
 
     @expression
     def if_maybe(self, l: Maybe[T], r: Maybe[T]) -> Maybe[T]:
         ...
 
 
-@guess.register(BoolCompat)
-@guess.register(Boolean)
-@guess.register(bool)
-def guess_bool_compat(b: object) -> Guess[Boolean, BoolCompat]:
-    return Converter[Boolean].convert(b), BoolCompat.from_maybe_boolean
+@guess_type.register(BoolCompat)
+@guess_type.register(Boolean)
+@guess_type.register(bool)
+def guess_bool_compat(b: object):
+    return BoolCompat, Boolean
 
 
 @register

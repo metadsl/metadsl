@@ -1,9 +1,10 @@
 from __future__ import annotations
 import typing
-
+import typing_inspect
 
 from metadsl import *
 from metadsl_core import *
+from metadsl.typing_tools import get_type
 from .bool_compat import *
 from .injest import *
 from .int_compat import *
@@ -44,11 +45,11 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
         # If we infer it to an int, then use the getitem int
         # otherwise use the slice
         try:
-            maybe_inner, make_outer = guess(idx)
+            injested_idx = injest(idx)
         except NotImplementedError:
             pass
         else:
-            if isinstance(make_outer(maybe_inner), IntCompat):
+            if isinstance(guess_type, IntCompat):
                 return self.getitem_int(idx)
         return self.getitem_slice(idx)
 
@@ -86,34 +87,23 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
         ...
 
 
-@guess.register(HomoTupleCompat)
-def guess_homo_tuple(ht: HomoTupleCompat[T, U]) -> Guess[Vec[U], HomoTupleCompat[T, U]]:
-    return ht.to_maybe_vec, ht.from_maybe_vec
+@guess_type.register(HomoTupleCompat)
+def guess_homo_tuple(ht: HomoTupleCompat[T, U]):
+    compat_tp, inner_tp = typing_inspect.get_args(get_type(ht))
+    return ht, Vec[inner_tp]
 
 
-@expression
-def _homo_tuple_example(outer: T, inner: Maybe[U]) -> HomoTupleCompat[T, U]:
-    """
-    Just used to create a version for type inference so we can grab the from_maybe_vec
-    method off of it
-    """
-    ...
+@guess_type.register(Vec)
+def guess_homo_tuple_tuple(b: Vec[T]):
+    (arg_tp,) = typing_inspect.get_args(get_type(b))
+    compat_tp, inner_tp = guess_type_of_type(arg_tp)
+    return HomoTupleCompat[compat_tp, inner_tp], Vec[inner_tp]
 
 
-@guess.register
-def guess_homo_tuple_tuple(b: tuple) -> Guess[Vec[T], HomoTupleCompat[object, T]]:
-    maybes: typing.List[Maybe[T]]
-    wrap: typing.Callable[[Maybe[T]], object]
-    wrap, maybes = guess_all(*b)
-    maybe_vec = Vec.lift_maybe(Vec.create(*maybes))
-
-    # Create a homo tuple of the right type, so we can grab the `from_maybe_vec`
-    # classmethod off of it
-    inner_instance = maybes[0]
-    outer_instance = wrap(inner_instance)
-    ht = _homo_tuple_example(outer_instance, inner_instance)
-
-    return maybe_vec, ht.from_maybe_vec
+@guess_type.register
+def guess_homo_tuple_tuple(b: tuple):
+    compat_tp, inner_tp = guess_types(*b)
+    return HomoTupleCompat[compat_tp, inner_tp], Vec[inner_tp]
 
 
 @register_convert
