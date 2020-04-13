@@ -427,6 +427,10 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     Matches a type hint with a type, return a mapping of any type vars to their values.
     """
     logger.debug("match_types hint=%s type=%s", hint, t)
+    if hint == object:
+        hint = typing.Any  # type: ignore
+    if t == object:
+        t = typing.Any  # type: ignore
     if hint == t:
         return {}
 
