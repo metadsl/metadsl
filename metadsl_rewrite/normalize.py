@@ -4,6 +4,7 @@ import typing
 import dataclasses
 import collections
 import functools
+import contextlib
 
 from metadsl import *
 from .strategies import *
@@ -41,6 +42,25 @@ class Registrator:
 
     def __delitem__(self, label: str) -> None:
         del self.strategy.phases[label]
+
+    def __contains__(self, label: str) -> bool:
+        return label in self.strategy.phases
+
+    @contextlib.contextmanager
+    def tmp(self, *strategies: Strategy):
+        """
+        Context manager that temporarily appends a list of strategies
+        """
+        TMP_NAME = "__tmp"
+        for s in strategies:
+            self[TMP_NAME](s)
+        try:
+            yield
+        except Exception:
+            raise
+        finally:
+            if TMP_NAME in self:
+                del self[TMP_NAME]
 
 
 @dataclasses.dataclass
