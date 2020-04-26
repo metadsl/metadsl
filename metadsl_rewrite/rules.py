@@ -64,7 +64,7 @@ def default_rule(fn: typing.Callable) -> Strategy:
     return DefaultRule(fn)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(unsafe_hash=True)
 class DefaultRule(Strategy):
     fn: typing.Callable
     inner_fn: typing.Callable = dataclasses.field(
@@ -154,7 +154,7 @@ def create_wildcard(t: typing.Type[T]) -> T:
 WildcardMapping = typing.Mapping[Expression, object]
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(unsafe_hash=True)
 class Rule(Strategy):
     """
     Creates a replacement strategy given a function that maps from wildcard inputs
@@ -196,12 +196,9 @@ class Rule(Strategy):
 
         for i, result in enumerate(self.results):
             template, expression_thunk = result
-            if isinstance(expression_thunk, types.FunctionType):
-                new_result = result
-            else:
-                new_result = template, executor(expression_thunk, strategy)
-            new_results.append(new_result)
-        self.existing_results = new_result
+            # apply execution to all results that are not thunks
+            if not isinstance(expression_thunk, types.FunctionType):
+                self.results[1] = executor(expression_thunk, strategy)
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Result]:
         expr = ref.expression
