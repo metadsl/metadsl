@@ -97,38 +97,25 @@ class StrategyNormalize(Strategy):
         # return dataclasses.replace(self, phases=new_phases)
 
     @property
-    def pre_strategy(self) -> Strategy:
-        return StrategyFold(StrategySequence(*self.pre))
-
-    @property
-    def post_strategy(self) -> Strategy:
-        return StrategyFold(StrategySequence(*self.post))
-
-    @property
-    def phase_strategies(self) -> typing.Tuple[Strategy, ...]:
+    def phase_strategies(self) -> typing.Iterable[Strategy]:
         current_strategies: typing.Set[Strategy] = set()
-        phases: typing.List[Strategy] = []
         for label, strategies in self.phases.items():
             current_strategies.update(strategies)
-            phases.append(
-                StrategyLabel(
-                    label,
-                    StrategyRepeat(
-                        StrategySequence(
-                            self.pre_strategy,
-                            StrategyFold(StrategySequence(*current_strategies)),
-                        ),
-                    ),
-                )
+            yield StrategyLabel(
+                label,
+                StrategyRepeat(
+                    StrategyFold(StrategySequence(*self.pre, *current_strategies)),
+                ),
             )
-        return tuple(phases)
 
     @property
     def strategy(self) -> Strategy:
         return StrategyRepeat(
             StrategyInOrder(
-                StrategyLabel("pre", StrategyRepeat(self.pre_strategy)),
+                StrategyLabel(
+                    "pre", StrategyRepeat(StrategyFold(StrategySequence(*self.pre)))
+                ),
                 *self.phase_strategies,
-                StrategyLabel("post", self.post_strategy)
+                StrategyLabel("post", StrategyFold(StrategySequence(*self.post)))
             )
         )

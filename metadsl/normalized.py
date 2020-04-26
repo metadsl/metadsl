@@ -195,7 +195,7 @@ class ExpressionReference:
                 new_expression, typing.cast(int, self._optional_index)
             )
             # Reset index after replacing b/c we don't know index of newly replaced child
-            # (we could, but not sure we need it since we only replace once then through this object away)
+            # (we could, but not sure we need it since we only replace once then through this object anaway)
             self._optional_index = None
 
     @property

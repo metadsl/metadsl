@@ -73,10 +73,8 @@ class StrategySequence(Strategy):
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Result]:
         for strategy in self.strategies:
-            replacement = None
             for replacement in strategy(expr):
                 yield replacement
-            if replacement:
                 return
 
     def optimize(self, executor, strategy):
