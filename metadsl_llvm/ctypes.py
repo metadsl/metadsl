@@ -5,12 +5,10 @@ import ctypes
 
 from metadsl import *
 from metadsl_core import *
+from metadsl_rewrite import *
+from .strategies import *
 
-__all__ = ["ctypes_rules", "CType", "CFunctionType"]
-
-
-ctypes_rules = RulesRepeatFold()
-register_ctypes = ctypes_rules.append
+__all__ = ["CType", "CFunctionType"]
 
 
 class CType(Expression):

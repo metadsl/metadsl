@@ -9,14 +9,13 @@ import functools
 
 from metadsl import *
 from metadsl_core import *
+from metadsl_rewrite import *
+from .strategies import *
 
 from .ir import *
 from .integration import *
 
-__all__ = ["ir_context_rules", "llvm_fn", "to_llvm", "ValueExpr"]
-
-ir_context_rules = RulesRepeatFold()
-register_context = ir_context_rules.append
+__all__ = ["llvm_fn", "to_llvm", "ValueExpr"]
 
 
 BlockCtx = Pair[BlockRef, Fn]
@@ -368,4 +367,3 @@ def build_cbranch(
 @rule
 def build_constant(value: Value, block_ctx: BlockCtx) -> R[ValueCtx]:
     return (ValueExpr.from_value(value).build(block_ctx), Pair.create(value, block_ctx))
-

@@ -1,20 +1,19 @@
 from __future__ import annotations
-import typing
-import ctypes
 
+import ctypes
+import typing
 
 from metadsl import *
 from metadsl_core import *
-from .ir import *
+from metadsl_rewrite import *
+
 from .ctypes import *
-from .llvmlite_binding import *
+from .ir import *
 from .ir_llvmlite import *
+from .llvmlite_binding import *
+from .strategies import *
 
-__all__ = ["llvm_integration_rules", "compile_function", "compile_functions"]
-
-
-llvm_integration_rules = RulesRepeatFold()
-register_integration = llvm_integration_rules.append
+__all__ = ["compile_function", "compile_functions"]
 
 
 @expression
@@ -22,7 +21,7 @@ def concat_strings(l: str, r: str) -> str:
     return l + r
 
 
-register(default_rule(concat_strings))
+register_core(default_rule(concat_strings))
 
 
 def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str, Fn]:

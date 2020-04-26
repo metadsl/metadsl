@@ -5,18 +5,19 @@ Generate LLVM IR
 # TODO: What if repr of value changes over time like for IR?
 
 from __future__ import annotations
+
 import typing
 
 import llvmlite.ir as ir
 
 from metadsl import *
 from metadsl_core import *
+from metadsl_rewrite import *
+
 from .ir import *
+from .strategies import *
 
-__all__ = ["ir_llvmlite_rules", "mod_str"]
-
-ir_llvmlite_rules = RulesRepeatFold()
-register_llvmlite = ir_llvmlite_rules.append
+__all__ = ["mod_str"]
 
 
 @hash_value.register

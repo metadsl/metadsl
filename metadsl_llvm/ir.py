@@ -9,7 +9,7 @@ import llvmlite.ir as ir
 
 from metadsl import *
 from metadsl_core import *
-
+from metadsl_rewrite import *
 
 __all__ = [
     "ModRef",
@@ -173,37 +173,37 @@ class Type(Expression):
         ...
 
 
-@register
+@register_core
 @rule
 def mod_add_fn(ref: ModRef, fns: typing.Sequence[Fn], fn: Fn):
     return (ref.mod(*fns).add_fn(fn), ref.mod(*fns, fn))
 
 
-@register
+@register_core
 @rule
 def mod_ref(ref: ModRef, fns: typing.Sequence[Fn]):
     return (ref.mod(*fns).ref, ref)
 
 
-@register
+@register_core
 @rule
 def fn_add_block(ref: FnRef, blocks: typing.Sequence[Terminate], block: Terminate):
     return (ref.fn(*blocks).add_block(block), ref.fn(*blocks, block))
 
 
-@register
+@register_core
 @rule
 def fn_ref(ref: FnRef, blocks: typing.Sequence[Terminate]):
     return (ref.fn(*blocks).ref, ref)
 
 
-@register
+@register_core
 @rule
 def fn_ref_get_name(mod: ModRef, name: str, tp: FnType, calling_convention: str):
     return mod.fn(name, tp, calling_convention).name, name
 
 
-@register
+@register_core
 @rule
 def fn_ref_get_type(mod: ModRef, name: str, tp: FnType, calling_convention: str):
     return mod.fn(name, tp, calling_convention).type, tp

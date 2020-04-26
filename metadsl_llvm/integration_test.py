@@ -1,4 +1,4 @@
-import metadsl as m
+import metadsl_rewrite
 import metadsl_core as mc
 import metadsl_llvm as ml
 
@@ -98,7 +98,7 @@ def test_fib():
 
     mod = mod_ref.mod(fib_fn, fib_more_fn)
 
-    metadsl_fn = m.execute(ml.compile_function(mod, fib_ref))
+    metadsl_fn = metadsl_rewrite.execute(ml.compile_function(mod, fib_ref))
     assert metadsl_fn(10) == 55
 
 
@@ -126,5 +126,5 @@ def test_add():
     fn = fn_ref.fn(terminate)
 
     mod = mod_ref.mod(fn)
-    real_fn = m.execute(ml.compile_function(mod, fn_ref))
+    real_fn = metadsl_rewrite.execute(ml.compile_function(mod, fn_ref))
     assert real_fn(10, 11) == 22
