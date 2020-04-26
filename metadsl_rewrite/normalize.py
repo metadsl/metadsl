@@ -114,7 +114,7 @@ class StrategyNormalize(Strategy):
                 StrategyLabel(
                     label,
                     StrategyRepeat(
-                        StrategyInOrder(
+                        StrategySequence(
                             self.pre_strategy,
                             StrategyFold(StrategySequence(*current_strategies)),
                         ),
