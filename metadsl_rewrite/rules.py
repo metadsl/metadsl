@@ -91,6 +91,7 @@ class DefaultRule(Strategy):
         """
         with CaptureLogging() as results:
             expr = ref.expression
+            logger.debug("DefaultRule.__call__ self=%s expr=%s", self, expr)
             if not isinstance(expr, Expression):
                 return
 
@@ -125,6 +126,8 @@ class DefaultRule(Strategy):
             with TypeVarScope(*typevars.keys()):
                 new_expr = self.inner_fn(*args, **expr.kwargs)
                 result = ReplaceTypevarsExpression(typevars)(new_expr)
+            logger.debug("DefaultRule.__call__ result=%s", result)
+
             ref.replace(result)
         yield Result(str(self), logs="\n".join(results))
 
@@ -204,7 +207,7 @@ class Rule(Strategy):
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Result]:
         expr = ref.expression
         with CaptureLogging() as logs:
-            logger.debug("MatchStrategy.__call__ expr=%s", expr)
+            logger.debug("Rule.__call__ self=%s expr=%s", self, expr)
             for i, result in enumerate(self.results):
                 template, expression_thunk = result
                 try:
