@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import typing
+
 import pytest
 
-from .matching import *
-from .rules import *
-from .typing_tools import *
-from .expressions import *
+from metadsl import *
+from metadsl.typing_tools import *
+
+from . import *
 
 
 class _SomeExpression(Expression):
@@ -331,11 +333,14 @@ class TestRule:
 
         assert execute(subtract(add(1, 2), 3), subtract_rule) == subtract(add(1, 2), 3)
 
-        assert execute(subtract(add(1, 2), 3), RulesRepeatFold(add_rule)) == subtract(
-            3, 3
-        )
+        assert execute(
+            subtract(add(1, 2), 3), StrategyRepeat(StrategyFold(add_rule))
+        ) == subtract(3, 3)
         assert (
-            execute(subtract(add(1, 2), 3), RulesRepeatFold(add_rule, subtract_rule))
+            execute(
+                subtract(add(1, 2), 3),
+                StrategyRepeat(StrategyFold(StrategyInOrder(add_rule, subtract_rule))),
+            )
             == 0
         )
 
@@ -501,11 +506,14 @@ class TestDefaultRule:
 
         assert execute(subtract(add(1, 2), 3), subtract_rule) == subtract(add(1, 2), 3)
 
-        assert execute(subtract(add(1, 2), 3), RulesRepeatFold(add_rule)) == subtract(
-            3, 3
-        )
+        assert execute(
+            subtract(add(1, 2), 3), StrategyRepeat(StrategyFold(add_rule))
+        ) == subtract(3, 3)
         assert (
-            execute(subtract(add(1, 2), 3), RulesRepeatFold(subtract_rule, add_rule))
+            execute(
+                subtract(add(1, 2), 3),
+                StrategyRepeat(StrategyFold(StrategySequence(subtract_rule, add_rule))),
+            )
             == 0
         )
 

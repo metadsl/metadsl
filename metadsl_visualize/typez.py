@@ -9,8 +9,8 @@ import inspect
 import types
 import typing
 import warnings
-import black
 
+import black
 import metadsl
 import typing_inspect
 from typez import *

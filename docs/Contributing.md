@@ -15,6 +15,7 @@ conda env create -f binder/environment.yml
 conda activate metadsl
 flit -f typez.pyproject.toml install --symlink
 flit install --symlink
+flit -f rewrite.pyproject.toml install --symlink
 flit -f core.pyproject.toml install --symlink
 flit -f visualize.pyproject.toml install --symlink
 flit -f llvm.pyproject.toml install --symlink
@@ -91,6 +92,7 @@ npm publish
 cd ..
 flit -f typez.pyproject.toml publish
 flit -f pyproject.toml publish
+flit -f rewrite.pyproject.toml publish
 flit -f core.pyproject.toml   publish
 flit -f llvm.pyproject.toml   publish
 flit -f visualize.pyproject.toml    publish

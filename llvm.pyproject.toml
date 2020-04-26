@@ -9,6 +9,7 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "metadsl",
+    "metadsl_rewrite",
     "metadsl_core",
     "llvmlite"
 ]

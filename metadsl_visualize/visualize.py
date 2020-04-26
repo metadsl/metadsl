@@ -1,8 +1,10 @@
-import IPython.core.display
-import IPython
 import typing
 
+import IPython
+import IPython.core.display
 from metadsl import *
+from metadsl_rewrite import *
+
 from .typez import *
 
 __all__ = ["execute_and_visualize"]
@@ -11,7 +13,7 @@ __all__ = ["execute_and_visualize"]
 T = typing.TypeVar("T")
 
 
-def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
+def execute_and_visualize(ref: ExpressionReference, strategy: Strategy) -> object:
     """
     Returns the replaced version of this expression and also displays the execution trace.
     """
@@ -24,9 +26,9 @@ def execute_and_visualize(ref: ExpressionReference, rule: Rule) -> object:
     ):
         IPython.core.display.display(expression_display)
 
-    # Update the typez display as we execute the rules
-    for replacement in rule(ref):
-        expression_display.update(replacement.rule, replacement.label)
+    # Update the typez display as we execute the strategys
+    for result in strategy(ref):
+        expression_display.update(result.name, result.label)
     return ref.expression
 
 

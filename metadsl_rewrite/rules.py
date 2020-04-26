@@ -1,5 +1,5 @@
 """
-Pattern matching allows you to define replacement rules by creating a template that should resemble
+Pattern matching allows you to define replacement strategies by creating a template that should resemble
 an expression, with certain leaf nodes as Wildcards. These can match any node in the target expression.
 
 The values at these wildcards are captured and passed to another function to compute a resulting expression
@@ -10,31 +10,33 @@ this is a form of symbolic tree transducers, but not implemented in a mathematic
 then we could more easily combine matches to make them execute faster and compute properties about them. This would
 be good to add at a later date, and could be done without having users change their code.
 """
+from __future__ import annotations
 
-import typing
 import dataclasses
 import functools
-import types
 import inspect
-import typing_inspect
-import functools
 import logging
+import types
+import typing
 
-from .expressions import *
-from .dict_tools import *
-from .normalized import *
-from .typing_tools import *
-from .rules import Rule, Replacement
+import typing_inspect
+from metadsl import *
+from metadsl.typing_tools import *
 
+from .strategies import *
 
 __all__ = ["R", "NoMatch", "rule", "default_rule", "create_wildcard"]
 
-T = typing.TypeVar("T", bound=Expression)
+T = typing.TypeVar("T")
 
-R_single = typing.Tuple[T, typing.Union[typing.Callable[[], T], T]]
-R = typing.Union[typing.Generator[R_single[T], None, None], R_single[T]]
+R = typing.Union[
+    typing.Tuple[T, typing.Union[typing.Callable[[], T], T]],
+    typing.Generator[
+        typing.Tuple[T, typing.Union[typing.Callable[[], T], T]], None, None
+    ],
+]
 # Mapping from wildcards to the matching pattern and replacement
-MatchFunctionType = typing.Callable[..., R[T]]
+MatchFunctionType = typing.Callable[..., R]
 
 logger = logging.getLogger(__name__)
 
@@ -43,29 +45,31 @@ class NoMatch(Exception):
     pass
 
 
-def rule(fn: MatchFunctionType) -> Rule:
+def rule(fn: MatchFunctionType) -> Strategy:
     """
-    Creates a new rule given a callable that accepts wildcards and returns
+    Creates a new strategy given a callable that accepts wildcards and returns
     the match value and the replacement value.
     """
 
-    return MatchRule(fn)
+    return Rule(fn)
 
 
 T_Callable = typing.TypeVar("T_Callable", bound=typing.Callable)
 
 
-def default_rule(fn: typing.Callable) -> Rule:
+def default_rule(fn: typing.Callable) -> Strategy:
     """
-    Creates a rule based on the body of a passed in expression function
+    Creates a strategy based on the body of a passed in expression function
     """
     return DefaultRule(fn)
 
 
 @dataclasses.dataclass
-class DefaultRule:
+class DefaultRule(Strategy):
     fn: typing.Callable
-    inner_fn: typing.Callable = dataclasses.field(init=False, repr=False)
+    inner_fn: typing.Callable = dataclasses.field(
+        init=False, repr=False, compare=False, hash=False
+    )
 
     def __str__(self):
         return f"{self.inner_fn.__module__}.{self.inner_fn.__qualname__}"
@@ -73,9 +77,13 @@ class DefaultRule:
     def __post_init__(self):
         self.inner_fn = self.fn.__wrapped__  # type: ignore
 
-    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
+    def optimize(self, executor, strategy):
+        # TODO: Implement optimizations for default rules
+        pass
+
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Result]:
         """
-        This rule should match whenever the expression is this function.
+        This strategy should match whenever the expression is this function.
 
         Then, all it has to do is get the type variable mapping given the current args
         and apply it to the return value. This is so that if the body uses generic type
@@ -117,7 +125,7 @@ class DefaultRule:
             new_expr = self.inner_fn(*args, **expr.kwargs)
             result = ReplaceTypevarsExpression(typevars)(new_expr)
         ref.replace(result)
-        yield Replacement(str(self))
+        yield Result(str(self))
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -147,23 +155,25 @@ WildcardMapping = typing.Mapping[Expression, object]
 
 
 @dataclasses.dataclass
-class MatchRule:
+class Rule(Strategy):
     """
-    Creates a replacement rule given a function that maps from wildcard inputs
+    Creates a replacement strategy given a function that maps from wildcard inputs
     to two things, a template expression tree and a replacement thunk.
 
     If the template matches an expression, it will be replaced with the result of the thunk, replacing
     the input args with the nodes at their locations in the template.
 
-    You can also return None from the rule to signal that it won't match.
+    You can also return None from the strategy to signal that it won't match.
     """
 
     matchfunction: MatchFunctionType
 
     # the wildcards that are present in the template
-    wildcards: typing.List[Expression] = dataclasses.field(init=False)
+    wildcards: typing.List[Expression] = dataclasses.field(
+        init=False, hash=False, compare=False
+    )
 
-    results: typing.List[R] = dataclasses.field(init=False)
+    results: typing.List[R] = dataclasses.field(init=False, hash=False, compare=False)
 
     def __str__(self):
         return f"{self.matchfunction.__module__}.{self.matchfunction.__qualname__}"
@@ -181,11 +191,23 @@ class MatchRule:
             else [result]
         )
 
-    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Replacement]:
-        expr = ref.expression
-        logger.debug("MatchRule.__call__ expr=%s", expr)
+    def optimize(self, executor: Executor, strategy: Strategy) -> None:
+        new_results: typing.List[R] = []
+
         for i, result in enumerate(self.results):
-            template, _ = result
+            template, expression_thunk = result
+            if isinstance(expression_thunk, types.FunctionType):
+                new_result = result
+            else:
+                new_result = template, executor(expression_thunk, strategy)
+            new_results.append(new_result)
+        self.existing_results = new_result
+
+    def __call__(self, ref: ExpressionReference) -> typing.Iterable[Result]:
+        expr = ref.expression
+        logger.debug("MatchStrategy.__call__ expr=%s", expr)
+        for i, result in enumerate(self.results):
+            template, expression_thunk = result
             try:
                 logger.debug("Trying to match against %s", template)
                 typevars, wildcards_to_nodes = match_expression(  # type: ignore
@@ -196,16 +218,18 @@ class MatchRule:
                 continue
             logger.debug("Matched expr=%s typevars=%s", typevars, wildcards_to_nodes)
 
-            args = [
-                wildcards_to_nodes.get(wildcard, wildcard)
-                for wildcard in self.wildcards
-            ]
-            _, expression_thunk = (
-                list(self.matchfunction(*args))[i]
-                if inspect.isgeneratorfunction(self.matchfunction)
-                else self.matchfunction(*args)
-            )
+            # if the result is a function, we can't use substitution, so instead we re-call
+            # with args and use that result
             if isinstance(expression_thunk, types.FunctionType):
+                args = [
+                    wildcards_to_nodes.get(wildcard, wildcard)
+                    for wildcard in self.wildcards
+                ]
+                _, expression_thunk = (
+                    list(self.matchfunction(*args))[i]
+                    if inspect.isgeneratorfunction(self.matchfunction)
+                    else self.matchfunction(*args)
+                )
                 # If it's a function, make sure we have real values instead of placeholders
                 # for any of the nodes that are placeholders for something more specific
                 # than a typevar, object, or any
@@ -220,15 +244,34 @@ class MatchRule:
                 except NoMatch:
                     continue
             else:
-                result_expr = expression_thunk
+                result_expr = ReplaceValues(wildcards_to_nodes)(expression_thunk)
             with TypeVarScope(*typevars.keys()):
                 result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
                 ref.replace(result_expr)
-            yield Replacement(
-                # if there is more than one possible match from this rule, also put the index of the match
-                rule=str(self) if len(self.results) == 1 else f"{self}[{i}]"
+            yield Result(
+                # if there is more than one possible match from this strategy, also put the index of the match
+                name=str(self)
+                if len(self.results) == 1
+                else f"{self}[{i}]"
             )
             return
+
+
+@dataclasses.dataclass
+class ReplaceValues:
+    """
+    Replaces all instances of `var` with `arg` inside of `body`, 
+    except for local bindings of `var` as declared in other `from_fn`s inside.
+    """
+
+    mapping: typing.Mapping
+
+    def __call__(self, expr):
+        if expr in self.mapping:
+            return self.mapping[expr]
+        if not isinstance(expr, Expression):
+            return expr
+        return expr._map(self)
 
 
 @dataclasses.dataclass(frozen=True)
