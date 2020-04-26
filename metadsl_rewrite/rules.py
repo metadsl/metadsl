@@ -89,43 +89,44 @@ class DefaultRule(Strategy):
         and apply it to the return value. This is so that if the body uses generic type
         variables, they are turned into the actual instantiations. 
         """
-        expr = ref.expression
-        if not isinstance(expr, Expression):
-            return
+        with CaptureLogging() as results:
+            expr = ref.expression
+            if not isinstance(expr, Expression):
+                return
 
-        fn = self.fn
+            fn = self.fn
 
-        args = expr.args
+            args = expr.args
 
-        # If any of the args are placeholders, don't match!
-        if any(
-            isinstance(arg, PlaceholderExpression)
-            for arg in args + list(expr.kwargs.values())
-        ):
-            return None
-
-        typevars: TypeVarMapping = infer_return_type(
-            expr.function.fn,  # type: ignore
-            getattr(expr.function, "owner", None),
-            getattr(expr.function, "is_classmethod", False),
-            tuple(args),
-            expr.kwargs,
-        )[-1]
-        if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
-            if fn.fn != expr.function.fn:
+            # If any of the args are placeholders, don't match!
+            if any(
+                isinstance(arg, PlaceholderExpression)
+                for arg in args + list(expr.kwargs.values())
+            ):
                 return None
-            if fn.is_classmethod:
-                args = [
-                    typing.cast(object, replace_typevars(typevars, fn.owner))
-                ] + args
 
-        elif fn != expr.function:
-            return None
-        with TypeVarScope(*typevars.keys()):
-            new_expr = self.inner_fn(*args, **expr.kwargs)
-            result = ReplaceTypevarsExpression(typevars)(new_expr)
-        ref.replace(result)
-        yield Result(str(self))
+            typevars: TypeVarMapping = infer_return_type(
+                expr.function.fn,  # type: ignore
+                getattr(expr.function, "owner", None),
+                getattr(expr.function, "is_classmethod", False),
+                tuple(args),
+                expr.kwargs,
+            )[-1]
+            if isinstance(fn, BoundInfer) and isinstance(expr.function, BoundInfer):
+                if fn.fn != expr.function.fn:
+                    return None
+                if fn.is_classmethod:
+                    args = [
+                        typing.cast(object, replace_typevars(typevars, fn.owner))
+                    ] + args
+
+            elif fn != expr.function:
+                return None
+            with TypeVarScope(*typevars.keys()):
+                new_expr = self.inner_fn(*args, **expr.kwargs)
+                result = ReplaceTypevarsExpression(typevars)(new_expr)
+            ref.replace(result)
+        yield Result(str(self), logs="\n".join(results))
 
 
 class Wildcard(Expression, typing.Generic[T]):
@@ -198,60 +199,62 @@ class Rule(Strategy):
             template, expression_thunk = result
             # apply execution to all results that are not thunks
             if not isinstance(expression_thunk, types.FunctionType):
-                self.results[1] = executor(expression_thunk, strategy)
+                self.results[i] = (template, executor(expression_thunk, strategy))
 
     def __call__(self, ref: ExpressionReference) -> typing.Iterable[Result]:
         expr = ref.expression
-        logger.debug("MatchStrategy.__call__ expr=%s", expr)
-        for i, result in enumerate(self.results):
-            template, expression_thunk = result
-            try:
-                logger.debug("Trying to match against %s", template)
-                typevars, wildcards_to_nodes = match_expression(  # type: ignore
-                    self.wildcards, template, expr
-                )
-            except NoMatch:
-                logger.debug("Not a match", template)
-                continue
-            logger.debug("Matched expr=%s typevars=%s", typevars, wildcards_to_nodes)
-
-            # if the result is a function, we can't use substitution, so instead we re-call
-            # with args and use that result
-            if isinstance(expression_thunk, types.FunctionType):
-                args = [
-                    wildcards_to_nodes.get(wildcard, wildcard)
-                    for wildcard in self.wildcards
-                ]
-                _, expression_thunk = (
-                    list(self.matchfunction(*args))[i]
-                    if inspect.isgeneratorfunction(self.matchfunction)
-                    else self.matchfunction(*args)
-                )
-                # If it's a function, make sure we have real values instead of placeholders
-                # for any of the nodes that are placeholders for something more specific
-                # than a typevar, object, or any
-                if any(
-                    isinstance(node, PlaceholderExpression)
-                    and not is_vague_type(wildcard_inner_type(wildcard))
-                    for wildcard, node in wildcards_to_nodes.items()
-                ):
-                    continue
+        with CaptureLogging() as logs:
+            logger.debug("MatchStrategy.__call__ expr=%s", expr)
+            for i, result in enumerate(self.results):
+                template, expression_thunk = result
                 try:
-                    result_expr: object = expression_thunk()
+                    logger.debug("Trying to match against %s", template)
+                    typevars, wildcards_to_nodes = match_expression(  # type: ignore
+                        self.wildcards, template, expr
+                    )
                 except NoMatch:
+                    logger.debug("Not a match")
                     continue
-            else:
-                result_expr = ReplaceValues(wildcards_to_nodes)(expression_thunk)
-            with TypeVarScope(*typevars.keys()):
-                result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
-                ref.replace(result_expr)
-            yield Result(
-                # if there is more than one possible match from this strategy, also put the index of the match
-                name=str(self)
-                if len(self.results) == 1
-                else f"{self}[{i}]"
-            )
-            return
+                logger.debug(
+                    "Matched expr=%s typevars=%s", typevars, wildcards_to_nodes
+                )
+
+                # if the result is a function, we can't use substitution, so instead we re-call
+                # with args and use that result
+                if isinstance(expression_thunk, types.FunctionType):
+                    args = [
+                        wildcards_to_nodes.get(wildcard, wildcard)
+                        for wildcard in self.wildcards
+                    ]
+                    _, expression_thunk = (
+                        list(self.matchfunction(*args))[i]
+                        if inspect.isgeneratorfunction(self.matchfunction)
+                        else self.matchfunction(*args)
+                    )
+                    # If it's a function, make sure we have real values instead of placeholders
+                    # for any of the nodes that are placeholders for something more specific
+                    # than a typevar, object, or any
+                    if any(
+                        isinstance(node, PlaceholderExpression)
+                        and not is_vague_type(wildcard_inner_type(wildcard))
+                        for wildcard, node in wildcards_to_nodes.items()
+                    ):
+                        continue
+                    try:
+                        result_expr: object = expression_thunk()
+                    except NoMatch:
+                        continue
+                else:
+                    result_expr = ReplaceValues(wildcards_to_nodes)(expression_thunk)
+                with TypeVarScope(*typevars.keys()):
+                    result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
+                    ref.replace(result_expr)
+                yield Result(
+                    # if there is more than one possible match from this strategy, also put the index of the match
+                    name=str(self) if len(self.results) == 1 else f"{self}[{i}]",
+                    logs="\n".join(logs),
+                )
+                return
 
 
 @dataclasses.dataclass

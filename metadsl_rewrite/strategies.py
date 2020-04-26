@@ -55,9 +55,10 @@ class Executor:
 
 @dataclasses.dataclass
 class Result:
-
     # The name of the strategy that was executed
     name: str
+    # Any optional logs for this strategy
+    logs: str = ""
     # An optional label for this replacement
     label: typing.Optional[str] = None
 

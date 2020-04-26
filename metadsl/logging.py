@@ -35,7 +35,7 @@ class CapturingHandler(logging.Handler):
         self.events = events
 
     def emit(self, record):
-        self.events.append(self.format(record))
+        self.events.append(logging.Formatter("%(name)s.%(message)s").format(record))
 
 
 @dataclasses.dataclass
