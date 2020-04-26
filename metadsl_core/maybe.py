@@ -120,7 +120,7 @@ def push_down_maybe_maybe_match(
     """
     return (
         m.match(nothing, just).match(nothing_outer, just_outer),
-        m.match(
+        lambda: m.match(
             nothing.match(nothing_outer, just_outer),
             Abstraction[T, V].from_fn(
                 lambda t: just(t).match(nothing_outer, just_outer)

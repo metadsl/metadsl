@@ -105,6 +105,10 @@ class TestConvertToAbstraction:
         ids=["just", "nothing"],
     )
     def test_from_abstraction(self, u_to_x_rule, v_to_t_rule) -> None:
+        """
+        Test converting from a function to an abstraction
+        """
+
         def fn(t: T) -> U:
             return t_to_u(t)
 

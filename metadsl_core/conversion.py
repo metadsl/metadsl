@@ -97,7 +97,7 @@ def convert_to_abstraction(a: Abstraction[T, U]) -> R[Maybe[Abstraction[V, Maybe
 
     return (
         Converter[Abstraction[V, Maybe[X]]].convert(a),
-        Maybe.just(
+        lambda: Maybe.just(
             Abstraction[V, Maybe[X]].from_fn(
                 lambda v: Converter[T]
                 .convert(v)
@@ -118,5 +118,5 @@ def convert_fn_to_abstraction(
 ) -> R[Maybe[Abstraction[V, Maybe[X]]]]:
     return (
         Converter[Abstraction[V, Maybe[X]]].convert(a),
-        Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
+        lambda: Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
     )
