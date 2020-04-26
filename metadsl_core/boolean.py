@@ -1,11 +1,15 @@
 from __future__ import annotations
+
 import typing
 
 from metadsl import *
-from .rules import *
+
+from metadsl_rewrite import *
+
+from .abstraction import *
 from .conversion import *
 from .maybe import *
-from .abstraction import *
+from .strategies import *
 
 __all__ = ["Boolean"]
 
@@ -43,17 +47,17 @@ class Boolean(Expression):
         return Boolean.create(False)
 
 
-register(default_rule(Boolean.true))
-register(default_rule(Boolean.false))
+register_ds(default_rule(Boolean.true))
+register_ds(default_rule(Boolean.false))
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def if_(b: bool, l: T, r: T) -> R[T]:
     return Boolean.create(b).if_(l, r), lambda: l if b else r
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def and_or(l: bool, r: bool) -> R[Boolean]:
     l_boolean = Boolean.create(l)
@@ -75,7 +79,7 @@ def convert_bool(b: bool) -> R[Maybe[Boolean]]:
     return Converter[Boolean].convert(b), Maybe.just(Boolean.create(b))
 
 
-@register
+@register_core
 @rule
 def pull_if_above_maybe(
     b: Boolean,

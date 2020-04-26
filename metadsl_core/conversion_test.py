@@ -1,10 +1,11 @@
 import pytest
 from metadsl import *
+from metadsl_rewrite import *
 
 from .abstraction import *
 from .conversion import *
 from .maybe import *
-from .rules import *
+from .strategies import *
 
 
 class TestConvertIdentity:
@@ -121,10 +122,5 @@ class TestConvertToAbstraction:
                 )
             )
         )
-        new_all_rules = RulesRepeatSequence(
-            all_rules, RulesRepeatFold(v_to_t_rule, u_to_x_rule)
-        )
-
-        assert execute(called_with_v, new_all_rules) == execute(
-            desired_result, new_all_rules
-        )
+        with register.tmp(v_to_t_rule, u_to_x_rule):
+            assert execute(called_with_v) == execute(desired_result)

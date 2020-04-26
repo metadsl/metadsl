@@ -2,8 +2,10 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
+
 from .abstraction import *
-from .rules import *
+from .strategies import *
 from .pair import *
 
 __all__ = ["Maybe", "collapse_maybe"]
@@ -73,20 +75,20 @@ def collapse_maybe(x: Maybe[Maybe[T]]) -> Maybe[T]:
     )
 
 
-register(default_rule(Maybe[T].map))
-register(default_rule(Maybe[T].default))
-register(default_rule(Maybe[T].flat_map))
-register(default_rule(collapse_maybe))
+register_core(default_rule(Maybe[T].map))
+register_core(default_rule(Maybe[T].default))
+register_core(default_rule(Maybe[T].flat_map))
+register_core(default_rule(collapse_maybe))
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def maybe_match(nothing: U, just: Abstraction[T, U], v: T) -> R[U]:
     yield Maybe[T].nothing().match(nothing, just), nothing
     yield Maybe.just(v).match(nothing, just), just(v)
 
 
-@register
+@register_core
 @rule
 def maybe_or(x: T, v: Maybe[T]) -> R[Maybe[T]]:
     yield Maybe[T].nothing() | Maybe[T].nothing(), Maybe[T].nothing()
@@ -94,7 +96,7 @@ def maybe_or(x: T, v: Maybe[T]) -> R[Maybe[T]]:
     yield v | Maybe.just(x), Maybe.just(x)
 
 
-@register
+@register_core
 @rule
 def maybe_and(left: Maybe[T], right: Maybe[U], left_v: T, right_v: U) -> R[Pair[T, U]]:
     yield Maybe[T].nothing() & right, Maybe[Pair[T, U]].nothing()
@@ -104,7 +106,7 @@ def maybe_and(left: Maybe[T], right: Maybe[U], left_v: T, right_v: U) -> R[Pair[
     )
 
 
-@register
+@register_core
 @rule
 def push_down_maybe_maybe_match(
     m: Maybe[T],
@@ -127,7 +129,7 @@ def push_down_maybe_maybe_match(
     )
 
 
-@register
+@register_core
 @rule
 def match_identity(m: Maybe[T], var: T,) -> R[Maybe[T]]:
     """

@@ -3,7 +3,8 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
-from .rules import *
+from metadsl_rewrite import *
+from .strategies import *
 from .abstraction import *
 from .abstraction import Variable, from_fn_rule
 from .integer import *
@@ -25,7 +26,6 @@ class I(Expression):
     @expression
     def dec(self) -> I:
         ...
-
 
 
 class TestAbstraction:

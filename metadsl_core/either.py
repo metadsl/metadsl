@@ -2,10 +2,11 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
 from .conversion import *
 from .maybe import *
 from .abstraction import *
-from .rules import *
+from .strategies import *
 
 __all__ = ["Either"]
 
@@ -30,7 +31,7 @@ class Either(Expression, typing.Generic[T, U]):
         ...
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def either_match(l: Abstraction[T, V], r: Abstraction[U, V], t: T, u: U) -> R[V]:
     yield Either[T, U].left(t).match(l, r), lambda: l(t)  # type: ignore

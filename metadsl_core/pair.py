@@ -2,7 +2,9 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
-from .rules import *
+from metadsl_rewrite import *
+
+from .strategies import *
 
 __all__ = ["Pair"]
 
@@ -40,7 +42,7 @@ class Pair(Expression, typing.Generic[T, U]):
         return self.left, self.right
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def pair_left(l: T, r: U) -> R[T]:
     """
@@ -50,7 +52,7 @@ def pair_left(l: T, r: U) -> R[T]:
     return Pair.create(l, r).left, l
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def pair_right(l: T, r: U) -> R[U]:
     """
@@ -60,7 +62,7 @@ def pair_right(l: T, r: U) -> R[U]:
     return Pair.create(l, r).right, r
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def pair_set(l: T, r: U, new_l: T, new_r: U) -> R[Pair[T, U]]:
     """

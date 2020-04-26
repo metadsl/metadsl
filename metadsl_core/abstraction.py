@@ -4,8 +4,9 @@ import dataclasses
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
 import metadsl.typing_tools
-from .rules import *
+from .strategies import *
 
 __all__ = ["Abstraction", "Variable"]
 
@@ -78,10 +79,10 @@ class Abstraction(Expression, typing.Generic[T, U]):
 # Run the `from_fn` before any other rules, so that variables
 # are all created before any are replaced
 # This is needed if a variable is caught in an inner scope of a local function
-from_fn_rule = register_pre(default_rule(Abstraction[T, U].from_fn))
+from_fn_rule = register.pre(default_rule(Abstraction[T, U].from_fn))
 # Run  the fixed point  operator  rule after all others, so that
 # it is only expanded if we need it.
-fix_rule = register_post(default_rule(Abstraction.fix))
+fix_rule = register.post(default_rule(Abstraction.fix))
 
 
 def _replace(body: U, var: T, arg: T) -> U:
@@ -104,7 +105,7 @@ def _replace(body: U, var: T, arg: T) -> U:
     return body._map(lambda e: _replace(e, var, arg))  # type: ignore
 
 
-@register
+@register_core
 @rule
 def compose(vl: T, bl: U, vr: V, br: T) -> R[Abstraction[V, U]]:
     # We want to define composition for the lambda calculus
@@ -129,13 +130,13 @@ def compose(vl: T, bl: U, vr: V, br: T) -> R[Abstraction[V, U]]:
     )
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def beta_reduce(var: T, body: U, arg: T) -> R[U]:
     return (Abstraction[T, U].create(var, body)(arg), lambda: _replace(body, var, arg))
 
 
-@register
+@register_core
 @rule
 def unfix_normal(
     var: T, body: U
@@ -144,11 +145,13 @@ def unfix_normal(
     # If this is a normal abstraction, then just return the original
     return (
         original.unfix,
-        Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(lambda _: original),
+        lambda: Abstraction[Abstraction[T, U], Abstraction[T, U]].from_fn(
+            lambda _: original
+        ),
     )
 
 
-@register
+@register_core
 @rule
 def unfix_fixed(
     a: Abstraction[Abstraction[T, U], Abstraction[T, U]]

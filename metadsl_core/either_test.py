@@ -5,8 +5,8 @@ from metadsl import *
 from .conversion import *
 from .either import *
 from .abstraction import *
-from .rules import all_rules
 from .maybe import *
+from metadsl_rewrite import *
 
 
 class Int(Expression):
@@ -62,26 +62,26 @@ def convert_to_str(s: str) -> R[Maybe[Str]]:
     return Converter[Str].convert(s), lambda: Maybe.just(Str.from_str(s))
 
 
-convert_rules = RulesRepeatFold(convert_to_str, convert_to_int, all_rules)
+convert_rules = register.tmp(convert_to_str, convert_to_int)
 
 
 class TestConvert:
+    @convert_rules
     def test_convert_int(self):
-        assert execute(Converter[Int].convert(123), convert_rules) == Maybe.just(
-            Int.from_int(123)
-        )
+        assert execute(Converter[Int].convert(123)) == Maybe.just(Int.from_int(123))
 
+    @convert_rules
     def test_convert_str(self):
-        assert execute(Converter[Str].convert("hi"), convert_rules) == Maybe.just(
-            Str.from_str("hi")
-        )
+        assert execute(Converter[Str].convert("hi")) == Maybe.just(Str.from_str("hi"))
 
+    @convert_rules
     def test_convert_either_int(self):
-        assert execute(Converter[IntStr].convert(123), convert_rules) == Maybe.just(
+        assert execute(Converter[IntStr].convert(123)) == Maybe.just(
             IntStr.left(Int.from_int(123))
         )
 
+    @convert_rules
     def test_convert_either_str(self):
-        assert execute(Converter[IntStr].convert("hi"), convert_rules) == Maybe.just(
+        assert execute(Converter[IntStr].convert("hi")) == Maybe.just(
             IntStr.right(Str.from_str("hi"))
         )

@@ -4,12 +4,14 @@ import metadsl.typing_tools
 import pytest
 from metadsl import *
 
+from metadsl_rewrite import *
+
 from .abstraction import *
 from .conversion import *
 from .function import *
 from .integer import *
 from .maybe import *
-from .rules import *
+from .strategies import *
 
 one = Integer.from_int(1)
 zero = Integer.from_int(0)
@@ -183,9 +185,8 @@ class TestFunctionConversion:
     def test_zero(self, input, t_to_u_rule):
         result = Converter[FunctionZero[Maybe[U]]].convert(input)
         desired = Maybe.just(FunctionZero.create("fn", Converter[U].convert(t())))
-        new_all_rules = RulesRepeatSequence(all_rules, RulesRepeatFold(t_to_u_rule))
-
-        assert execute(result, new_all_rules) == execute(desired, new_all_rules,)
+        with register.tmp(t_to_u_rule):
+            assert execute(result) == execute(desired)
 
     @pytest.mark.parametrize(
         "u_to_x_rule",
@@ -212,8 +213,5 @@ class TestFunctionConversion:
             Abstraction[T, U].from_fn(fn_one)
         ).flat_map(Abstraction[U, Maybe[X]].from_fn(Converter[X].convert))
 
-        new_all_rules = RulesRepeatSequence(
-            all_rules, RulesRepeatFold(u_to_x_rule, v_to_t_rule)
-        )
-
-        assert execute(result, new_all_rules) == execute(desired, new_all_rules)
+        with register.tmp(u_to_x_rule, v_to_t_rule):
+            assert execute(result) == execute(desired)

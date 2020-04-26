@@ -3,12 +3,13 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
 
 from .abstraction import *
 from .boolean import *
 from .conversion import *
 from .maybe import *
-from .rules import *
+from .strategies import *
 
 __all__ = ["Integer"]
 
@@ -86,12 +87,12 @@ class Integer(Expression):
         ...
 
 
-register(default_rule(Integer.zero))
-register(default_rule(Integer.inc))
-register(default_rule(Integer.one))
+register_ds(default_rule(Integer.zero))
+register_ds(default_rule(Integer.inc))
+register_ds(default_rule(Integer.one))
 
 
-@register
+@register_ds
 @rule
 def integer_math(l: int, r: int) -> R[Integer]:
     yield Integer.from_int(l) + Integer.from_int(r), lambda: Integer.from_int(l + r)
@@ -105,7 +106,7 @@ def integer_math(l: int, r: int) -> R[Integer]:
     yield inf + Integer.from_int(r), inf
 
 
-@register
+@register_ds
 @rule
 def integer_comparison(l: int, r: int) -> R[Boolean]:
     li = Integer.from_int(l)
@@ -132,7 +133,7 @@ def integer_comparison(l: int, r: int) -> R[Boolean]:
     yield inf >= ri, true
 
 
-@register
+@register_ds
 @rule
 def fold(i: int, initial: T, fn: Abstraction[Integer, Abstraction[T, T]]) -> R[T]:
     def inner() -> T:

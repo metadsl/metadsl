@@ -10,7 +10,9 @@ from __future__ import annotations
 
 
 from metadsl import *
-from .rules import *
+from metadsl_rewrite import *
+
+from .strategies import *
 from .abstraction import *
 from .conversion import *
 from .maybe import *
@@ -256,36 +258,36 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
         ...
 
 
-register_pre(default_rule(FunctionZero[T].from_fn))
-register_pre(default_rule(FunctionOne[T, U].from_fn))
-register_pre(default_rule(FunctionTwo[T, U, V].from_fn))
-register_pre(default_rule(FunctionThree[T, U, V, X].from_fn))
+register.pre(default_rule(FunctionZero[T].from_fn))
+register.pre(default_rule(FunctionOne[T, U].from_fn))
+register.pre(default_rule(FunctionTwo[T, U, V].from_fn))
+register.pre(default_rule(FunctionThree[T, U, V, X].from_fn))
 
 
-register_pre(default_rule(FunctionOne[T, U].from_fn_recursive))
-register_pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
-register_pre(default_rule(FunctionThree[T, U, V, X].from_fn_recursive))
+register.pre(default_rule(FunctionOne[T, U].from_fn_recursive))
+register.pre(default_rule(FunctionTwo[T, U, V].from_fn_recursive))
+register.pre(default_rule(FunctionThree[T, U, V, X].from_fn_recursive))
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def zero_call(_: str, v: T) -> R[T]:
     return FunctionZero.create(_, v)(), v
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def one_call(_: str, a: Abstraction[T, U], t: T) -> R[U]:
     return FunctionOne.create(_, a)(t), a(t)
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def two_call(_: str, a: Abstraction[T, Abstraction[U, V]], t: T, u: U) -> R[V]:
     return FunctionTwo.create(_, a)(t, u), a(t)(u)
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def three_call(
     _: str, a: Abstraction[T, Abstraction[U, Abstraction[V, X]]], t: T, u: U, v: V
@@ -293,19 +295,19 @@ def three_call(
     return FunctionThree.create(_, a)(t, u, v), a(t)(u)(v)
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def zero_value(_: str, t: T) -> R[T]:
     return FunctionZero.create(_, t).value, t
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def one_abstraction(fn: FunctionOne[T, U]) -> R[Abstraction[T, U]]:
     return fn.abstraction, lambda: Abstraction[T, U].from_fn(lambda t: fn(t))
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def two_abstraction(fn: FunctionTwo[T, U, V]) -> R[Abstraction[T, Abstraction[U, V]]]:
     return (
@@ -316,7 +318,7 @@ def two_abstraction(fn: FunctionTwo[T, U, V]) -> R[Abstraction[T, Abstraction[U,
     )
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def three_abstraction(
     fn: FunctionThree[T, U, V, X]
@@ -331,31 +333,31 @@ def three_abstraction(
     )
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def zero_name(name: str, t: T):
     return FunctionZero.create(name, t).name, name
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def one_name(_: str, abst: Abstraction[T, U]):
     return FunctionOne.create(_, abst).name, _
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def two_name(_: str, abst: Abstraction[T, Abstraction[U, V]]):
     return FunctionTwo.create(_, abst).name, _
 
 
-@register  # type: ignore
+@register_core  # type: ignore
 @rule
 def three_name(_: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]):
     return FunctionThree.create(_, abst).name, _
 
 
-@register_pre  # type: ignore
+@register.pre  # type: ignore
 @rule
 def one_unfix(name: str, abst: Abstraction[T, U]):
     def result():
@@ -368,7 +370,7 @@ def one_unfix(name: str, abst: Abstraction[T, U]):
     return FunctionOne.create(name, abst).unfix, result
 
 
-@register_pre  # type: ignore
+@register.pre  # type: ignore
 @rule
 def two_unfix(name: str, abst: Abstraction[T, Abstraction[U, V]]):
     def result():
@@ -381,7 +383,7 @@ def two_unfix(name: str, abst: Abstraction[T, Abstraction[U, V]]):
     return FunctionTwo.create(name, abst).unfix, result
 
 
-@register_pre  # type: ignore
+@register.pre  # type: ignore
 @rule
 def three_unfix(name: str, abst: Abstraction[T, Abstraction[U, Abstraction[V, X]]]):
     def result():

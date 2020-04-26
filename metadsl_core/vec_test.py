@@ -1,11 +1,13 @@
 from __future__ import annotations
-
+import pytest
 
 from metadsl import *
+from metadsl_rewrite import *
+
 from .conversion import *
 from .either import *
 from .abstraction import *
-from .rules import *
+from .strategies import *
 from .maybe import *
 from .vec import *
 from .integer import *
@@ -37,11 +39,7 @@ def convert_to_str(i: int, s: str) -> R[Maybe[Str]]:
     yield Converter[Str].convert(i), Maybe[Str].nothing()
 
 
-convert_rules = RulesRepeatFold(  # type: ignore
-    convert_to_str, convert_to_int, execute.default_rule  # type: ignore
-)
-
-e = lambda e: execute(e, convert_rules)
+vec_convert = register.tmp(convert_to_str, convert_to_int)
 
 
 class TestVec:
@@ -51,15 +49,24 @@ class TestVec:
     def test_append(self):
         assert execute(Vec.create(10).append(11)) == Vec.create(10, 11)
 
+    @vec_convert
     def test_convert_empty(self):
-        assert e(Converter[Vec[Int]].convert(())) == Maybe.just(Vec[Int].create())
+        assert execute(Converter[Vec[Int]].convert(())) == Maybe.just(Vec[Int].create())
 
+    @vec_convert
     def test_convert_items(self):
-        assert e(Converter[Vec[Int]].convert((1, 2))) == Maybe.just(
+        assert execute(Converter[Vec[Int]].convert((1, 2))) == Maybe.just(
             Vec.create(Int.from_int(1), Int.from_int(2))
         )
 
+    @vec_convert
     def test_invalid_conversion(self):
-        assert e(Converter[Vec[Int]].convert((1, "hi"))) == Maybe[Vec[Int]].nothing()
-        assert e(Converter[Vec[Int]].convert(("hi", 1))) == Maybe[Vec[Int]].nothing()
-        assert e(Converter[Vec[Int]].convert(("hi",))) == Maybe[Vec[Int]].nothing()
+        assert (
+            execute(Converter[Vec[Int]].convert((1, "hi"))) == Maybe[Vec[Int]].nothing()
+        )
+        assert (
+            execute(Converter[Vec[Int]].convert(("hi", 1))) == Maybe[Vec[Int]].nothing()
+        )
+        assert (
+            execute(Converter[Vec[Int]].convert(("hi",))) == Maybe[Vec[Int]].nothing()
+        )

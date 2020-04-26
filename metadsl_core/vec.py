@@ -3,13 +3,15 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
+
 from .boolean import *
 from .integer import *
 from .maybe import *
 from .conversion import *
 from .abstraction import *
 from .pair import *
-from .rules import *
+from .strategies import *
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
@@ -83,7 +85,7 @@ class Selection(Expression):
         ...
 
 
-register(default_rule(Selection.create_slice_optional))
+register_ds(default_rule(Selection.create_slice_optional))
 
 
 class Vec(Expression, typing.Generic[T]):
@@ -176,11 +178,11 @@ class Vec(Expression, typing.Generic[T]):
         return self.empty.if_(Maybe[T].nothing(), Maybe.just(self[Integer.zero()]))
 
 
-register(default_rule(Vec[T].empty))
-register(default_rule(Vec[T].first))
+register_ds(default_rule(Vec[T].empty))
+register_ds(default_rule(Vec[T].first))
 
 
-@register
+@register_ds
 @rule
 def create_fn_rules(
     l: Integer,
@@ -224,7 +226,7 @@ def create_fn_rules(
     )
 
 
-@register
+@register_ds
 @rule
 def select_slice(start: Integer, stop: Integer, step: Integer, i: Integer):
     s = Selection.create_slice(start, stop, step)
@@ -243,13 +245,13 @@ def select_slice(start: Integer, stop: Integer, step: Integer, i: Integer):
     yield (s.length(i), (stop - actual_stop) // step)
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def length_rule(xs: typing.Sequence[T]) -> R[Integer]:
     return (Vec[T].create(*xs).length, lambda: Integer.from_int(len(xs)))
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def take_drop_rule(xs: typing.Sequence[T], i: int) -> R[Vec[T]]:
     yield (
@@ -262,19 +264,19 @@ def take_drop_rule(xs: typing.Sequence[T], i: int) -> R[Vec[T]]:
     )
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def add_rule(ls: typing.Sequence[T], rs: typing.Sequence[T]) -> R[Vec[T]]:
     return (Vec[T].create(*ls) + Vec[T].create(*rs), Vec[T].create(*ls, *rs))
 
 
-@register  # type: ignore
+@register_ds  # type: ignore
 @rule
 def getitem(i: int, xs: typing.Sequence[T]) -> R[T]:
     return (Vec[T].create(*xs)[Integer.from_int(i)], lambda: xs[i])
 
 
-@register
+@register_ds
 @rule
 def map(fn: Abstraction[T, U], xs: typing.Sequence[T]) -> R[Vec[U]]:
     return (
@@ -283,14 +285,14 @@ def map(fn: Abstraction[T, U], xs: typing.Sequence[T]) -> R[Vec[U]]:
     )
 
 
-@register
+@register_ds
 @rule
 def append(xs: typing.Sequence[T], x: T) -> R[Vec[T]]:
     return (Vec[T].create(*xs).append(x), lambda: Vec.create(*xs, x))
 
 
 # TODO: Replace with exact replacement for slice
-@register
+@register_ds
 @rule
 def vec_select(xs: typing.Sequence[T], s: Selection) -> R[Vec[T]]:
     v = Vec[T].create(*xs)
@@ -315,7 +317,7 @@ def vec_select(xs: typing.Sequence[T], s: Selection) -> R[Vec[T]]:
     return v.select(s), inner
 
 
-@register
+@register_ds
 @rule
 def vec_set(xs: typing.Sequence[T], i: int, value: T) -> R[Vec[T]]:
     return (
@@ -324,7 +326,7 @@ def vec_set(xs: typing.Sequence[T], i: int, value: T) -> R[Vec[T]]:
     )
 
 
-@register
+@register_ds
 @rule
 def vec_set_selection(
     xs: typing.Sequence[T], start: int, stop: int, step: int, values: typing.Sequence[T]
@@ -390,7 +392,7 @@ def vec_set_selection(
 #     return t.fold(Maybe.just(Vec[T].create()), fn)
 
 
-@register
+@register_ds
 @rule
 def fold_vec(
     xs: typing.Sequence[T], initial: U, fn: Abstraction[U, Abstraction[T, U]]
@@ -443,7 +445,7 @@ def convert_slice(s: slice) -> R[Maybe[Selection]]:
     )
 
 
-@register
+@register_core
 @rule
 def lift_maybe(v: Vec[Maybe[T]]) -> R[Maybe[Vec[T]]]:
 

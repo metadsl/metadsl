@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from metadsl import *
+from metadsl_rewrite import *
 from .boolean import *
 
 

@@ -6,11 +6,12 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
+from metadsl_rewrite import *
 
 from .abstraction import *
 from .maybe import *
 from .pair import *
-from .rules import *
+from .strategies import *
 
 __all__ = ["Converter", "convert_identity_rule", "convert_to_maybe"]
 
@@ -73,7 +74,7 @@ def lift_abstraction_maybe(a: Abstraction[T, Maybe[U]]) -> Maybe[Abstraction[T, 
     ...
 
 
-@register
+@register_core
 @rule
 def lift_abstraction_maybe_rule(v: T, b: U) -> R[Maybe[Abstraction[T, U]]]:
     # Need to hard code in cases, b/c we don't wanna lift unbound variable outside of abstraction
