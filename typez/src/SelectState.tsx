@@ -59,12 +59,7 @@ export default function SelectState({
         <ValueLabelComponent
           children={children}
           open={open}
-          value={
-            value === 0
-              ? "initial"
-              : states!.states![value - 1].label ??
-                states!.states![value - 1].rule
-          }
+          value={value === 0 ? "initial" : states!.states![value - 1].rule}
         />
       )}
       step={1}
