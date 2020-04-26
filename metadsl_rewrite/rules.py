@@ -251,6 +251,7 @@ class Rule(Strategy):
                     result_expr = ReplaceValues(wildcards_to_nodes)(expression_thunk)
                 with TypeVarScope(*typevars.keys()):
                     result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
+                    logger.debug("Rule.__call__ res=%s", result_expr)
                     ref.replace(result_expr)
                 yield Result(
                     # if there is more than one possible match from this strategy, also put the index of the match
