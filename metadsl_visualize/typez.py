@@ -14,6 +14,7 @@ import black
 import metadsl
 import typing_inspect
 from typez import *
+from metadsl_rewrite import *
 
 __all__ = ["ExpressionDisplay", "SHOW_MODULE"]
 
@@ -45,7 +46,7 @@ class ExpressionDisplay:
             states=States(initial=initial_node_id), nodes=nodes
         )
 
-    def update(self, rule: str, label: typing.Optional[str] = None):
+    def update(self, result: Result):
         new_nodes = convert_to_nodes(self.ref)
         old_nodes = self.typez_display.typez.nodes or []
         old_node_ids = set(node.id for node in old_nodes)
@@ -63,7 +64,12 @@ class ExpressionDisplay:
                         if self.typez_display.typez.states
                         else []
                     ),
-                    State(node=str(self.ref.hash), rule=rule, label=label),
+                    State(
+                        node=str(self.ref.hash),
+                        rule=result.name,
+                        label=result.label,
+                        logs=result.logs,
+                    ),
                 ],
             ),
         )

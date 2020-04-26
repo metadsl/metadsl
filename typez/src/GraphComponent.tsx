@@ -39,6 +39,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function GraphComponent({ typez }: { typez: Typez }) {
   const [id, setID] = React.useState(typez.states!.initial);
+  const [logs, setLogs] = React.useState("");
   const [state, setState] = React.useState(
     () => new State(typez["nodes"]!, id, null)
   );
@@ -46,7 +47,7 @@ export default function GraphComponent({ typez }: { typez: Typez }) {
   const debouncedElements = useDebounce(state.elements, 500);
 
   React.useEffect(() => {
-    setState(oldState => new State(typez["nodes"]!, id, oldState));
+    setState((oldState) => new State(typez["nodes"]!, id, oldState));
   }, [typez, id]);
 
   return (
@@ -57,12 +58,19 @@ export default function GraphComponent({ typez }: { typez: Typez }) {
           paddingTop: "8px",
           paddingRight: "28px",
           width: "100%",
-          boxSizing: "border-box"
+          boxSizing: "border-box",
         }}
       >
-        <SelectState typez={typez} onChange={setID} />
+        <SelectState
+          typez={typez}
+          onChange={({ logs, node }) => {
+            setID(node);
+            setLogs(logs);
+          }}
+        />
       </div>
       <CytoscapeComponent elements={debouncedElements} />
+      <pre>{logs}</pre>
     </div>
   );
 }

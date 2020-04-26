@@ -143,6 +143,8 @@ type State = {
   rule: string;
   // An optional label to be shown to the user, to highlight this state
   label?: string;
+  // Logs  for this state
+  logs: string;
 };
 
 /**

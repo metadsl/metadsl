@@ -21,7 +21,7 @@ function ValueLabelComponent(props: {
   return (
     <Tooltip
       PopperProps={{
-        popperRef
+        popperRef,
       }}
       open={open}
       enterTouchDelay={0}
@@ -35,10 +35,10 @@ function ValueLabelComponent(props: {
 
 export default function SelectState({
   typez: { states },
-  onChange
+  onChange,
 }: {
   typez: Typez;
-  onChange: (node: string) => void;
+  onChange: (options: { node: string; logs: string }) => void;
 }) {
   // selected index, from the right
   const [selected, setSelected] = React.useState<number>(0);
@@ -46,9 +46,10 @@ export default function SelectState({
   const i = n - selected;
   React.useEffect(() => {
     if (i === 0) {
-      onChange(states!.initial);
+      onChange({ node: states!.initial, logs: "" });
     } else {
-      onChange(states!.states![i - 1]!.node);
+      const { node, logs } = states!.states![i - 1]!;
+      onChange({ node, logs });
     }
   }, [states, selected]);
 
@@ -73,10 +74,10 @@ export default function SelectState({
       onChange={(_, newValue) => setSelected(n - (newValue as any))}
       marks={[
         { value: 0, label: "initial" },
-        ...(states?.states?.map(({ label }, idx) => ({
+        ...(states?.states ?? []).map(({ label }, idx) => ({
           value: idx + 1,
-          label
-        })) ?? [])
+          label,
+        })),
       ]}
     />
   );

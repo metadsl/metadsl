@@ -28,7 +28,7 @@ def execute_and_visualize(ref: ExpressionReference, strategy: Strategy) -> objec
 
     # Update the typez display as we execute the strategys
     for result in strategy(ref):
-        expression_display.update(result.name, result.label)
+        expression_display.update(result)
     return ref.expression
 
 
