@@ -104,7 +104,10 @@ class StrategyNormalize(Strategy):
             yield StrategyLabel(
                 label,
                 StrategyRepeat(
-                    StrategyFold(StrategySequence(*self.pre, *current_strategies)),
+                    StrategySequence(
+                        StrategyFold(StrategySequence(*self.pre)),
+                        StrategyFold(StrategySequence(*current_strategies)),
+                    )
                 ),
             )
 
