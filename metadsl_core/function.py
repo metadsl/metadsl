@@ -408,7 +408,9 @@ def function_zero_convert(
     # From callable -> function
     yield (
         Converter[FunctionZero[Maybe[U]]].convert(callable_zero),
-        Converter[FunctionZero[Maybe[U]]].convert(FunctionZero.from_fn(callable_zero)),
+        lambda: Converter[FunctionZero[Maybe[U]]].convert(
+            FunctionZero.from_fn(callable_zero)
+        ),
     )
     # from function -> value
     yield (
@@ -424,11 +426,13 @@ def function_one_convert(
 ) -> R[Maybe[FunctionOne[V, Maybe[X]]]]:
     yield (
         Converter[FunctionOne[V, Maybe[X]]].convert(callable_one),
-        Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.from_fn(callable_one)),
+        lambda: Converter[FunctionOne[V, Maybe[X]]].convert(
+            FunctionOne.from_fn(callable_one)
+        ),
     )
     yield (
         Converter[FunctionOne[V, Maybe[X]]].convert(FunctionOne.create(name, abs_one)),
-        Converter[Abstraction[V, Maybe[X]]]
+        lambda: Converter[Abstraction[V, Maybe[X]]]
         .convert(abs_one)
         .map(
             Abstraction[Abstraction[V, Maybe[X]], FunctionOne[V, Maybe[X]]].from_fn(
@@ -445,5 +449,5 @@ def convert_fn_to_abstraction(
 ) -> R[Maybe[Abstraction[V, Maybe[X]]]]:
     return (
         Converter[Abstraction[V, Maybe[X]]].convert(a),
-        Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
+        lambda: Converter[Abstraction[V, Maybe[X]]].convert(Abstraction.from_fn(a)),
     )
