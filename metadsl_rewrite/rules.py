@@ -137,21 +137,21 @@ class Wildcard(Expression, typing.Generic[T]):
     Insert this somewhere in an expression tree to represent any expression or value of type T.
     """
 
-
-@expression
-def create_wildcard_expession(t: typing.Type[T], obj: object) -> T:
-    """
-    The object inside is only needed for identity checks, to different
-    two wildcards if the objects are different.
-    """
-    ...
+    @expression
+    @classmethod
+    def create(cls, obj: object) -> T:
+        """
+        The object inside is only needed for identity checks, to different
+        two wildcards if the objects are different.
+        """
+        ...
 
 
 def create_wildcard(t: typing.Type[T]) -> T:
     """
     Returns a wildcard of type "t"
     """
-    return create_wildcard_expession(t, object())
+    return Wildcard[t].create(object())  # type: ignore
 
 
 # a number of (wildcard expression, replacement) pairs
