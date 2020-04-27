@@ -53,7 +53,9 @@ def llvm_to_c_type(tp: Type) -> CType:
 def llvm_to_c_fn_type_rule(ret_tp: Type, arg_tps: typing.Sequence[Type]):
     return (
         llvm_to_c_fn_type(FnType.create(ret_tp, *arg_tps)),
-        CFunctionType.create(llvm_to_c_type(ret_tp), *(map(llvm_to_c_type, arg_tps))),
+        lambda: CFunctionType.create(
+            llvm_to_c_type(ret_tp), *(map(llvm_to_c_type, arg_tps))
+        ),
     )
 
 
