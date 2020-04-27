@@ -390,13 +390,12 @@ def match_expression(
             min_n_args = len(template.args) - 1
             if len(expr.args) < min_n_args:
                 raise NoMatch("Wrong number of args in match")
-            template_args_ = list(template.args)
+            template_args = list(template.args)
             (template_iterated,) = iterated_args
             template_index_iterated = list(template.args).index(template_iterated)
 
             # Swap template iterated with inner wildcard
-            (template_args_[template_index_iterated],) = template_iterated.args
-            template_args = template_args_
+            (template_args[template_index_iterated],) = template_iterated.args
 
             expr_args = collapse_tuple(
                 tuple(expr.args),
