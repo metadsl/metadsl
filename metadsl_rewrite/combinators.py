@@ -26,13 +26,12 @@ class StrategyLabel(Strategy):
     strategy: Strategy
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Result]:
-        last_result = None
-        for result in self.strategy(expr):  # type: ignore
-            if last_result:
-                yield last_result
-            last_result = result
-        if last_result:
-            yield dataclasses.replace(last_result, label=self.label)
+        replaced = False
+        for result in self.strategy(expr):
+            replaced = True
+            yield result
+        if replaced:
+            yield Result(name=self.label, label=self.label)
 
     def optimize(self, executor, strategy):
         self.strategy.optimize(executor, strategy)
@@ -92,9 +91,8 @@ class StrategyFold(Strategy):
     strategy: Strategy
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Result]:
-        strategy: Strategy = self.strategy  # type: ignore
         for child_ref in expr.descendents:
-            for replacement in strategy(child_ref):
+            for replacement in self.strategy(child_ref):
                 yield replacement
                 return
 
@@ -113,11 +111,10 @@ class StrategyRepeat(Strategy):
 
     def __call__(self, expr: ExpressionReference) -> typing.Iterable[Result]:
         i = 0
-        strategy: Strategy = self.strategy  # type: ignore
 
         for i in range(self.max_calls):
             replaced = False
-            for replacement in strategy(expr):
+            for replacement in self.strategy(expr):
                 replaced = True
                 yield replacement
             if not replaced:
