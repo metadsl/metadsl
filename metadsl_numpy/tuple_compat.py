@@ -51,7 +51,7 @@ class HomoTupleCompat(Expression, typing.Generic[T, U]):
         except NotImplementedError:
             pass
         else:
-            if isinstance(guess_type, IntCompat):
+            if isinstance(injested_idx, IntCompat):
                 return self.getitem_int(idx)
         return self.getitem_slice(idx)
 
