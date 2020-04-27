@@ -1,7 +1,7 @@
 # from metadsl import execute
 # from .numpy_engine import *
 # import numpy
-# from .rules import *
+# from .strategies import *
 
 
 # def test_getitem():

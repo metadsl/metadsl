@@ -1,6 +1,7 @@
 from __future__ import annotations
 from metadsl import *
 from metadsl_core import *
+from metadsl_rewrite import *
 
 from .int_compat import *
 from .tuple_compat import *

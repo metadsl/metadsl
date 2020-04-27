@@ -45,10 +45,21 @@ NO WAIT. I can't generate all these... I must generate ast :(
 
 __version__ = "0.0.0"
 
+from metadsl import export_from
 
-from .injest import *
-from .boxing import *
 from .bool_compat import *
+from .boxing import *
+from .function_compat import *
+from .injest import *
 from .int_compat import *
 from .tuple_compat import *
-from .function_compat import *
+
+export_from(
+    __name__,
+    "injest",
+    "boxing",
+    "bool_compat",
+    "int_compat",
+    "tuple_compat",
+    "function_compat",
+)

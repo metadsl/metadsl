@@ -3,6 +3,7 @@ import typing
 
 from metadsl import *
 from metadsl_core import *
+from metadsl_rewrite import *
 
 __all__ = ["Boxer"]
 
@@ -31,5 +32,5 @@ class Boxer(Expression, typing.Generic[T, U]):
         return cls.box(cls.convert(value))
 
 
-register(default_rule(Boxer[T, U].convert))
-register(default_rule(Boxer[T, U].convert_and_box))
+register_box(default_rule(Boxer[T, U].convert))
+register_box(default_rule(Boxer[T, U].convert_and_box))

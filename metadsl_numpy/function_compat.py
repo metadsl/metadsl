@@ -7,6 +7,7 @@ import typing_inspect
 from metadsl import *
 from metadsl_core import *
 from metadsl.typing_tools import ToCallable, get_type
+from metadsl_rewrite import *
 
 from .injest import *
 from .boxing import *
@@ -51,11 +52,11 @@ class FunctionOneCompat(Expression, typing.Generic[T]):
         ...
 
 
-@register_convert
+@register_box
 @rule
-def box_function_one(v: Maybe[FunctionOne[U, V]]) -> R[FunctionOne[object, T]]:
+def box_function_one(v: Maybe[FunctionOne[U, Maybe[V]]]) -> R[FunctionOne[object, T]]:
     return (
-        Boxer[FunctionOne[object, T], FunctionOne[U, V]].box(v),
+        Boxer[FunctionOne[object, T], FunctionOne[U, Maybe[V]]].box(v),
         FunctionOneCompat[T].box(v),
     )
 
@@ -65,16 +66,16 @@ def converter_name(name: str) -> str:
     return name + "_convert"
 
 
-register(default_rule(converter_name))
+register_core(default_rule(converter_name))
 
 
-@register
+@register_box
 @rule
 def function_one_box_rule(fn: FunctionOne[U, Maybe[V]]) -> R[FunctionOne[object, T]]:
 
     return (
         FunctionOneCompat[T].box(Maybe.just(fn)),
-        FunctionOne[object, T].from_fn(
+        lambda: FunctionOne[object, T].from_fn(
             lambda o: Boxer[T, V].box(Converter[U].convert(o).flat_map(fn.abstraction)),
             name=Maybe.just(converter_name(fn.name)),
         ),
@@ -109,8 +110,8 @@ def guess_python_function_tp(
         # )
     if n_args == 1:
         return (
-            FunctionOne[object, return_compat_tp],
-            FunctionOne[arg_inner_tps[0], Maybe[return_inner_tp]],
+            FunctionOne[object, return_compat_tp],  # type: ignore
+            FunctionOne[arg_inner_tps[0], Maybe[return_inner_tp]],  # type: ignore
         )
     raise NotImplementedError
 
@@ -120,7 +121,7 @@ def guess_function_one_tp(fn: FunctionOne):
     arg_tp, ret_tp = typing_inspect.get_args(get_type(fn))
     ret_compat_tp, ret_inner_tp = guess_type_of_type(ret_tp)
 
-    return FunctionOne[object, ret_compat_tp], FunctionOne[arg_tp, Maybe[ret_inner_tp]]
+    return FunctionOne[object, ret_compat_tp], FunctionOne[arg_tp, Maybe[ret_inner_tp]]  # type: ignore
 
 
 # TODO:

@@ -11,7 +11,7 @@
 # from .vec import *
 # from .integer import *
 # from .conversion import *
-# from .rules import *
+# from .strategies import *
 # from .maybe import *
 # from .abstraction import *
 # from .pair import *
@@ -83,7 +83,7 @@
 
 # def ndarray_getitem()
 
-# @register
+# @register_core
 # @rule
 
 

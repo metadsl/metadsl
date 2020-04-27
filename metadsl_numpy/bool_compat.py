@@ -4,7 +4,7 @@ import typing
 
 from metadsl import *
 from metadsl_core import *
-
+from metadsl_rewrite import *
 from .injest import *
 from .boxing import *
 
@@ -34,8 +34,8 @@ class BoolCompat(Expression):
 
     def if_(self, l: object, r: object) -> object:
         compat_tp, inner_tp = guess_types(l, r)
-        boxer = Boxer[compat_tp, inner_tp]
-        return boxer.box(boxer.convert(l), boxer.convert(r))
+        boxer = Boxer[compat_tp, inner_tp]  # type: ignore
+        return boxer.box(self.if_maybe(boxer.convert(l), boxer.convert(r)))
 
     @expression
     def if_maybe(self, l: Maybe[T], r: Maybe[T]) -> Maybe[T]:
@@ -49,13 +49,13 @@ def guess_bool_compat(b: object):
     return BoolCompat, Boolean
 
 
-@register
+@register_box
 @rule
 def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
     return Boxer[BoolCompat, Boolean].box(b), BoolCompat.from_maybe_boolean(b)
 
 
-@register
+@register_convert
 @rule
 def convert_bool_compat(b: Maybe[Boolean]) -> R[Maybe[Boolean]]:
     return Converter[Boolean].convert(BoolCompat.from_maybe_boolean(b)), b
@@ -88,7 +88,7 @@ def and_or(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     )
 
 
-@register  # type: ignore
+@register_box  # type: ignore
 @rule
 def if_maybes(cond: Maybe[Boolean], true: Maybe[T], false: Maybe[T]) -> R[Maybe[T]]:
     return (

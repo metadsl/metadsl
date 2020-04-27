@@ -7,6 +7,7 @@ from metadsl_core import *
 from .bool_compat import *
 from .injest import *
 from .boxing import *
+from metadsl_rewrite import *
 
 __all__ = ["IntCompat"]
 
@@ -99,7 +100,7 @@ def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
 
 
-@register_convert
+@register_box
 @rule
 def box_int_compat(x: Maybe[Integer]) -> R[IntCompat]:
     return (
@@ -108,15 +109,17 @@ def box_int_compat(x: Maybe[Integer]) -> R[IntCompat]:
     )
 
 
-@register_convert
+@register_box
 @rule
 def int_compat_operators(maybe_l: Maybe[Integer], r: object) -> R[IntCompat]:
     maybe_r = Converter[Integer].convert(r)
     maybe = maybe_l & maybe_r
     compat_l = IntCompat.from_maybe_integer(maybe_l)
 
-    def create_int_result(m: typing.Callable[[Integer, Integer], Integer]) -> IntCompat:
-        return IntCompat.from_maybe_integer(
+    def create_int_result(
+        m: typing.Callable[[Integer, Integer], Integer]
+    ) -> typing.Callable[[], IntCompat]:
+        return lambda: IntCompat.from_maybe_integer(
             maybe.map(
                 Abstraction[Pair[Integer, Integer], Integer].from_fn(
                     lambda p: m(p.left, p.right)
@@ -126,8 +129,8 @@ def int_compat_operators(maybe_l: Maybe[Integer], r: object) -> R[IntCompat]:
 
     def create_bool_result(
         m: typing.Callable[[Integer, Integer], Boolean]
-    ) -> BoolCompat:
-        return BoolCompat.from_maybe_boolean(
+    ) -> typing.Callable[[], BoolCompat]:
+        return lambda: BoolCompat.from_maybe_boolean(
             maybe.map(
                 Abstraction[Pair[Integer, Integer], Boolean].from_fn(
                     lambda p: m(p.left, p.right)

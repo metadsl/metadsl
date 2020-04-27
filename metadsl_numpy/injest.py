@@ -22,7 +22,7 @@ def injest(o: object) -> object:
     Shouldn't be used in real code.
     """
     compat_tp, inner_tp = guess_type(o)
-    return Boxer[compat_tp, inner_tp].convert_and_box(o)
+    return Boxer[compat_tp, inner_tp].convert_and_box(o)  # type: ignore
 
 
 @functools.singledispatch
@@ -55,7 +55,7 @@ class CreateInstance(Expression, typing.Generic[T]):
 
 
 def create_instance(tp: typing.Type[T]) -> T:
-    return CreateInstance[tp].create()
+    return CreateInstance[tp].create()  # type: ignore
 
 
 def guess_type_of_type(tp: typing.Type) -> typing.Tuple[typing.Type, typing.Type]:
@@ -66,4 +66,3 @@ def guess_type_of_type(tp: typing.Type) -> typing.Tuple[typing.Type, typing.Type
     dummy instances instead.
     """
     return guess_type(create_instance(tp))
-

@@ -10,7 +10,7 @@
 # from .integer import *
 # from .maybe import *
 # from .pair import *
-# from .rules import *
+# from .strategies import *
 # from .vec import *
 
 # __all__ = ["ndarray_getitem"]
@@ -80,7 +80,7 @@
 #     return tuple(values)
 
 
-# register(default_rule(homo_tuple))
+# register_core(default_rule(homo_tuple))
 
 
 # @register_unbox  # type: ignore
