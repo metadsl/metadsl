@@ -11,6 +11,7 @@ requires = [
     "metadsl",
     "metadsl_rewrite",
     "metadsl_visualize",
+    "metadsl_numpy",
     "metadsl_core",
 ]
 classifiers = [
