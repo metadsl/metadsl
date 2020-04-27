@@ -32,5 +32,5 @@ class Boxer(Expression, typing.Generic[T, U]):
         return cls.box(cls.convert(value))
 
 
-register_box(default_rule(Boxer[T, U].convert))
-register_box(default_rule(Boxer[T, U].convert_and_box))
+register_convert(default_rule(Boxer[T, U].convert))
+register_convert(default_rule(Boxer[T, U].convert_and_box))

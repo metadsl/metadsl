@@ -100,7 +100,7 @@ def convert_to_integer(i: Maybe[Integer]) -> R[Maybe[Integer]]:
     return Converter[Integer].convert(IntCompat.from_maybe_integer(i)), i
 
 
-@register_box
+@register_convert
 @rule
 def box_int_compat(x: Maybe[Integer]) -> R[IntCompat]:
     return (
@@ -109,7 +109,7 @@ def box_int_compat(x: Maybe[Integer]) -> R[IntCompat]:
     )
 
 
-@register_box
+@register_convert
 @rule
 def int_compat_operators(maybe_l: Maybe[Integer], r: object) -> R[IntCompat]:
     maybe_r = Converter[Integer].convert(r)

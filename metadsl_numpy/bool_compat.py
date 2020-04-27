@@ -49,7 +49,7 @@ def guess_bool_compat(b: object):
     return BoolCompat, Boolean
 
 
-@register_box
+@register_convert
 @rule
 def box_boolean(b: Maybe[Boolean]) -> R[BoolCompat]:
     return Boxer[BoolCompat, Boolean].box(b), BoolCompat.from_maybe_boolean(b)
@@ -88,7 +88,7 @@ def and_or(maybe_l: Maybe[Boolean], r: object) -> R[BoolCompat]:
     )
 
 
-@register_box  # type: ignore
+@register_convert  # type: ignore
 @rule
 def if_maybes(cond: Maybe[Boolean], true: Maybe[T], false: Maybe[T]) -> R[Maybe[T]]:
     return (

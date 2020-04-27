@@ -52,7 +52,7 @@ class FunctionOneCompat(Expression, typing.Generic[T]):
         ...
 
 
-@register_box
+@register_convert
 @rule
 def box_function_one(v: Maybe[FunctionOne[U, Maybe[V]]]) -> R[FunctionOne[object, T]]:
     return (
@@ -69,7 +69,7 @@ def converter_name(name: str) -> str:
 register_core(default_rule(converter_name))
 
 
-@register_box
+@register_convert
 @rule
 def function_one_box_rule(fn: FunctionOne[U, Maybe[V]]) -> R[FunctionOne[object, T]]:
 

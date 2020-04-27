@@ -108,7 +108,7 @@ def guess_homo_tuple_tuple(b: tuple):
     return HomoTupleCompat[compat_tp, inner_tp], Vec[inner_tp]  # type: ignore
 
 
-@register_box
+@register_convert
 @rule
 def to_from_maybe_vec(v: Maybe[Vec[U]]) -> R[Maybe[Vec[U]]]:
     return HomoTupleCompat[T, U].from_maybe_vec(v).to_maybe_vec, v
@@ -120,7 +120,7 @@ def convert_to_vec(v: Maybe[Vec[U]]) -> R[Maybe[Vec[U]]]:
     return Converter[Vec[U]].convert(HomoTupleCompat[T, U].from_maybe_vec(v)), v
 
 
-@register_box
+@register_convert
 @rule
 def box_homo_tuple(v: Maybe[Vec[U]]) -> R[HomoTupleCompat[T, U]]:
     return (
@@ -129,7 +129,7 @@ def box_homo_tuple(v: Maybe[Vec[U]]) -> R[HomoTupleCompat[T, U]]:
     )
 
 
-@register_box
+@register_convert
 @rule
 def setitem(v: Maybe[Vec[U]], idx: object, value: object) -> R[HomoTupleCompat[T, U]]:
     """
@@ -162,7 +162,7 @@ def setitem(v: Maybe[Vec[U]], idx: object, value: object) -> R[HomoTupleCompat[T
     )
 
 
-@register_box
+@register_convert
 @rule
 def getitem_int(v: Maybe[Vec[U]], idx: object) -> R[T]:
     """
@@ -180,7 +180,7 @@ def getitem_int(v: Maybe[Vec[U]], idx: object) -> R[T]:
     )
 
 
-@register_box
+@register_convert
 @rule
 def getitem_slice(v: Maybe[Vec[U]], idx: object) -> R[HomoTupleCompat[T, U]]:
     return (
@@ -195,7 +195,7 @@ def getitem_slice(v: Maybe[Vec[U]], idx: object) -> R[HomoTupleCompat[T, U]]:
     )
 
 
-@register_box
+@register_convert
 @rule
 def length(v: Maybe[Vec[U]]) -> R[IntCompat]:
     return (
@@ -206,7 +206,7 @@ def length(v: Maybe[Vec[U]]) -> R[IntCompat]:
     )
 
 
-@register_box
+@register_convert
 @rule
 def add(v: Maybe[Vec[U]], o: object) -> R[HomoTupleCompat[T, U]]:
     both_converted = v & Converter[Vec[U]].convert(o)
