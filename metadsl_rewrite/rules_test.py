@@ -96,7 +96,7 @@ class TestRule:
     def test_type_args(self):
         @rule
         def _concat_lists(l: T, r: T) -> R[_List[T]]:
-            return _List.create(l) + _List.create(r), lambda: _List.create(l, r)
+            return _List.create(l) + _List.create(r), _List.create(l, r)
 
         assert execute(
             _List.create(1) + _List.create(2), _concat_lists
@@ -109,7 +109,7 @@ class TestRule:
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls) + _List[T].create(*rs),
-                lambda: _List[T].create(*ls, *rs),
+                _List[T].create(*ls, *rs),
             )
 
         assert execute(_List.create(1, 2) + _List.create(3, 4), _concat_lists) == _List[
@@ -123,7 +123,7 @@ class TestRule:
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls) + _List[T].create(*rs),
-                lambda: _List[T].create(*ls, *rs),
+                _List[T].create(*ls, *rs),
             )
 
         assert (
@@ -138,7 +138,7 @@ class TestRule:
         ) -> R[_List[T]]:
             return (
                 _List[T].create(*ls, l) + _List[T].create(*rs, r),
-                lambda: _List[T].create(*ls, *rs),
+                _List[T].create(*ls, *rs),
             )
 
         assert execute(
@@ -155,7 +155,7 @@ class TestRule:
         def _remove_one_first(xs: typing.Sequence[int], x: int) -> R[_List[int]]:
             return (
                 _List.create(1, x, *xs),
-                lambda: _List.create(x, *xs),
+                _List.create(x, *xs),
             )
 
         assert execute(_List.create(1, 2, 2), _remove_one_first) == _List.create(2, 2)
@@ -208,7 +208,7 @@ class TestRule:
         ) -> R[_List[_List[T]]]:
             return (
                 _List.create(_List[T].create(*ls)) + _List.create(_List[T].create(*rs)),
-                lambda: _List.create(_List[T].create(*ls, *rs)),
+                _List.create(_List[T].create(*ls, *rs)),
             )
 
         assert execute(
