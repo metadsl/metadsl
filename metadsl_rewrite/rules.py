@@ -263,11 +263,6 @@ class Rule(Strategy):
 
 @dataclasses.dataclass
 class ReplaceValues:
-    """
-    Replaces all instances of `var` with `arg` inside of `body`, 
-    except for local bindings of `var` as declared in other `from_fn`s inside.
-    """
-
     mapping: typing.Mapping
 
     def __call__(self, expr):
@@ -275,7 +270,24 @@ class ReplaceValues:
             return self.mapping[expr]
         if not isinstance(expr, Expression):
             return expr
-        return expr._map(self)
+        result = expr._map(self)
+
+        # if any of the args are create_iterated_placeholder
+        # then remove those and replaced with arg expanded.
+        new_args: typing.List = []
+        for arg in result.args:
+            if (
+                isinstance(arg, Expression)
+                and arg.function == create_iterated_placeholder
+            ):
+                inner_args = arg.args[0]
+                assert isinstance(inner_args, tuple)
+                for inner_arg in inner_args:
+                    new_args.append(inner_arg)
+            else:
+                new_args.append(arg)
+        result.args = new_args
+        return result
 
 
 @dataclasses.dataclass(frozen=True)
