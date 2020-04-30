@@ -41,6 +41,12 @@ class HashableMapping(collections.abc.Mapping, typing.Generic[T, V]):
     def __len__(self):
         return len(self._items)
 
+    def __str__(self):
+        return "{" + ", ".join(f"{k}={v}" for k, v in self._items) + "}"
+
+    def __repr__(self):
+        return f"HashableMapping({str(self)})"
+
 
 @dataclasses.dataclass(init=False)
 class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
@@ -81,6 +87,12 @@ class UnhashableMapping(collections.abc.MutableMapping, typing.Generic[T, V]):
 
     def __len__(self):
         return len(self._items)
+
+    def __str__(self):
+        return "{" + ", ".join(f"{item.key}={item.value}" for item in self._items) + "}"
+
+    def __repr__(self):
+        return f"UnhashableMapping({str(self)})"
 
 
 def safe_merge(
