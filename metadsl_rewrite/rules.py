@@ -219,7 +219,7 @@ class Rule(Strategy):
                     logger.debug("Not a match")
                     continue
                 logger.debug(
-                    "Matched expr=%s typevars=%s", typevars, wildcards_to_nodes
+                    "Matched expr=%s typevars=%s", wildcards_to_nodes, typevars
                 )
 
                 # if the result is a function, we can't use substitution, so instead we re-call
