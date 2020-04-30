@@ -4,6 +4,8 @@ import dataclasses
 import itertools
 import typing
 
+import typing_inspect
+
 from .typing_tools import *
 
 __all__ = [
@@ -17,6 +19,7 @@ __all__ = [
 
 T = typing.TypeVar("T")
 T_expression = typing.TypeVar("T_expression", bound="Expression")
+CALLABLE = typing.TypeVar("CALLABLE", bound=typing.Callable)
 
 
 @dataclasses.dataclass(eq=False, repr=False)
@@ -62,12 +65,24 @@ class Expression(GenericCheck):
             f"{self._type_str}({self.function}, {repr(self.args)}, {repr(self.kwargs)})"
         )
 
-    def _map(self: T_expression, fn: typing.Callable[[T], T]) -> T_expression:
+    def _map(
+        self: T_expression,
+        fn: typing.Callable[[T], T],
+        function_fn: typing.Callable[[CALLABLE], CALLABLE] = None,
+        type_fn: typing.Callable[
+            [typing.Type[T_expression]], typing.Type[T_expression]
+        ] = None,
+    ) -> T_expression:
         """
         Map a function on all args and recreate function.
+
         """
-        new_expr = dataclasses.replace(
-            self,
+        new_type: typing.Type[T_expression] = typing_inspect.get_generic_type(self)
+        if type_fn:
+            new_type = type_fn(new_type)  # type: ignore
+
+        new_expr = new_type(
+            function=function_fn(self.function) if function_fn else self.function,  # type: ignore
             args=[fn(typing.cast(T, arg)) for arg in self.args],
             kwargs={k: fn(typing.cast(T, v)) for k, v in self.kwargs.items()},
         )
