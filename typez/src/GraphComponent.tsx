@@ -44,7 +44,7 @@ export default function GraphComponent({ typez }: { typez: Typez }) {
     () => new State(typez["nodes"]!, id, null)
   );
 
-  const debouncedElements = useDebounce(state.elements, 500);
+  const debouncedElements = useDebounce(state.elements, 200);
 
   React.useEffect(() => {
     setState((oldState) => new State(typez["nodes"]!, id, oldState));
@@ -54,7 +54,6 @@ export default function GraphComponent({ typez }: { typez: Typez }) {
     <div>
       <div
         style={{
-          paddingTop: "8px",
           width: "100%",
           boxSizing: "border-box",
         }}

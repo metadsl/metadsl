@@ -59,6 +59,7 @@ export default function SelectState({
       <Input
         value={i}
         margin="dense"
+        type="number"
         onChange={(event) => setSelected(n - Number(event.target.value))}
         inputProps={{
           step: 1,
