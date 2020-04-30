@@ -1,25 +1,23 @@
 from __future__ import annotations
-import metadsl
-import metadsl_rewrite
+import metadsl_all as m
 
 
-class Number(metadsl.Expression):
-    @metadsl.expression
+class Number(m.Expression):
+    @m.expression
     def __add__(self, other: Number) -> Number:
         ...
 
-    @metadsl.expression
+    @m.expression
     @classmethod
     def from_int(cls, i: int) -> Number:
         ...
 
 
-@metadsl_rewrite.rule
+@m.register_core
+@m.rule
 def add_zero(y: Number):
     yield Number.from_int(0) + y, y
     yield y + Number.from_int(0), y
 
 
-assert metadsl_rewrite.execute(
-    Number.from_int(0) + Number.from_int(10), add_zero
-) == Number.from_int(10)
+assert m.execute(Number.from_int(0) + Number.from_int(10)) == Number.from_int(10)

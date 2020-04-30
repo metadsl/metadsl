@@ -24,4 +24,4 @@ export_from(
     local=["execute", "register"],
 )
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"

@@ -93,6 +93,7 @@ flit -f typez.pyproject.toml publish
 flit -f pyproject.toml publish
 flit -f rewrite.pyproject.toml publish
 flit -f core.pyproject.toml   publish
+flit -f visualize.pyproject.toml   publish
 flit -f llvm.pyproject.toml   publish
-flit -f visualize.pyproject.toml    publish
+flit -f all.pyproject.toml    publish
 ```
