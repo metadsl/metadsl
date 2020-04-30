@@ -827,7 +827,9 @@ class FunctionReplaceTyping:
     fn: typing.Callable
     typevars: HashableMapping[typing.TypeVar, typing.Type]  # type: ignore
     typevars_in_scope: typing.FrozenSet[typing.TypeVar]  # type: ignore
-    inner_mapping: typing.Callable[[typing.Any], typing.Any]
+    inner_mapping: typing.Callable[[typing.Any], typing.Any] = dataclasses.field(
+        repr=False
+    )
 
     @classmethod
     def create(
