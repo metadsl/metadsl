@@ -39,6 +39,7 @@ T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
 logger = logging.getLogger(__name__)
+logger.addFilter(lambda record: False)
 
 
 class GenericCheckType(type):
