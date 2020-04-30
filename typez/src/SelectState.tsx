@@ -2,6 +2,7 @@ import { Typez } from "./schema";
 import * as React from "react";
 import Slider from "@material-ui/core/Slider";
 import Tooltip from "@material-ui/core/Tooltip";
+import Input from "@material-ui/core/Input";
 import PopperJs from "popper.js";
 
 function ValueLabelComponent(props: {
@@ -54,26 +55,40 @@ export default function SelectState({
   }, [states, selected]);
 
   return (
-    <Slider
-      ValueLabelComponent={({ children, open, value }) => (
-        <ValueLabelComponent
-          children={children}
-          open={open}
-          value={value === 0 ? "initial" : states!.states![value - 1].rule}
-        />
-      )}
-      step={1}
-      valueLabelDisplay="on"
-      value={i}
-      max={n}
-      onChange={(_, newValue) => setSelected(n - (newValue as any))}
-      marks={[
-        { value: 0, label: "initial" },
-        ...(states?.states ?? []).map(({ label }, idx) => ({
-          value: idx + 1,
-          label,
-        })),
-      ]}
-    />
+    <div style={{ display: "flex" }}>
+      <Input
+        value={i}
+        margin="dense"
+        onChange={(event) => setSelected(n - Number(event.target.value))}
+        inputProps={{
+          step: 1,
+          min: 0,
+          max: n,
+          type: "number",
+        }}
+      />
+      <Slider
+        style={{ marginLeft: 60, marginRight: 60, marginTop: 8 }}
+        ValueLabelComponent={({ children, open, value }) => (
+          <ValueLabelComponent
+            children={children}
+            open={open}
+            value={value === 0 ? "initial" : states!.states![value - 1].rule}
+          />
+        )}
+        step={1}
+        valueLabelDisplay="on"
+        value={i}
+        max={n}
+        onChange={(_, newValue) => setSelected(n - (newValue as any))}
+        marks={[
+          { value: 0, label: "initial" },
+          ...(states?.states ?? []).map(({ label }, idx) => ({
+            value: idx + 1,
+            label,
+          })),
+        ]}
+      />
+    </div>
   );
 }

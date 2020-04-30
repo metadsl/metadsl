@@ -54,9 +54,7 @@ export default function GraphComponent({ typez }: { typez: Typez }) {
     <div>
       <div
         style={{
-          paddingLeft: "28px",
           paddingTop: "8px",
-          paddingRight: "28px",
           width: "100%",
           boxSizing: "border-box",
         }}
