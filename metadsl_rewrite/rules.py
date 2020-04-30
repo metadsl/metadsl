@@ -293,6 +293,9 @@ class ReplaceValues:
 @dataclasses.dataclass(frozen=True)
 class ReplaceTypevarsExpression:
     """
+    Make sure all functions have typevars attached to them, so when we call those functions
+    the typevars will be replaced.
+
     Use a class instead of a function so we can partially apply it and have equality based on typevars 
     """
 
@@ -304,12 +307,11 @@ class ReplaceTypevarsExpression:
         """
         typevars = self.typevars
         if isinstance(expression, Expression):
-            new_args = [self(a) for a in expression.args]
-            new_kwargs = {k: self(v) for k, v in expression.kwargs.items()}
-            new_fn = replace_fn_typevars(expression.function, typevars)
-            return replace_typevars(
-                typevars, typing_inspect.get_generic_type(expression)
-            )(new_fn, new_args, new_kwargs)
+            return expression._map(
+                fn=self,
+                function_fn=lambda fn: replace_fn_typevars(fn, typevars),  # type: ignore
+                type_fn=lambda tp: replace_typevars(typevars, tp),
+            )
         return replace_fn_typevars(
             expression,
             typevars,

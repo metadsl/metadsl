@@ -78,17 +78,18 @@ class Expression(GenericCheck):
 
         """
         new_type: typing.Type[T_expression] = typing_inspect.get_generic_type(self)
-        if type_fn:
-            new_type = type_fn(new_type)  # type: ignore
 
-        new_expr = new_type(
+        new_expr = type(self)(
             function=function_fn(self.function) if function_fn else self.function,  # type: ignore
             args=[fn(typing.cast(T, arg)) for arg in self.args],
             kwargs={k: fn(typing.cast(T, v)) for k, v in self.kwargs.items()},
         )
         # copy generic class
         if hasattr(self, "__orig_class__"):
-            new_expr.__orig_class__ = self.__orig_class__  # type: ignore
+            new_expr.__orig_class__ = (  # type: ignore
+                type_fn(self.__orig_class__) if type_fn else self.__orig_class__  # type: ignore
+            )
+
         return new_expr
 
     def __eq__(self, value) -> bool:
