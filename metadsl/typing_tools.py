@@ -40,6 +40,7 @@ U = typing.TypeVar("U")
 
 logger = logging.getLogger(__name__)
 logger.addFilter(lambda record: False)
+# logger.addFilter(lambda record: record.msg.startswith("infer_return_type"))
 
 
 class GenericCheckType(type):
@@ -618,9 +619,11 @@ def infer_return_type(
         matches: TypeVarMapping = merge_typevars(*mappings)
     except ValueError:
         raise TypeError(f"Couldn't merge mappings {mappings}")
-
     final_args = bound.args[1:] if is_classmethod else bound.args
     final_kwargs = bound.kwargs
+    logger.debug(
+        "infer_return_type matches=%s args=%s kwargs=%s", matches, args, kwargs
+    )
     for arg in final_args:
         record_scoped_typevars(arg, *matches.keys())
     for kwarg in final_kwargs.values():
@@ -843,6 +846,7 @@ class FunctionReplaceTyping:
         typevars_in_scope: typing.FrozenSet[TypeVar] = fn.__scoped_typevars__  # type: ignore
         if not typevars_in_scope:
             return fn
+        # TODO: Fix hack
         if "fib_more" in str(fn):
             return fn
 
@@ -864,11 +868,11 @@ class FunctionReplaceTyping:
             with TypeVarScope(*self.typevars_in_scope):
                 return self.inner_mapping(self.fn(*args, **kwargs))  # type: ignore
 
-    def __repr__(self):
-        return repr(self.fn)
+    # def __repr__(self):
+    #     return repr(self.fn)
 
-    def __str__(self):
-        return str(self.fn)
+    # def __str__(self):
+    #     return str(self.fn)
 
 
 @dataclasses.dataclass(unsafe_hash=True)
