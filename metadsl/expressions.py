@@ -4,19 +4,22 @@ import dataclasses
 import itertools
 import typing
 
+import typing_inspect
+
 from .typing_tools import *
 
 __all__ = [
     "Expression",
     "expression",
-    "ExpressionFolder",
-    "ExpressionReplacer",
     "PlaceholderExpression",
     "IteratedPlaceholder",
     "create_iterated_placeholder",
+    "clone_expression",
 ]
 
+T = typing.TypeVar("T")
 T_expression = typing.TypeVar("T_expression", bound="Expression")
+CALLABLE = typing.TypeVar("CALLABLE", bound=typing.Callable)
 
 
 @dataclasses.dataclass(eq=False, repr=False)
@@ -53,12 +56,41 @@ class Expression(GenericCheck):
     @property
     def _type_str(self):
         t = get_type(self)
-        return str(t)
+        if isinstance(t, typing._GenericAlias):  # type: ignore
+            return repr(t)
+        return typing._type_repr(t)  # type: ignore
 
     def __repr__(self):
         return (
             f"{self._type_str}({self.function}, {repr(self.args)}, {repr(self.kwargs)})"
         )
+
+    def _map(
+        self: T_expression,
+        fn: typing.Callable[[T], T],
+        function_fn: typing.Callable[[CALLABLE], CALLABLE] = None,
+        type_fn: typing.Callable[
+            [typing.Type[T_expression]], typing.Type[T_expression]
+        ] = None,
+    ) -> T_expression:
+        """
+        Map a function on all args and recreate function.
+
+        """
+        new_type: typing.Type[T_expression] = typing_inspect.get_generic_type(self)
+
+        new_expr = type(self)(
+            function=function_fn(self.function) if function_fn else self.function,  # type: ignore
+            args=[fn(typing.cast(T, arg)) for arg in self.args],
+            kwargs={k: fn(typing.cast(T, v)) for k, v in self.kwargs.items()},
+        )
+        # copy generic class
+        if hasattr(self, "__orig_class__"):
+            new_expr.__orig_class__ = (  # type: ignore
+                type_fn(self.__orig_class__) if type_fn else self.__orig_class__  # type: ignore
+            )
+
+        return new_expr
 
     def __eq__(self, value) -> bool:
         if not isinstance(value, Expression):
@@ -71,7 +103,10 @@ class Expression(GenericCheck):
         )
 
 
-T = typing.TypeVar("T")
+def clone_expression(expr: T) -> T:
+    if isinstance(expr, Expression):
+        return expr._map(clone_expression)  # type: ignore
+    return expr
 
 
 class PlaceholderExpression(Expression, OfType[T], typing.Generic[T]):
@@ -99,7 +134,9 @@ T_callable = typing.TypeVar("T_callable", bound=typing.Callable)
 
 def wrapper(fn, args, kwargs, return_type):
     expr_return_type = extract_expression_type(return_type)
-    return expr_return_type(fn, list(args), kwargs)
+    # Clone expression when returning it, so if if we mutate child expression
+    # those one won't be mutated
+    return clone_expression(expr_return_type(fn, list(args), kwargs))
 
 
 def expression(fn: T_callable) -> T_callable:
@@ -125,46 +162,3 @@ def create_iterated_placeholder(
     Used in matching with variable args.
     """
     ...
-
-
-T_Expression = typing.TypeVar("T_Expression", bound="Expression")
-
-
-@dataclasses.dataclass
-class ExpressionFolder:
-    """
-    Traverses this expression graph and transforms each node, from the bottom up.
-    """
-
-    fn: typing.Callable[[object], object] = lambda e: e
-    typevars: TypeVarMapping = dataclasses.field(default_factory=dict)
-
-    def __call__(self, expr: object) -> object:
-        fn: typing.Callable[[object], object] = self.fn  # type: ignore
-        if isinstance(expr, Expression):
-            return fn(
-                (replace_fn_typevars(expr.function, self.typevars))(
-                    *(self(arg) for arg in expr.args),
-                    **{k: self(v) for k, v in expr.kwargs.items()},
-                )
-            )
-        return fn(expr)
-
-
-@dataclasses.dataclass
-class ExpressionReplacer:
-    """
-    Replaces certain subexpression in an expression with values.
-    """
-
-    mapping: typing.Mapping
-    folder: ExpressionFolder = dataclasses.field(init=False)
-
-    def __post_init__(self):
-        self.folder = ExpressionFolder(self.fn)
-
-    def __call__(self, expr):
-        return self.folder(expr)
-
-    def fn(self, o):
-        return self.mapping.get(o, o)

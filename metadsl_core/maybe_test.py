@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 from metadsl import *
+from metadsl_rewrite import *
 from .abstraction import *
 from .maybe import *
 
@@ -35,7 +36,7 @@ class TestMaybe:
         def double_int(i: Int) -> Int:
             return Int.from_int(2) * i
 
-        assert execute(Maybe.just(Int.from_int(10)).map(double_int)) == Maybe[Int].just(
+        assert execute(Maybe.just(Int.from_int(10)).map(double_int)) == Maybe.just(
             Int.from_int(2) * Int.from_int(10)
         )
         assert execute(Maybe[Int].nothing().map(double_int)) == Maybe[Int].nothing()

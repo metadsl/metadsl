@@ -10,9 +10,11 @@ import types
 import typing
 import warnings
 
+import black
 import metadsl
 import typing_inspect
 from typez import *
+from metadsl_rewrite import *
 
 __all__ = ["ExpressionDisplay", "SHOW_MODULE"]
 
@@ -44,7 +46,7 @@ class ExpressionDisplay:
             states=States(initial=initial_node_id), nodes=nodes
         )
 
-    def update(self, rule: str, label: typing.Optional[str] = None):
+    def update(self, result: Result):
         new_nodes = convert_to_nodes(self.ref)
         old_nodes = self.typez_display.typez.nodes or []
         old_node_ids = set(node.id for node in old_nodes)
@@ -62,13 +64,21 @@ class ExpressionDisplay:
                         if self.typez_display.typez.states
                         else []
                     ),
-                    State(node=str(self.ref.hash), rule=rule, label=label),
+                    State(
+                        node=str(self.ref.hash),
+                        rule=result.name,
+                        label=result.label,
+                        logs=result.logs,
+                    ),
                 ],
             ),
         )
 
     def _ipython_display_(self):
         self.typez_display._ipython_display_()
+
+
+black_file_mode = black.FileMode(line_length=40)
 
 
 def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
@@ -88,7 +98,10 @@ def convert_to_nodes(ref: metadsl.ExpressionReference) -> Nodes:
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
                 or None,
-                function=f"{func_str}: {value._type_str}" if SHOW_TYPES else func_str,
+                function=black.format_str(
+                    f"{func_str}\n{value._type_str}" if SHOW_TYPES else func_str,
+                    mode=black_file_mode,
+                ),
                 args=[str(a) for a in children.args] or None,
                 kwargs={k: str(v) for k, v in children.kwargs.items()} or None,
             )

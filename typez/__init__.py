@@ -178,6 +178,7 @@ class States:
 class State:
     node: str
     rule: str
+    logs: str
     label: Optional[str] = None
 
 

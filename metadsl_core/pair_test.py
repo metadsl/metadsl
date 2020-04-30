@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from metadsl import *
+from metadsl_rewrite import *
 
 from .integer import *
 from .pair import *

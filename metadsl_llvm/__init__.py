@@ -5,10 +5,23 @@ LLVM support.
 __version__ = "0.2.0"
 
 
+from metadsl import export_from
+
 from .ctypes import *
 from .integration import *
-from .ir_llvmlite import *
 from .ir import *
-from .llvmlite_binding import *
 from .ir_context import *
-from . import rules as __llvmlite_rules  # NOQA
+from .ir_llvmlite import *
+from .llvmlite_binding import *
+from .strategies import *
+
+export_from(
+    __name__,
+    "ctypes",
+    "integration",
+    "ir_llvmlite",
+    "ir",
+    "llvmlite_binding",
+    "ir_context",
+    "strategies",
+)

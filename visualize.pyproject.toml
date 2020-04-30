@@ -9,6 +9,7 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "metadsl",
+    "metadsl_rewrite",
     "black",
     "typez"
 ]
@@ -19,6 +20,3 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
-
-[tool.flit.entrypoints.pytest11]
-metadsl_visualize = "metadsl_visualize.plugin"

@@ -2,22 +2,23 @@
 Compile LLVM module from IR.
 """
 from __future__ import annotations
+
 import typing
+
+import llvmlite.binding as binding
 
 from metadsl import *
 from metadsl_core import *
-import llvmlite.binding as binding
+from metadsl_rewrite import *
 
-__all__ = ["ModuleRef", "ExecutionEngine", "llvmlite_binding_rules"]
+from .strategies import *
+
+__all__ = ["ModuleRef", "ExecutionEngine"]
 
 binding.initialize()
 binding.initialize_native_target()
 binding.initialize_native_asmprinter()
 target_machine = binding.Target.from_default_triple().create_target_machine()
-
-
-llvmlite_binding_rules = RulesRepeatFold()
-register_llvmlite_binding = llvmlite_binding_rules.append
 
 
 class ModuleRef(Expression):

@@ -30,7 +30,7 @@
                 "properties": {
                   "params": {
                     "additionalProperties": {
-                      "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4561391487194"
+                      "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4603391487194"
                     },
                     "type": "object"
                   },
@@ -147,7 +147,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
+                                    "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
                                   },
                                   "type": "object"
                                 },
@@ -212,7 +212,7 @@
                                 "properties": {
                                   "params": {
                                     "additionalProperties": {
-                                      "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
+                                      "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
                                     },
                                     "type": "object"
                                   },
@@ -273,7 +273,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
+                              "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
                             },
                             "type": "object"
                           },
@@ -340,6 +340,9 @@
                   "label": {
                     "type": "string"
                   },
+                  "logs": {
+                    "type": "string"
+                  },
                   "node": {
                     "type": "string"
                   },
@@ -349,7 +352,8 @@
                 },
                 "required": [
                   "node",
-                  "rule"
+                  "rule",
+                  "logs"
                 ],
                 "type": "object"
               },
@@ -364,7 +368,7 @@
       },
       "type": "object"
     },
-    "alias-src/schema.ts-2494-2600-src/schema.ts-0-4561328996174": {
+    "alias-src/schema.ts-2494-2600-src/schema.ts-0-4603328996174": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -383,7 +387,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4561328996174"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
               },
               "type": "object"
             },
@@ -415,14 +419,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-src/schema.ts-3340-3479-src/schema.ts-0-4561391487194": {
+    "alias-src/schema.ts-3340-3479-src/schema.ts-0-4603391487194": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4561391487194"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4603391487194"
               },
               "type": "object"
             },

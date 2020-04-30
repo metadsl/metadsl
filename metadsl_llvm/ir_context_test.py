@@ -1,8 +1,12 @@
-import metadsl as m
+import pytest
+
+
+import metadsl_rewrite
 import metadsl_core as mc
 import metadsl_llvm as ml
 
 
+@pytest.mark.skip
 def test_fib():
     ##
     # Constants
@@ -32,7 +36,7 @@ def test_fib():
     def fib(n: ml.ValueExpr) -> ml.ValueExpr:
         return fib_more(n, zero, one)
 
-    metadsl_fn = m.execute(
+    metadsl_fn = metadsl_rewrite.execute(
         ml.compile_functions(mod_ref, ml.to_llvm(fib), ml.to_llvm(fib_more))
     )
     assert metadsl_fn(10) == 55
@@ -49,5 +53,5 @@ def test_add():
     def add(l: ml.ValueExpr, r: ml.ValueExpr) -> ml.ValueExpr:
         return l + r + one
 
-    real_fn = m.execute(ml.compile_functions(mod_ref, ml.to_llvm(add)))
+    real_fn = metadsl_rewrite.execute(ml.compile_functions(mod_ref, ml.to_llvm(add)))
     assert real_fn(10, 11) == 22

@@ -9,7 +9,7 @@ author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "metadsl",
-    "numpy"
+    "metadsl_rewrite"
 ]
 classifiers = [
     "Intended Audience :: Developers",

@@ -126,37 +126,16 @@ TEST_EXPRESSIONS: typing.Iterable[object] = [
 
 
 @pytest.mark.parametrize("instance", TEST_EXPRESSIONS)
-def test_fold_identity(instance) -> None:
+def test_clone_expression(instance) -> None:
     """
     You should be able to decompose any instances into it's type and expression and recompose it.
     """
-    result = ExpressionFolder(lambda e: e)(instance)
-    assert instance == result
+    assert clone_expression(instance) == instance
 
 
 U = typing.TypeVar("U")
 
 
-def test_fold_typevars_identity():
-    assert ExpressionFolder()(Generic[T].create()) == Generic[T].create()
-    assert ExpressionFolder()(Generic[U].create()) == Generic[U].create()
-
-
-def test_fold_typevars_replace():
-    assert (
-        ExpressionFolder(typevars={T: int})(Generic[T].create())
-        == Generic[int].create()
-    )
-    assert (
-        ExpressionFolder(typevars={U: int})(Generic[U].create())
-        == Generic[int].create()
-    )
-
-
-def test_fold_typevars_replace_skip_missing():
-    assert (
-        ExpressionFolder(typevars={U: int})(Generic[T].create()) == Generic[T].create()
-    )
-    assert (
-        ExpressionFolder(typevars={T: int})(Generic[U].create()) == Generic[U].create()
-    )
+def test_clone_expression_generic():
+    assert clone_expression(Generic[T].create()) == Generic[T].create()
+    assert clone_expression(Generic[U].create()) == Generic[U].create()

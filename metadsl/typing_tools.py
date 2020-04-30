@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import inspect
-import typing
-import copy
-import typing_inspect
 import collections.abc
+import copy
 import dataclasses
 import functools
+import inspect
+import logging
 import types
+import typing
+
+import typing_inspect
+
 from .dict_tools import *
 
 __all__ = [
@@ -29,10 +32,15 @@ __all__ = [
     "match_types",
     "get_origin_type",
     "get_fn_typevars",
+    "ToCallable",
 ]
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U")
+
+logger = logging.getLogger(__name__)
+logger.addFilter(lambda record: False)
+# logger.addFilter(lambda record: record.msg.startswith("infer_return_type"))
 
 
 class GenericCheckType(type):
@@ -116,8 +124,17 @@ def generic_subclasscheck(self, cls):
     """
     Modified from https://github.com/python/cpython/blob/aa73841a8fdded4a462d045d1eb03899cbeecd65/Lib/typing.py#L707-L717
     """
-    cls = getattr(cls, "__origin__", cls)
-    return issubclass(self.__origin__, cls)
+    self_origin = self.__origin__
+    cls_origin = getattr(cls, "__origin__", cls)
+
+    # If we are a callable type and other cls is is not an actualy callable
+    # type, match against the ToCallable type instead
+    if (
+        self_origin == collections.abc.Callable
+        and cls_origin != collections.abc.Callable
+    ):
+        self_origin = ToCallable
+    return issubclass(cls_origin, self_origin)
 
 
 # Allow isinstance and issubclass calls on special forms like union
@@ -131,6 +148,51 @@ def special_form_subclasscheck(self, cls):
 
 typing._GenericAlias.__subclasscheck__ = generic_subclasscheck  # type: ignore
 typing._SpecialForm.__subclasscheck__ = special_form_subclasscheck  # type: ignore
+
+
+class ToCallableMeta(type):
+    """
+    Type of type that can be used in isubclass to determine whether
+    it wil be understood as a callable from the typing_tools perspective.
+
+    Basically whatever is coerced in `get_type` to a callable.
+
+    Need to switch typing.Callable for this, because that uses anything that works
+    like a callable, which is not waht we want
+    """
+
+    def __instancecheck__(cls, inst):
+        return isinstance(
+            inst,
+            (
+                functools.partial,
+                Infer,
+                BoundInfer,
+                FunctionReplaceTyping,
+                types.FunctionType,
+            ),
+        )
+
+    def __subclasscheck__(cls, sub):
+        """Implement issubclass(sub, cls)."""
+        return (
+            issubclass(
+                sub,
+                (
+                    functools.partial,
+                    Infer,
+                    BoundInfer,
+                    FunctionReplaceTyping,
+                    types.FunctionType,
+                ),
+            )
+            or typing_inspect.get_origin(sub) == collections.abc.Callable
+        )
+
+
+class ToCallable(metaclass=ToCallableMeta):
+    def __call__(*__args, **__kwargs):
+        ...
 
 
 def get_origin(t: typing.Type) -> typing.Type:
@@ -280,10 +342,15 @@ TypeVarMapping = typing.Mapping[typing.TypeVar, typing.Type]  # type: ignore
 
 
 def match_values(hint_value: T, value: T) -> TypeVarMapping:
-    return match_type(get_type(hint_value), value)
+    logger.debug("match_values hint_value=%s value=%s", hint_value, value)
+    hint_type = get_type(hint_value)
+    logger.debug("hint_type=%s", hint_type)
+    return match_type(hint_type, value)
 
 
 def match_type(hint: typing.Type[T], value: T) -> TypeVarMapping:
+    logger.debug("match_type hint=%s value=%s", hint, value)
+
     if typing_inspect.get_origin(hint) == type:
         (inner_hint,) = typing_inspect.get_args(hint)
         return match_types(inner_hint, typing.cast(typing.Type, value))
@@ -361,6 +428,11 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     """
     Matches a type hint with a type, return a mapping of any type vars to their values.
     """
+    logger.debug("match_types hint=%s type=%s", hint, t)
+    if hint == object:
+        hint = typing.Any  # type: ignore
+    if t == object:
+        t = typing.Any  # type: ignore
     if hint == t:
         return {}
 
@@ -414,7 +486,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         else:
             raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
 
+    logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
     if not issubclass(t, hint):
+        logger.debug("not subclass")
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return merge_typevars(
         *(
@@ -493,6 +567,9 @@ def infer_return_type(
     typing.Type[T],
     TypeVarMapping,
 ]:
+    logger.debug(
+        "infer_return_type fn=%s owner=%s args=%s kwargs=%s", fn, owner, args, kwargs
+    )
     hints = copy.copy(typing_get_type_hints(fn))
     signature = inspect_signature(fn)
 
@@ -542,9 +619,11 @@ def infer_return_type(
         matches: TypeVarMapping = merge_typevars(*mappings)
     except ValueError:
         raise TypeError(f"Couldn't merge mappings {mappings}")
-
     final_args = bound.args[1:] if is_classmethod else bound.args
     final_kwargs = bound.kwargs
+    logger.debug(
+        "infer_return_type matches=%s args=%s kwargs=%s", matches, args, kwargs
+    )
     for arg in final_args:
         record_scoped_typevars(arg, *matches.keys())
     for kwarg in final_kwargs.values():
@@ -642,15 +721,46 @@ class Infer(typing.Generic[T, U]):
             method = BoundInfer(  # type: ignore
                 fn, self.wrapper, get_type(instance), is_classmethod  # type: ignore
             )
+            # if this is not a classmethod we are calling on an instance, bind the first value to self
+            if not is_classmethod:
+                method = functools.partial(method, instance)  # type: ignore
             if is_property:
-                return method(instance)  # type: ignore
-            return functools.partial(method, instance)  # type: ignore
+                return method()  # type: ignore
+            return method  # type: ignore
         return BoundInfer(  # type: ignore
             fn, self.wrapper, owner, is_classmethod  # type: ignore
         )
 
     def __repr__(self):
         return getattr(self.fn, "__name__", str(self.fn))
+
+
+SPECIAL_BINARY_METHODS = {
+    f"__{n}__"
+    for n in [
+        # comparison
+        "lt",
+        "le",
+        "eq",
+        "ne",
+        "gt",
+        "ge",
+        # numeric
+        "add",
+        "sub",
+        "mul",
+        "matmul",
+        "truediv",
+        "mod",
+        "divmod",
+        "pow",
+        "lshift",
+        "rshift",
+        "and",
+        "xor",
+        "or",
+    ]
+}
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -664,9 +774,17 @@ class BoundInfer(typing.Generic[T, U]):
         functools.update_wrapper(self, self.fn)
 
     def __call__(self, *args, **kwargs) -> U:
-        *wrapper_args, typevars = infer_return_type(
-            self.fn, self.owner, self.is_classmethod, args, kwargs
-        )
+        try:
+            *wrapper_args, typevars = infer_return_type(
+                self.fn, self.owner, self.is_classmethod, args, kwargs
+            )
+        except TypeError:
+            # Return NotImplemented from special methods
+            # if it cannot handle the types, instead of throwing
+            # https://docs.python.org/3/library/constants.html#NotImplemented
+            if self.fn.__name__ in SPECIAL_BINARY_METHODS:
+                return NotImplemented
+            raise
         with TypeVarScope(*typevars.keys()):
             res = self.wrapper(self, *wrapper_args)  # type: ignore
         return res
@@ -712,7 +830,9 @@ class FunctionReplaceTyping:
     fn: typing.Callable
     typevars: HashableMapping[typing.TypeVar, typing.Type]  # type: ignore
     typevars_in_scope: typing.FrozenSet[typing.TypeVar]  # type: ignore
-    inner_mapping: typing.Callable[[typing.Any], typing.Any]
+    inner_mapping: typing.Callable[[typing.Any], typing.Any] = dataclasses.field(
+        repr=False
+    )
 
     @classmethod
     def create(
@@ -726,6 +846,7 @@ class FunctionReplaceTyping:
         typevars_in_scope: typing.FrozenSet[TypeVar] = fn.__scoped_typevars__  # type: ignore
         if not typevars_in_scope:
             return fn
+        # TODO: Fix hack
         if "fib_more" in str(fn):
             return fn
 
@@ -746,6 +867,12 @@ class FunctionReplaceTyping:
         with NewTypeVarScope():
             with TypeVarScope(*self.typevars_in_scope):
                 return self.inner_mapping(self.fn(*args, **kwargs))  # type: ignore
+
+    # def __repr__(self):
+    #     return repr(self.fn)
+
+    # def __str__(self):
+    #     return str(self.fn)
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -770,6 +897,7 @@ def replace_fn_typevars(
             ),
         )
     if isinstance(fn, types.FunctionType):
+        logger.debug("replace_fn_typevars function fn=%s typevars=%s", fn, typevars)
         # Create new function by replacing typevars in existing function
         return FunctionReplaceTyping.create(fn, typevars, inner_mapping)  # type: ignore
     return fn
