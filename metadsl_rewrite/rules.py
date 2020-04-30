@@ -187,13 +187,20 @@ class Rule(Strategy):
         # Create one wildcard` per argument
         self.wildcards = [create_wildcard(a) for a in get_arg_hints(self.matchfunction)]
 
-        # Call the function first to create a template with the wildcards
-        result = self.matchfunction(*self.wildcards)
-        self.results = (
-            list(result)  # type: ignore
-            if inspect.isgeneratorfunction(self.matchfunction)
-            else [result]
-        )
+        # we match the wildcards against themselves to get an identity typevar mapping
+        # TODO: Replace with just grabbing all typevars from arg types themselves
+        typevars_in_args = match_values(
+            tuple(self.wildcards), tuple(self.wildcards)
+        ).keys()
+        # Set the typevar args in scope so when functions are called here they are recorded properly
+        with TypeVarScope(*typevars_in_args):
+            # Call the function first to create a template with the wildcards
+            result = self.matchfunction(*self.wildcards)
+            self.results = (
+                list(result)  # type: ignore
+                if inspect.isgeneratorfunction(self.matchfunction)
+                else [result]
+            )
 
     def optimize(self, executor: Executor, strategy: Strategy) -> None:
         new_results: typing.List[R] = []
@@ -221,7 +228,6 @@ class Rule(Strategy):
                 logger.debug(
                     "Matched expr=%s typevars=%s", wildcards_to_nodes, typevars
                 )
-
                 # if the result is a function, we can't use substitution, so instead we re-call
                 # with args and use that result
                 if isinstance(expression_thunk, types.FunctionType):
@@ -229,30 +235,31 @@ class Rule(Strategy):
                         wildcards_to_nodes.get(wildcard, wildcard)
                         for wildcard in self.wildcards
                     ]
-                    _, expression_thunk = (
-                        list(self.matchfunction(*args))[i]
-                        if inspect.isgeneratorfunction(self.matchfunction)
-                        else self.matchfunction(*args)
-                    )
-                    # If it's a function, make sure we have real values instead of placeholders
-                    # for any of the nodes that are placeholders for something more specific
-                    # than a typevar, object, or any
-                    if any(
-                        isinstance(node, PlaceholderExpression)
-                        and not is_vague_type(wildcard_inner_type(wildcard))
-                        for wildcard, node in wildcards_to_nodes.items()
-                    ):
-                        continue
-                    try:
-                        result_expr: object = expression_thunk()
-                    except NoMatch:
-                        continue
+                    with TypeVarScope(*typevars.keys()):
+                        _, expression_thunk = (
+                            list(self.matchfunction(*args))[i]
+                            if inspect.isgeneratorfunction(self.matchfunction)
+                            else self.matchfunction(*args)
+                        )
+                        # If it's a function, make sure we have real values instead of placeholders
+                        # for any of the nodes that are placeholders for something more specific
+                        # than a typevar, object, or any
+                        if any(
+                            isinstance(node, PlaceholderExpression)
+                            and not is_vague_type(wildcard_inner_type(wildcard))
+                            for wildcard, node in wildcards_to_nodes.items()
+                        ):
+                            continue
+                        try:
+                            result_expr: object = expression_thunk()
+                        except NoMatch:
+                            continue
                 else:
                     result_expr = ReplaceValues(wildcards_to_nodes)(expression_thunk)
                 with TypeVarScope(*typevars.keys()):
                     result_expr = ReplaceTypevarsExpression(typevars)(result_expr)
-                    logger.debug("Rule.__call__ res=%s", result_expr)
-                    ref.replace(result_expr)
+                logger.debug("Rule.__call__ res=%s", result_expr)
+                ref.replace(result_expr)
                 yield Result(
                     # if there is more than one possible match from this strategy, also put the index of the match
                     name=str(self) if len(self.results) == 1 else f"{self}[{i}]",
