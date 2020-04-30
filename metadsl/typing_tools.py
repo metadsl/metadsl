@@ -893,6 +893,7 @@ def replace_fn_typevars(
             ),
         )
     if isinstance(fn, types.FunctionType):
+        logger.debug("replace_fn_typevars function fn=%s typevars=%s", fn, typevars)
         # Create new function by replacing typevars in existing function
         return FunctionReplaceTyping.create(fn, typevars, inner_mapping)  # type: ignore
     return fn
