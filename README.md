@@ -17,6 +17,6 @@ If you are interested in either of these topics, feel free to open an issue or r
 
 ## Support
 
-The only reason this projects exists was due to the funding and support from Quansight Labs, since it inception in 2018 till 2020
+The only reason this projects exists was due to the funding and support from Quansight Labs, since its inception in 2018 till 2020.
 
 [![Quansight Labs Logo](https://github.com/Quansight-Labs/quansight-labs-site/raw/main/files/images/QuansightLabs_logo_V2.png)]((https://labs.quansight.org/))
