@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import CodeType
 
+from typing import Tuple
 from .code_flags_data import CodeFlagsData
 
 
@@ -41,19 +42,20 @@ class CodeData:
 
     # code flags
     flags: CodeFlagsData
+    flags: int
 
     # string of raw compiled bytecode
     # TODO: turn into instructions
     code: bytes
 
     # tuple of constants used in the bytecode
-    consts: tuple[object, ...]
+    consts: Tuple[object, ...]
 
     # tuple of names of local variables
-    names: tuple[str, ...]
+    names: Tuple[str, ...]
 
     # tuple of names of arguments and local variables
-    varnames: tuple[str, ...]
+    varnames: Tuple[str, ...]
 
     # name of file in which this code object was created
     filename: str
@@ -69,9 +71,9 @@ class CodeData:
     lnotab: bytes
 
     # tuple of names of free variables (referenced via a function’s closure)
-    freevars: tuple[str, ...]
+    freevars: Tuple[str, ...]
     # tuple of names of cell variables (referenced by containing scopes)
-    cellvars: tuple[str, ...]
+    cellvars: Tuple[str, ...]
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:

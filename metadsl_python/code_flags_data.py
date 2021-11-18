@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import astuple, dataclass
 from dis import COMPILER_FLAG_NAMES
-
+from typing import List
 import __future__  # isort:skip
 
 
@@ -82,7 +82,7 @@ FUTURE_FLAG_NAMES = [
 ]
 
 # List of flag values, in order of the dataclass
-FLAG_VALUES: list[int] = [
+FLAG_VALUES: List[int] = [
     *COMPILER_FLAG_NAMES.keys(),
     *(getattr(__future__, name) for name in FUTURE_FLAG_NAMES),
 ]
