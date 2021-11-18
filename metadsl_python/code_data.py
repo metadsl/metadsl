@@ -1,0 +1,117 @@
+
+
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from types import CodeType
+
+from .code_flags_data import CodeFlagsData
+
+
+@dataclass
+class CodeData:
+    """
+    A code object is what is seralized on disk as PYC file. It is the lowest
+    abstraction level CPython provides before execution.
+
+    This class is meant to a be a data description of a code object,
+    where the types of the attributes can help us understand what the different
+    possible options are.
+
+    All recursive code object are translated to code data as well.
+
+    From https://docs.python.org/3/library/inspect.html
+    """
+
+    # number of arguments (not including keyword only arguments, * or ** args)
+    argcount: int
+
+    # number of positional only arguments
+    posonlyargcount: int
+
+    # number of keyword only arguments (not including ** arg)
+    kwonlyargcount: int
+
+    # number of local variables
+    nlocals: int
+
+    # virtual machine stack space required
+    stacksize: int
+
+    # code flags
+    flags: CodeFlagsData
+
+    # string of raw compiled bytecode
+    # TODO: turn into instructions
+    code: bytes
+
+    # tuple of constants used in the bytecode
+    consts: tuple[object, ...]
+
+    # tuple of names of local variables
+    names: tuple[str, ...]
+
+    # tuple of names of arguments and local variables
+    varnames: tuple[str, ...]
+
+    # name of file in which this code object was created
+    filename: str
+
+    # name with which this code object was defined
+    name: str
+
+    # number of first line in Python source code
+    firstlineno: int
+
+    # encoded mapping of line numbers to bytecode indices
+    # TODO: Decode this
+    lnotab: bytes
+
+    # tuple of names of free variables (referenced via a function’s closure)
+    freevars: tuple[str, ...]
+    # tuple of names of cell variables (referenced by containing scopes)
+    cellvars: tuple[str, ...]
+
+    @classmethod
+    def from_code(cls, code: CodeType) -> CodeData:
+        code.co_flags
+        return cls(
+            code.co_argcount,
+            code.co_posonlyargcount,
+            code.co_kwonlyargcount,
+            code.co_nlocals,
+            code.co_stacksize,
+            CodeFlagsData.from_flags(code.co_flags),
+            code.co_code,
+            code.co_consts,
+            code.co_names,
+            code.co_varnames,
+            code.co_filename,
+            code.co_name,
+            code.co_firstlineno,
+            code.co_lnotab,
+            code.co_freevars,
+            code.co_cellvars,
+        )
+
+    def to_code(self) -> CodeType:
+        # https://github.com/python/cpython/blob/cd74e66a8c420be675fd2fbf3fe708ac02ee9f21/Lib/test/test_code.py#L217-L232
+        return CodeType(
+            self.argcount,
+            self.posonlyargcount,
+            self.kwonlyargcount,
+            self.nlocals,
+            self.stacksize,
+            self.flags.to_flags(),
+            self.code,
+            self.consts,
+            self.names,
+            self.varnames,
+            self.filename,
+            self.name,
+            self.firstlineno,
+            self.lnotab,
+            self.freevars,
+            self.cellvars,
+        )

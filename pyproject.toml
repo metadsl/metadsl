@@ -29,6 +29,8 @@ test = [
     "pytest-randomly",
     "pytest-xdist",
     "pytest-pudb",
+    "hypothesmith",
+    "hypothesis",
     "mypy"
 ]
 doc = [
