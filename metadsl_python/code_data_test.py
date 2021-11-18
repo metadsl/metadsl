@@ -21,26 +21,32 @@ def safe_get_code(loader: Loader, name: str) -> Optional[CodeType]:
         return None
 
 
+# Special cases to test manually
+SAMPLE_CODE = {"unicode": "'©'"}
+
+code_params = [
+    pytest.param(compile(str, "<str>", "exec"), id=name)
+    for name, str in SAMPLE_CODE.items()
+]
+
 # In order to test the code_data, we try to get a sample of bytecode,
 # by walking all our packages and trying to load every module.
 # Note that although this doesn't require the code to be executable,
 # `walk_packages` does require it, so this will ignore any modules
 # which raise errors on import.
 module_infos = pkgutil.walk_packages(onerror=lambda _name: None)
-name_and_code = (
-    (mi.name, code)
+code_params += [
+    pytest.param(code, id=mi.name)
     for mi in module_infos
     if (
         code := safe_get_code(
             cast(Loader, mi.module_finder.find_module(mi.name)), mi.name
         )
     )
-)
+]
 
 
-@pytest.mark.parametrize(
-    "code", (pytest.param(code, id=name) for name, code in name_and_code)
-)
+@pytest.mark.parametrize("code", code_params)
 def test_code_data(code: CodeType):
     code_data = CodeData.from_code(code)
     resulting_code = code_data.to_code()

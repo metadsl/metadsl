@@ -1,11 +1,7 @@
-
-
-
 from __future__ import annotations
 
 from dataclasses import dataclass
 from types import CodeType
-
 from typing import Tuple
 from .code_flags_data import CodeFlagsData
 
@@ -42,7 +38,6 @@ class CodeData:
 
     # code flags
     flags: CodeFlagsData
-    flags: int
 
     # string of raw compiled bytecode
     # TODO: turn into instructions
@@ -77,7 +72,6 @@ class CodeData:
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:
-        code.co_flags
         return cls(
             code.co_argcount,
             code.co_posonlyargcount,
