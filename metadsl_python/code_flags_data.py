@@ -60,7 +60,7 @@ class CodeFlagsData:
 
     @classmethod
     def from_flags(cls, flags: int) -> CodeFlagsData:
-        return cls(*(bool(flags & flag) for flag in FLAG_VALUES),)
+        return cls(*(bool(flags & flag) for flag in FLAG_VALUES))
 
     def to_flags(self) -> int:
         flags = 0
