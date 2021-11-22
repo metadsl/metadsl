@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from types import CodeType
 from typing import Tuple, List
 from .code_flags_data import CodeFlagsData
@@ -47,10 +47,10 @@ class CodeData:
     stacksize: int
 
     # code flags
-    flags: int
+    flags_data: CodeFlagsData
 
     # Bytecode instructions
-    code: bytes
+    instructions: List[InstructionData]
 
     # tuple of constants used in the bytecode
     consts: Tuple[object, ...]
@@ -79,28 +79,13 @@ class CodeData:
     # tuple of names of cell variables (referenced by containing scopes)
     cellvars: Tuple[str, ...]
 
-    # https://florimond.dev/en/posts/2018/10/reconciling-dataclasses-and-properties-in-python/#attempt-5-exclude-_wheels-from-the-constructor
-    # code flags
-    flags_data: CodeFlagsData = field(init=False)
-
-    # Bytecode instructions
-    instructions: List[InstructionData] = field(init=False)
-
-    @property  # type: ignore
+    @property
     def flags(self) -> int:
         return self.flags_data.to_flags()
 
-    @flags.setter  # type: ignore
-    def flags(self, value: int) -> None:
-        self.flags_data = CodeFlagsData.from_flags(value)
-
-    @property  # type: ignore
+    @property
     def code(self) -> bytes:
         return instructions_to_bytes(self.instructions)
-
-    @code.setter  # type: ignore
-    def code(self, value: bytes) -> None:
-        self.instructions = list(instructions_from_bytes(value))
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:
@@ -110,8 +95,8 @@ class CodeData:
             code.co_kwonlyargcount,
             code.co_nlocals,
             code.co_stacksize,
-            code.co_flags,
-            code.co_code,
+            CodeFlagsData.from_flags(code.co_flags),
+            list(instructions_from_bytes(code.co_code)),
             code.co_consts,
             code.co_names,
             code.co_varnames,
