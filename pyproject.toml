@@ -47,5 +47,6 @@ dev = [
     "jupyterlab>=1.0.0",
     "nbconvert",
     "pudb",
+    "tox",
     "beni"
 ]

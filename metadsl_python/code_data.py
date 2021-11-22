@@ -11,11 +11,6 @@ from .instruction_data import (
 )
 
 
-# TODO: Should this just be the data description?
-# Then another class for flags... and another for bytecode...?
-# Is there a better way to do this iteratively?
-
-
 @dataclass
 class CodeData:
     """
