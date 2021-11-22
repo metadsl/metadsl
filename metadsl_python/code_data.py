@@ -47,7 +47,7 @@ class CodeData:
     stacksize: int
 
     # code flags
-    flags: CodeFlagsData
+    flags_data: CodeFlagsData
 
     # Bytecode instructions
     instructions: List[InstructionData]
@@ -79,6 +79,14 @@ class CodeData:
     # tuple of names of cell variables (referenced by containing scopes)
     cellvars: Tuple[str, ...]
 
+    @property
+    def flags(self) -> int:
+        return self.flags_data.to_flags()
+
+    @property
+    def code(self) -> bytes:
+        return instructions_to_bytes(self.instructions)
+
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:
         return cls(
@@ -108,8 +116,8 @@ class CodeData:
             self.kwonlyargcount,
             self.nlocals,
             self.stacksize,
-            self.flags.to_flags(),
-            instructions_to_bytes(self.instructions),
+            self.flags,
+            self.code,
             self.consts,
             self.names,
             self.varnames,
