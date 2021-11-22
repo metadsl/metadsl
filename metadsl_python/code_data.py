@@ -2,8 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import CodeType
-from typing import Tuple
+from typing import Tuple, List
 from .code_flags_data import CodeFlagsData
+from .instruction_data import (
+    InstructionData,
+    instructions_from_bytes,
+    instructions_to_bytes,
+)
+
+
+# TODO: Should this just be the data description?
+# Then another class for flags... and another for bytecode...?
+# Is there a better way to do this iteratively?
 
 
 @dataclass
@@ -39,9 +49,8 @@ class CodeData:
     # code flags
     flags: CodeFlagsData
 
-    # string of raw compiled bytecode
-    # TODO: turn into instructions
-    code: bytes
+    # Bytecode instructions
+    instructions: List[InstructionData]
 
     # tuple of constants used in the bytecode
     consts: Tuple[object, ...]
@@ -79,7 +88,7 @@ class CodeData:
             code.co_nlocals,
             code.co_stacksize,
             CodeFlagsData.from_flags(code.co_flags),
-            code.co_code,
+            list(instructions_from_bytes(code.co_code)),
             code.co_consts,
             code.co_names,
             code.co_varnames,
@@ -100,7 +109,7 @@ class CodeData:
             self.nlocals,
             self.stacksize,
             self.flags.to_flags(),
-            self.code,
+            instructions_to_bytes(self.instructions),
             self.consts,
             self.names,
             self.varnames,
