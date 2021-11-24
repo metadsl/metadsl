@@ -9,6 +9,7 @@ from .instruction_data import (
     instructions_from_bytes,
     instructions_to_bytes,
 )
+import sys
 
 
 @dataclass
@@ -84,9 +85,13 @@ class CodeData:
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:
+        if sys.version_info >= (3, 8):
+            posonlyargcount = code.co_posonlyargcount
+        else:
+            posonlyargcount = 0
         return cls(
             code.co_argcount,
-            code.co_posonlyargcount,
+            posonlyargcount,
             code.co_kwonlyargcount,
             code.co_nlocals,
             code.co_stacksize,
@@ -105,21 +110,41 @@ class CodeData:
 
     def to_code(self) -> CodeType:
         # https://github.com/python/cpython/blob/cd74e66a8c420be675fd2fbf3fe708ac02ee9f21/Lib/test/test_code.py#L217-L232
-        return CodeType(
-            self.argcount,
-            self.posonlyargcount,
-            self.kwonlyargcount,
-            self.nlocals,
-            self.stacksize,
-            self.flags,
-            self.code,
-            self.consts,
-            self.names,
-            self.varnames,
-            self.filename,
-            self.name,
-            self.firstlineno,
-            self.lnotab,
-            self.freevars,
-            self.cellvars,
-        )
+        if sys.version_info >= (3, 8):
+            return CodeType(
+                self.argcount,
+                # Only include this on 3.8+
+                self.posonlyargcount,
+                self.kwonlyargcount,
+                self.nlocals,
+                self.stacksize,
+                self.flags,
+                self.code,
+                self.consts,
+                self.names,
+                self.varnames,
+                self.filename,
+                self.name,
+                self.firstlineno,
+                self.lnotab,
+                self.freevars,
+                self.cellvars,
+            )
+        else:
+            return CodeType(
+                self.argcount,
+                self.kwonlyargcount,
+                self.nlocals,
+                self.stacksize,
+                self.flags,
+                self.code,
+                self.consts,
+                self.names,
+                self.varnames,
+                self.filename,
+                self.name,
+                self.firstlineno,
+                self.lnotab,
+                self.freevars,
+                self.cellvars,
+            )

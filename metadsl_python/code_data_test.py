@@ -48,9 +48,11 @@ def codes() -> Iterable[CodeType]:
         for mi in pkgutil.walk_packages(onerror=lambda _name: None):
             loader: Loader = mi.module_finder.find_module(mi.name)
             try:
-                yield loader.get_code(mi.name)
+                code = loader.get_code(mi.name)
             except SyntaxError:
                 continue
+            if code:
+                yield code
 
 
 def code_to_dict(code: CodeType) -> dict[str, object]:
