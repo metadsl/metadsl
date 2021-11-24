@@ -1,7 +1,6 @@
 # https://github.com/tox-dev/tox-gh#workflow-configuration
 name: Test
 on:
-  push:
   pull_request:
 
 jobs:
@@ -23,4 +22,4 @@ jobs:
           python-version: ${{ matrix.py }}
       - uses: actions/checkout@v2
       - run: pip install tox
-      - run: tox -e py
+      - run: tox -e py -- -x
