@@ -25,7 +25,7 @@ envs/%-env: envs/%.yml
 	conda env create --force -f $^ -p $@
 
 test: $(envs)
-	pytest -d -x metadsl_python \
+	pytest --dist each -x metadsl_python -vv \
 	$(foreach e,$(envs),--tx popen//python=$(e)/bin/python)
 	
 
