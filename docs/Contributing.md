@@ -50,6 +50,15 @@ You can also run tests through ipython, to test if the custom visualizations all
 ipython -m pytest
 ```
 
+If you want to test against all our supported Python versions, we support
+that with Tox and Conda:
+
+```bash
+tox -p
+```
+
+Currently this just runs the `metadsl_python` tests and doesn't build all packages.
+
 ### Debugging
 
 If you have a notebook that isn't working, one way to debug it is to convert it to a Python
@@ -71,15 +80,7 @@ sphinx-autobuild docs docs/_build/html/
 You can generate a new `environment.yml` from our project dependencies with:
 
 ```bash
-beni pyproject.toml *.pyproject.toml --ignore \
-    typing_extensions\
-    typing_inspect \
-    pytest \
-    pytest-mypy \
-    pytest-xdist \
-    pytest-cov \
-    pytest-testmo \
-> binder/environment.yml
+beni --deps all pyproject.toml *.pyproject.toml > binder/environment.yml
 ```
 
 ### Publishing
