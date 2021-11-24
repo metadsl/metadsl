@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import marshal
+import warnings
 import pkgutil
 from importlib.abc import Loader
 from types import CodeType
@@ -21,7 +22,7 @@ def safe_get_code(loader: Loader, name: str) -> Optional[CodeType]:
 
 
 # Special cases to test manually
-SAMPLE_CODE = {"string": "a"}
+SAMPLE_CODE = {"variable": "a"}
 
 code_params = [
     pytest.param(compile(str, "<str>", "exec"), id=name)
@@ -33,7 +34,10 @@ code_params = [
 # Note that although this doesn't require the code to be executable,
 # `walk_packages` does require it, so this will ignore any modules
 # which raise errors on import.
-module_infos = pkgutil.walk_packages(onerror=lambda _name: None)
+# Catch warnings so warnings raised on import are surpressed
+with warnings.catch_warnings():
+    module_infos = pkgutil.walk_packages(onerror=lambda _name: None)
+
 code_params += [
     pytest.param(code, id=mi.name)
     for mi in module_infos
@@ -64,4 +68,13 @@ def code_to_dict(code: CodeType) -> dict[str, object]:
     """
     Converts a code object to a dict for testing
     """
-    return {name: getattr(code, name) for name in dir(code) if name.startswith("co_")}
+    return {
+        name: getattr(code, name)
+        for name in dir(code)
+        if name.startswith("co_")
+        # Don't compare generated co_lines iterator returned in Python 3.10
+        # When co_lntob is removed in 3.12, we need to figured out how to adapt.
+        # TODO: look at how co_lines works and make sure we can duplicate logic for mapping
+        # https://docs.python.org/3/whatsnew/3.10.html?highlight=co_lines#pep-626-precise-line-numbers-for-debugging-and-other-tools
+        and name != "co_lines"
+    }
