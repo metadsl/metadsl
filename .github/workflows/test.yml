@@ -1,4 +1,4 @@
-# https://github.com/ymyzk/tox-gh-actions
+# https://github.com/tox-dev/tox-gh#workflow-configuration
 name: Test
 on:
   push:
@@ -22,5 +22,5 @@ jobs:
         with:
           python-version: ${{ matrix.py }}
       - uses: actions/checkout@v2
-      - run: python -m pip install -e .
-      - run: pytest metadsl_python
+      - run: pip install tox
+      - run: tox -e py
