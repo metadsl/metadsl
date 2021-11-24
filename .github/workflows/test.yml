@@ -25,4 +25,4 @@ jobs:
       - name: Install dependencies
         run: python -m pip install tox tox-gh-actions
       - name: Setup test suite
-        run: tox --skip-pkg-install
+        run: tox
