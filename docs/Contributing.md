@@ -50,14 +50,14 @@ You can also run tests through ipython, to test if the custom visualizations all
 ipython -m pytest
 ```
 
-If you want to test against all our supported Python versions, we support
-that with Tox and Conda:
+If you want to test against all our supported Python versions, we support using
+pytest xdist and conda to do that:
 
 ```bash
-tox -p
+make test
 ```
 
-Currently this just runs the `metadsl_python` tests and doesn't build all packages.
+Currently this just runs the `metadsl_python` tests.
 
 ### Debugging
 

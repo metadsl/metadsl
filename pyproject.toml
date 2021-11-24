@@ -25,12 +25,8 @@ classifiers = [
 test = [
     "pytest>=3.6.0",
     "pytest-cov",
-    "pytest-mypy",
-    "pytest-randomly",
     "pytest-xdist",
     "pytest-pudb",
-    "hypothesmith",
-    "hypothesis",
     "mypy"
 ]
 doc = [
@@ -47,7 +43,5 @@ dev = [
     "jupyterlab>=1.0.0",
     "nbconvert",
     "pudb",
-    "tox",
-    "tox-conda",
     "beni"
 ]
