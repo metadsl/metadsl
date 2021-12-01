@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import CodeType
-from typing import Tuple, List
+from typing import Tuple, List, Union
 from .code_flags_data import CodeFlagsData
 from .instruction_data import (
     InstructionData,
@@ -66,9 +66,7 @@ class CodeData:
     # number of first line in Python source code
     firstlineno: int
 
-    # encoded mapping of line numbers to bytecode indices
-    # TODO: Decode this
-    lnotab: bytes
+    line_mapping: BytecodeLineMapping
 
     # tuple of names of free variables (referenced via a function’s closure)
     freevars: Tuple[str, ...]
@@ -89,6 +87,11 @@ class CodeData:
             posonlyargcount = code.co_posonlyargcount
         else:
             posonlyargcount = 0
+
+        if sys.version_info >= (3, 10):
+            line_mapping = LineTable(code.co_linetable)
+        else:
+            line_mapping = BytecodeLineMapping(code.co_lnotab)
         return cls(
             code.co_argcount,
             posonlyargcount,
@@ -103,7 +106,7 @@ class CodeData:
             code.co_filename,
             code.co_name,
             code.co_firstlineno,
-            code.co_lnotab,
+            line_mapping,
             code.co_freevars,
             code.co_cellvars,
         )
@@ -126,7 +129,7 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.lnotab,
+                self.line_mapping.bytes,
                 self.freevars,
                 self.cellvars,
             )
@@ -144,7 +147,28 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.lnotab,
+                self.line_mapping.bytes,
                 self.freevars,
                 self.cellvars,
             )
+
+
+@dataclass
+class LineTable:
+    """
+    PEP 626 line number table.
+    """
+
+    bytes: bytes
+
+
+@dataclass
+class LineMapping:
+    """
+    Pre PEP 626 line number mapping
+    """
+
+    bytes: bytes
+
+
+BytecodeLineMapping = Union[LineMapping, LineTable]

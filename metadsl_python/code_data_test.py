@@ -42,13 +42,15 @@ def codes() -> Iterable[CodeType]:
     # Note that although this doesn't require the code to be executable,
     # `walk_packages` does require it, so this will ignore any modules
     # which raise errors on import.
-    # Catch warnings so warnings raised on import are surpressed
 
     with warnings.catch_warnings():
+        # Ignore warning on find_module which will be deprecated in Python 3.12
+        # Worry about it later!
+        warnings.simplefilter("ignore")
         for mi in pkgutil.walk_packages(onerror=lambda _name: None):
-            loader: Loader = mi.module_finder.find_module(mi.name)
+            loader: Loader = mi.module_finder.find_module(mi.name)  # type: ignore
             try:
-                code = loader.get_code(mi.name)
+                code = loader.get_code(mi.name)  # type: ignore
             except SyntaxError:
                 continue
             if code:
