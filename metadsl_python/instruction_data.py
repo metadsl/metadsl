@@ -1,9 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Iterable, List, Protocol, Callable
+from typing import Iterable, List, Callable
 from itertools import chain
 from functools import partial
 from abc import abstractmethod
+from typing_extensions import Protocol
 
 
 def instructions_from_bytes(b: bytes) -> Iterable[InstructionData]:
