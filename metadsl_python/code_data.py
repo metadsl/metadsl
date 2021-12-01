@@ -91,7 +91,7 @@ class CodeData:
         if sys.version_info >= (3, 10):
             line_mapping = LineTable(code.co_linetable)
         else:
-            line_mapping = BytecodeLineMapping(code.co_lnotab)
+            line_mapping = LineMapping(code.co_lnotab)
         return cls(
             code.co_argcount,
             posonlyargcount,
