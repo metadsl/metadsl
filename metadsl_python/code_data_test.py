@@ -6,36 +6,28 @@ import pkgutil
 from importlib.abc import Loader
 from types import CodeType
 from typing import Iterable
+from hypothesis import example, given
+import hypothesmith
 
 from .code_data import CodeData
 
 
-# Special cases to test manually
-SAMPLE_CODE = ["a"]
-
-
-def test_code_data():
+def test_code_data_from_modules():
     # Instead of params, iterate in test so that:
     # 1. the number of tests is consistant accross python versions pleasing xdist running multiple versions
     # 2. pushing loading of all modules inside generator, so that fast samples run first
-    for code in codes():
-
-        # Note: Make sure not to store a copy of the CodeData instance,
-        # or if you do, delete if before trying to dump it.
-        # marshalling will treat values with refernces differently sometimes
-        # and store them as "refs" to prevent cycles, so the bytes will not be ==
-        resulting_code = CodeData.from_code(code).to_code()
-
-        # We start by comparing the data first and then the marshalled bytes.
-        # Compares the bytes gives us the highest assurance that our parsing
-        # was isomorphic, but also is harder to parse if there is an error.
-        assert code_to_dict(resulting_code) == code_to_dict(code)
-        assert marshal.dumps(resulting_code) == marshal.dumps(code)
+    for code in module_codes():
+        verify_code(code)
 
 
-def codes() -> Iterable[CodeType]:
-    for s in SAMPLE_CODE:
-        yield compile(s, "<str>", "exec")
+@given(source_code=hypothesmith.from_node())
+@example("a")
+def test_code_data_generated(source_code):
+    code = compile(source_code, "<string>", "exec")
+    verify_code(code)
+
+
+def module_codes() -> Iterable[CodeType]:
 
     # In order to test the code_data, we try to get a sample of bytecode,
     # by walking all our packages and trying to load every module.
@@ -55,6 +47,20 @@ def codes() -> Iterable[CodeType]:
                 continue
             if code:
                 yield code
+
+
+def verify_code(code: CodeType) -> None:
+    # Note: Make sure not to store a copy of the CodeData instance,
+    # or if you do, delete if before trying to dump it.
+    # marshalling will treat values with refernces differently sometimes
+    # and store them as "refs" to prevent cycles, so the bytes will not be ==
+    resulting_code = CodeData.from_code(code).to_code()
+
+    # We start by comparing the data first and then the marshalled bytes.
+    # Compares the bytes gives us the highest assurance that our parsing
+    # was isomorphic, but also is harder to parse if there is an error.
+    assert code_to_dict(resulting_code) == code_to_dict(code)
+    assert marshal.dumps(resulting_code) == marshal.dumps(code)
 
 
 def code_to_dict(code: CodeType) -> dict[str, object]:
