@@ -1,3 +1,10 @@
+"""
+Represent Python Bytecode instructions as a data structure.
+
+We build a SSA CFG from the bytecode, which builds up the data stacks
+"""
+
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, List, Callable
@@ -59,6 +66,20 @@ class NoValue(RegisterOpcode):
         return cls(value)
 
 
+##
+# General instructions
+##
+
+
+@dataclass
+class Nop(NoValue):
+    """
+    Do nothing code. Used as a placeholder by the bytecode optimizer.
+    """
+
+    opcode = 9
+
+
 @dataclass
 class PopTop(NoValue):
     """
@@ -87,6 +108,16 @@ class RotThree(NoValue):
 
 
 @dataclass
+class RotFour(NoValue):
+    """
+    Lifts second, third and fourth stack items one position up, moves top down
+    to position four.
+    """
+
+    opcode = 6
+
+
+@dataclass
 class DupTop(NoValue):
     """
     Duplicates the reference on top of the stack.
@@ -98,35 +129,48 @@ class DupTop(NoValue):
 @dataclass
 class DupTopTwo(NoValue):
     """
-    Duplicates the two references on top of the stack, leaving them in the same order.
+    Duplicates the two references on top of the stack, leaving them in the same
+    order.
     """
 
     opcode = 5
 
 
+##
+# Unary operations
+#
+# Unary operations take the top of the stack, apply the operation, and push the
+# result back on the stack.
+##
+
+
 @dataclass
-class RotFour(NoValue):
+class UnaryPositive(NoValue):
     """
-    Lifts second, third and fourth stack items one position up, moves top down to position four.
+    Implements TOS = +TOS.
     """
 
-    opcode = 6
+    opcode = 10
 
 
 @dataclass
-class Nop(NoValue):
+class UnaryNegative(NoValue):
     """
-    Do nothing code. Used as a placeholder by the bytecode optimizer.
+    Implements TOS = -TOS.
     """
 
-    opcode = 9
+    opcode = 11
 
 
-# def_op('UNARY_POSITIVE', 10)
-# def_op('UNARY_NEGATIVE', 11)
-# def_op('UNARY_NOT', 12)
+@dataclass
+class UnaryNot(NoValue):
+    opcode = 12
 
-# def_op('UNARY_INVERT', 15)
+
+@dataclass
+class UnaryInvert(NoValue):
+    opcode = 15
+
 
 # def_op('BINARY_MATRIX_MULTIPLY', 16)
 # def_op('INPLACE_MATRIX_MULTIPLY', 17)
