@@ -20,7 +20,7 @@ def test_modules():
 
 
 @given(source_code=hypothesmith.from_node())
-@settings(suppress_health_check=(HealthCheck.filter_too_much,))
+@settings(suppress_health_check=(HealthCheck.filter_too_much, HealthCheck.too_slow))
 @example("a")
 @example("class A: pass\nclass A: pass\n")
 def test_generated(source_code):
