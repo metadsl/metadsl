@@ -1,8 +1,9 @@
 from __future__ import annotations
+from ast import Constant
 
 from dataclasses import dataclass
 from types import CodeType
-from typing import Tuple, List, Union
+from typing import FrozenSet, Tuple, List, Union
 from .code_flags_data import CodeFlagsData
 from .instruction_data import (
     InstructionData,
@@ -49,7 +50,7 @@ class CodeData:
     instructions: List[InstructionData]
 
     # tuple of constants used in the bytecode
-    consts: Tuple[object, ...]
+    consts: Tuple[CodeConstant, ...]
 
     # tuple of names of local variables
     names: Tuple[str, ...]
@@ -100,7 +101,7 @@ class CodeData:
             code.co_stacksize,
             CodeFlagsData.from_flags(code.co_flags),
             list(instructions_from_bytes(code.co_code)),
-            code.co_consts,
+            tuple(map(to_code_constant, code.co_consts)),
             code.co_names,
             code.co_varnames,
             code.co_filename,
@@ -112,6 +113,7 @@ class CodeData:
         )
 
     def to_code(self) -> CodeType:
+        consts = tuple(map(from_code_constant, self.consts))
         # https://github.com/python/cpython/blob/cd74e66a8c420be675fd2fbf3fe708ac02ee9f21/Lib/test/test_code.py#L217-L232
         if sys.version_info >= (3, 8):
             return CodeType(
@@ -123,7 +125,7 @@ class CodeData:
                 self.stacksize,
                 self.flags,
                 self.code,
-                self.consts,
+                consts,
                 self.names,
                 self.varnames,
                 self.filename,
@@ -141,7 +143,7 @@ class CodeData:
                 self.stacksize,
                 self.flags,
                 self.code,
-                self.consts,
+                consts,
                 self.names,
                 self.varnames,
                 self.filename,
@@ -172,3 +174,23 @@ class LineMapping:
 
 
 BytecodeLineMapping = Union[LineMapping, LineTable]
+
+
+@dataclass
+class ConstanValue:
+    value: object
+
+
+CodeConstant = Union[ConstanValue, CodeData]
+
+
+def to_code_constant(value: object) -> CodeConstant:
+    if isinstance(value, CodeType):
+        return CodeData.from_code(value)
+    return ConstanValue(value)
+
+
+def from_code_constant(value: CodeConstant) -> object:
+    if isinstance(value, ConstanValue):
+        return value.value
+    return value.to_code()
