@@ -1,4 +1,5 @@
 from __future__ import annotations
+import marshal
 
 import warnings
 import pkgutil
@@ -15,8 +16,8 @@ def test_modules():
     # Instead of params, iterate in test so that:
     # 1. the number of tests is consistant accross python versions pleasing xdist running multiple versions
     # 2. pushing loading of all modules inside generator, so that fast samples run first
-    for code in module_codes():
-        verify_code(code)
+    for name, code in module_codes():
+        verify_code(code, name)
 
 
 @given(source_code=hypothesmith.from_node())
@@ -25,10 +26,10 @@ def test_modules():
 @example("class A: pass\nclass A: pass\n")
 def test_generated(source_code):
     code = compile(source_code, "<string>", "exec")
-    verify_code(code)
+    verify_code(code, source_code)
 
 
-def module_codes() -> Iterable[CodeType]:
+def module_codes() -> Iterable[tuple[str, CodeType]]:
     # In order to test the code_data, we try to get a sample of bytecode,
     # by walking all our packages and trying to load every module.
     # Note that although this doesn't require the code to be executable,
@@ -46,13 +47,13 @@ def module_codes() -> Iterable[CodeType]:
             except SyntaxError:
                 continue
             if code:
-                yield code
+                yield mi.name, code
 
 
-def verify_code(code: CodeType) -> None:
+def verify_code(code: CodeType, label: str) -> None:
     resulting_code = CodeData.from_code(code).to_code()
-    assert code_to_primitives(code) == code_to_primitives(resulting_code)
-    assert code == resulting_code
+    assert code_to_primitives(code) == code_to_primitives(resulting_code), label
+    assert code == resulting_code, label
 
 
 code_attributes = tuple(
