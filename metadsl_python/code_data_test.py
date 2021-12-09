@@ -128,7 +128,7 @@ def code_to_primitives(code: CodeType) -> dict[str, object]:
             )
             # Compare code with instructions for easier diff
             if name == "co_consts"
-            else list(_get_instructions_bytes(code.co_code))
+            else [(i.opname, i.argval) for i in _get_instructions_bytes(code.co_code)]
             if name == "co_code"
             else getattr(code, name)
         )
