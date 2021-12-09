@@ -1,4 +1,5 @@
 from __future__ import annotations
+from dis import _get_instructions_bytes
 import marshal
 
 import warnings
@@ -20,12 +21,50 @@ def test_modules():
         verify_code(code, name)
 
 
+MANY_CONSTS = """
+x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+"""
+
+SCANNER = r"""
+def _scan_once(string, idx):
+    try:
+        nextchar = string[idx]
+    except IndexError:
+        raise StopIteration(idx) from None
+
+    if nextchar == '"':
+        return parse_string(string, idx + 1, strict)
+    elif nextchar == "{":
+        return parse_object(
+            (string, idx + 1),
+            strict,
+            _scan_once,
+            object_hook,
+            object_pairs_hook,
+            memo,
+        )
+    elif nextchar == "[":
+        return parse_array((string, idx + 1), _scan_once)
+    elif nextchar == "n" and string[idx : idx + 4] == "null":
+        return None, idx + 4
+    elif nextchar == "t" and string[idx : idx + 4] == "true":
+        return True, idx + 4
+    elif nextchar == "t" and string[idx : idx + 4] == "true":
+        return True, idx + 4
+"""
+
+
 @given(source_code=hypothesmith.from_node())
 @settings(suppress_health_check=(HealthCheck.filter_too_much, HealthCheck.too_slow))
 @example("a")
 @example("class A: pass\nclass A: pass\n")
+@example(MANY_CONSTS)
+@example(SCANNER)
 def test_generated(source_code):
-    code = compile(source_code, "<string>", "exec")
+    with warnings.catch_warnings():
+        # Ignore syntax warnings in compilation
+        warnings.simplefilter("ignore")
+        code = compile(source_code, "<string>", "exec")
     verify_code(code, source_code)
 
 
@@ -41,6 +80,8 @@ def module_codes() -> Iterable[tuple[str, CodeType]]:
         # Worry about it later!
         warnings.simplefilter("ignore")
         for mi in pkgutil.walk_packages(onerror=lambda _name: None):
+            if mi.name != "json.scanner":
+                continue
             loader: Loader = mi.module_finder.find_module(mi.name)  # type: ignore
             try:
                 code = loader.get_code(mi.name)  # type: ignore
@@ -52,8 +93,14 @@ def module_codes() -> Iterable[tuple[str, CodeType]]:
 
 def verify_code(code: CodeType, label: str) -> None:
     resulting_code = CodeData.from_code(code).to_code()
+
+    # First compare as primitives, for better diffing if they aren't equal
     assert code_to_primitives(code) == code_to_primitives(resulting_code), label
+
+    # Then compare objects directly, for greater equality confidence
     assert code == resulting_code, label
+    # We used to compare the marhsalled bytes as well, but this was unstable
+    # due to whether the constants had refernces to them, so we disabled it
 
 
 code_attributes = tuple(
@@ -75,12 +122,15 @@ def code_to_primitives(code: CodeType) -> dict[str, object]:
     return {
         name: (
             # Recursively transform constants
-            getattr(code, name)
-            if name != "co_consts"
-            else tuple(
+            tuple(
                 code_to_primitives(a) if isinstance(a, CodeType) else a
                 for a in getattr(code, name)
             )
+            # Compare code with instructions for easier diff
+            if name == "co_consts"
+            else list(_get_instructions_bytes(code.co_code))
+            if name == "co_code"
+            else getattr(code, name)
         )
         for name in code_attributes
     }
