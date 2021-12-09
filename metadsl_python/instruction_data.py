@@ -15,15 +15,18 @@ import dis
 
 def instructions_from_bytes(b: bytes) -> Iterable[InstructionData]:
     extended_arg = 0
+    n_extended_args = 0
     for i in range(0, len(b), 2):
         # TODO: Longer value bytes
         opcode = b[i]
         arg = b[i + 1] | extended_arg
         if opcode == dis.EXTENDED_ARG:
             extended_arg = arg << 8
+            n_extended_args += 1
         else:
             extended_arg = 0
-            yield InstructionData(i, opcode, arg)
+            yield InstructionData(i, n_extended_args, opcode, arg)
+            n_extended_args = 0
 
 
 def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
@@ -36,6 +39,13 @@ def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
 class InstructionData:
     # The bytes offset of the instruction
     offset: int
+    # The number of extended args
+    # Note: in Python >= 3.10 we can calculute this from the instruction size,
+    # using `instrsize`, but in python < 3.10, sometimes instructions are prefixed
+    # with extended args with value 0 (not sure why or how), so we need to save
+    # the value manually to recreate the instructions
+    n_extended_args: int
+
     opcode: int
     arg: int
 
@@ -43,6 +53,9 @@ class InstructionData:
     jump_target_offset: Optional[int] = field(init=False)
 
     def __post_init__(self):
+        # The total numver of required args should be at least big enough to hold the arg
+        assert self.n_extended_args + 1 >= instrsize(self.arg)
+
         self.jump_target_offset = (
             self.arg
             if self.opcode in dis.hasjabs
@@ -52,13 +65,12 @@ class InstructionData:
         )
 
     def bytes(self) -> Iterable[int]:
-        n_units = instrsize(self.arg)
         # Duplicate semantics of write_op_arg
         # to produce the the right number of extended arguments
         # https://github.com/python/cpython/blob/b2e5794870eb4728ddfaafc0f79a40299576434f/Python/wordcode_helpers.h#L22-L44
-        for i in range(n_units, 0, -1):
-            yield self.opcode if i == 1 else dis.EXTENDED_ARG
-            yield (self.arg >> (8 * (i - 1))) & 0xFF
+        for i in range(self.n_extended_args, -1, -1):
+            yield self.opcode if i == 0 else dis.EXTENDED_ARG
+            yield (self.arg >> (8 * i)) & 0xFF
 
 
 def instrsize(arg: int) -> int:
