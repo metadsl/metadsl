@@ -1,6 +1,5 @@
 from __future__ import annotations
-from dis import _get_instructions_bytes
-import marshal
+from dis import _get_instructions_bytes  # type: ignore
 
 import warnings
 import pkgutil
@@ -92,7 +91,9 @@ def module_codes() -> Iterable[tuple[str, CodeType]]:
 
 
 def verify_code(code: CodeType, label: str) -> None:
-    resulting_code = CodeData.from_code(code).to_code()
+    code_data = CodeData.from_code(code)
+    code_data.verify()
+    resulting_code = code_data.to_code()
 
     # First compare as primitives, for better diffing if they aren't equal
     assert code_to_primitives(code) == code_to_primitives(resulting_code), label

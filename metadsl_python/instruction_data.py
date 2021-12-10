@@ -1,14 +1,12 @@
 """
 Represent Python Bytecode instructions as a data structure.
 
-We build a SSA CFG from the bytecode, which builds up the data stacks
 """
 
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from tkinter import N
-from typing import Iterable, List, Optional
+from typing import Iterable, Optional
 from itertools import chain
 import dis
 
@@ -44,7 +42,7 @@ class InstructionData:
     # using `instrsize`, but in python < 3.10, sometimes instructions are prefixed
     # with extended args with value 0 (not sure why or how), so we need to save
     # the value manually to recreate the instructions
-    n_extended_args: int
+    n_extended_args: int = field(repr=False)
 
     opcode: int
     arg: int
@@ -56,10 +54,11 @@ class InstructionData:
         # The total numver of required args should be at least big enough to hold the arg
         assert self.n_extended_args + 1 >= instrsize(self.arg)
 
+        # Copied from dis.findlabels
         self.jump_target_offset = (
-            self.arg
+            self.arg * 2
             if self.opcode in dis.hasjabs
-            else self.offset + self.arg + 2
+            else self.offset + 2 + self.arg * 2
             if self.opcode in dis.hasjrel
             else None
         )
@@ -72,6 +71,15 @@ class InstructionData:
             yield self.opcode if i == 0 else dis.EXTENDED_ARG
             yield (self.arg >> (8 * i)) & 0xFF
 
+    def offsets(self) -> Iterable[int]:
+        """
+        Returns all the offsets for the instruction, including those for the extended
+        args that appear before it
+        """
+        yield self.offset
+        for i in range(self.n_extended_args):
+            yield self.offset - (i * 2)
+
 
 def instrsize(arg: int) -> int:
     """
@@ -81,42 +89,3 @@ def instrsize(arg: int) -> int:
     From https://github.com/python/cpython/blob/b2e5794870eb4728ddfaafc0f79a40299576434f/Python/wordcode_helpers.h#L11-L20
     """
     return 1 if arg <= 0xFF else 2 if arg <= 0xFFFF else 3 if arg <= 0xFFFFFF else 4
-
-
-# @dataclass
-# class ControlFlowGraph:
-#     """
-#     The control flow graph represents the different "blocks" of instructions
-#     that Python moves between as it executes the control flow.
-
-#     Every instruction that is jumped to starts a new control flow block.
-#     Every jump and return instructions ends a control flow block.
-#     """
-
-#     # List of blocks, keyed by index
-#     blocks: list[Block]
-
-#     # Mapping of bytecode offset to the offset of the block
-#     bytecode_to_block: dict[int, int]
-
-#     @classmethod
-#     def from_instructions(
-#         cls, instructions: Iterable[InstructionData]
-#     ) -> ControlFlowGraph:
-#         # First compute a sorted list of all bytecode offsets which are jump targets
-#         targets = sorted(
-#             set(i.jump_target for i in instructions if i.jump_target is not None)
-#         )
-#         # Then, iterate through every instruction,
-#         current_block = Block([])
-#         blocks = [current_block]
-#         bytecode_to_block = {0: 0}
-#         for instruction in instructions:
-#             block = blocks.get(instruction.offset)
-
-
-# @dataclass
-# class Block:
-#     instructions: List[InstructionData]
-#     # the block which this jumps to
-#     jump: Optional[int] = field(default=None)

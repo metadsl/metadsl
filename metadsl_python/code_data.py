@@ -4,12 +4,13 @@ from ast import Constant
 from dataclasses import dataclass
 from types import CodeType
 from typing import FrozenSet, Tuple, List, Union
-from .code_flags_data import CodeFlagsData
-from .instruction_data import (
-    InstructionData,
-    instructions_from_bytes,
-    instructions_to_bytes,
+
+from metadsl_python.control_flow_graph import (
+    ControlFlowGraph,
+    bytes_to_cfg,
+    cfg_to_bytes,
 )
+from .code_flags_data import CodeFlagsData
 import sys
 
 
@@ -47,7 +48,7 @@ class CodeData:
     flags_data: CodeFlagsData
 
     # Bytecode instructions
-    instructions: List[InstructionData]
+    cfg: ControlFlowGraph
 
     # tuple of constants used in the bytecode
     consts: Tuple[CodeConstant, ...]
@@ -80,7 +81,10 @@ class CodeData:
 
     @property
     def code(self) -> bytes:
-        return instructions_to_bytes(self.instructions)
+        return cfg_to_bytes(self.cfg)
+
+    def verify(self) -> None:
+        self.cfg.verify()
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:
@@ -100,7 +104,7 @@ class CodeData:
             code.co_nlocals,
             code.co_stacksize,
             CodeFlagsData.from_flags(code.co_flags),
-            list(instructions_from_bytes(code.co_code)),
+            bytes_to_cfg(code.co_code),
             tuple(map(to_code_constant, code.co_consts)),
             code.co_names,
             code.co_varnames,
