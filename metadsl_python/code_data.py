@@ -1,15 +1,11 @@
 from __future__ import annotations
-from ast import Constant
 
 from dataclasses import dataclass
 from types import CodeType
-from typing import FrozenSet, Tuple, List, Union
+from typing import Tuple, Union
 
-from metadsl_python.control_flow_graph import (
-    ControlFlowGraph,
-    bytes_to_cfg,
-    cfg_to_bytes,
-)
+from .control_flow_graph import ControlFlowGraph, bytes_to_cfg, cfg_to_bytes
+from .line_table import LineTable, NewLineTable, OldLineTable
 from .code_flags_data import CodeFlagsData
 import sys
 
@@ -68,7 +64,7 @@ class CodeData:
     # number of first line in Python source code
     firstlineno: int
 
-    line_mapping: BytecodeLineMapping
+    line_table: LineTable
 
     # tuple of names of free variables (referenced via a function’s closure)
     freevars: Tuple[str, ...]
@@ -94,9 +90,9 @@ class CodeData:
             posonlyargcount = 0
 
         if sys.version_info >= (3, 10):
-            line_mapping = LineTable(code.co_linetable)
+            line_mapping = NewLineTable(code.co_linetable)  # type: ignore
         else:
-            line_mapping = LineMapping(code.co_lnotab)
+            line_mapping = OldLineTable.from_bytes(code.co_lnotab)
         return cls(
             code.co_argcount,
             posonlyargcount,
@@ -135,7 +131,7 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.line_mapping.bytes,
+                self.line_table.to_bytes(),
                 self.freevars,
                 self.cellvars,
             )
@@ -153,31 +149,10 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.line_mapping.bytes,
+                self.line_table.to_bytes(),
                 self.freevars,
                 self.cellvars,
             )
-
-
-@dataclass
-class LineTable:
-    """
-    PEP 626 line number table.
-    """
-
-    bytes: bytes
-
-
-@dataclass
-class LineMapping:
-    """
-    Pre PEP 626 line number mapping
-    """
-
-    bytes: bytes
-
-
-BytecodeLineMapping = Union[LineMapping, LineTable]
 
 
 @dataclass

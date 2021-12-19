@@ -1,31 +1,26 @@
 from __future__ import annotations
 from dis import _get_instructions_bytes  # type: ignore
-
+import pytest
 import warnings
 import pkgutil
 from importlib.abc import Loader
 from types import CodeType
 from typing import Iterable
-from hypothesis import example, given, settings, HealthCheck
+from hypothesis import given, settings, HealthCheck
 import hypothesmith
 
 from .code_data import CodeData
 
-
-def test_modules():
-    # Instead of params, iterate in test so that:
-    # 1. the number of tests is consistant accross python versions pleasing xdist running multiple versions
-    # 2. pushing loading of all modules inside generator, so that fast samples run first
-    for name, code in module_codes():
-        verify_code(code, name)
+NEWLINE = "\n"
 
 
-MANY_CONSTS = """
-x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-"""
-
-SCANNER = r"""
-def _scan_once(string, idx):
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param("a", id="variable"),
+        pytest.param("class A: pass\nclass A: pass\n", id="duplicate class"),
+        pytest.param(
+            """def _scan_once(string, idx):
     try:
         nextchar = string[idx]
     except IndexError:
@@ -49,16 +44,28 @@ def _scan_once(string, idx):
     elif nextchar == "t" and string[idx : idx + 4] == "true":
         return True, idx + 4
     elif nextchar == "t" and string[idx : idx + 4] == "true":
-        return True, idx + 4
-"""
+        return True, idx + 4""",
+            id="json.scanner",
+        ),
+        pytest.param(f"x = 1{NEWLINE * 127}\ny=2", id="long line jump"),
+    ],
+)
+def test_examples(source):
+    code = compile(source, "<string>", "exec")
+
+    verify_code(code, code)
+
+
+def test_modules():
+    # Instead of params, iterate in test so that:
+    # 1. the number of tests is consistant accross python versions pleasing xdist running multiple versions
+    # 2. pushing loading of all modules inside generator, so that fast samples run first
+    for name, code in module_codes():
+        verify_code(code, name)
 
 
 @given(source_code=hypothesmith.from_node())
 @settings(suppress_health_check=(HealthCheck.filter_too_much, HealthCheck.too_slow))
-@example("a")
-@example("class A: pass\nclass A: pass\n")
-@example(MANY_CONSTS)
-@example(SCANNER)
 def test_generated(source_code):
     with warnings.catch_warnings():
         # Ignore syntax warnings in compilation
