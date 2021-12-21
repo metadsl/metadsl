@@ -7,7 +7,7 @@ module = "metadsl_python"
 author = "Saul Shanabrook"
 author-email = "s.shanabrook@gmail.com"
 home-page = "https://github.com/Quansight-Labs/metadsl"
-requires = []
+requires = ["rich"]
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",

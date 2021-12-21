@@ -27,6 +27,7 @@ dependencies:
 - mypy
 - llvmlite
 - numpy
+- rich
 - jsonschema
 - black
 name: metadsl
