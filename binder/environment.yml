@@ -3,7 +3,6 @@ channels:
 dependencies:
 - pip:
   - flit
-  - beni
   - pytest-pudb
   - hypothesmith
 - python>=3.7
@@ -24,10 +23,7 @@ dependencies:
 - sphinx-autobuild
 - pytest>=3.6.0
 - pytest-cov
-- pytest-mypy
-- pytest-randomly
 - pytest-xdist
-- hypothesis
 - mypy
 - llvmlite
 - numpy

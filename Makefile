@@ -12,12 +12,8 @@ all: $(envs)
 binder/environment.yml:  pyproject.toml *.pyproject.toml
 	beni --deps all $^ > $@
 
-# Create a new one just for tests
-envs/base.yml:  pyproject.toml
-	beni --extras test $^ > $@
-
 # Create a env yaml for a specific python version
-envs/%.yml: envs/base.yml
+envs/%.yml: binder/environment.yml
 	sed 's/python>=3.7/python=$*/g' $^ > $@
 
 # Create a conda env for a python version
