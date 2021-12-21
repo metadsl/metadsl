@@ -62,4 +62,4 @@ might instead chose to compile to some alternative implementaiton before
 executing, such as high level language like SQL or a lower level langauge like
 LLVM.
 """
-
+__version__ = "0.0.0"

@@ -36,7 +36,7 @@ def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
 @dataclass
 class InstructionData:
     # The bytes offset of the instruction
-    offset: int
+    offset: int = field(repr=False)
     # The number of extended args
     # Note: in Python >= 3.10 we can calculute this from the instruction size,
     # using `instrsize`, but in python < 3.10, sometimes instructions are prefixed
@@ -48,7 +48,7 @@ class InstructionData:
     arg: int
 
     # The bytes offset of the jump target, if it does jump.
-    jump_target_offset: Optional[int] = field(init=False)
+    jump_target_offset: Optional[int] = field(init=False, repr=False)
 
     def __post_init__(self):
         # The total numver of required args should be at least big enough to hold the arg
