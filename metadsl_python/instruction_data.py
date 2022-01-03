@@ -35,6 +35,7 @@ def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
 
 @dataclass
 class InstructionData:
+    # TODO: Don't store offset or jump target offeset, instead store block number
     # The bytes offset of the instruction
     offset: int
     # The number of extended args
@@ -50,6 +51,8 @@ class InstructionData:
     # The bytes offset of the jump target, if it does jump.
     jump_target_offset: Optional[int] = field(init=False)
 
+    name: str = field(init=False)
+
     def __post_init__(self):
         # The total numver of required args should be at least big enough to hold the arg
         assert self.n_extended_args + 1 >= instrsize(self.arg)
@@ -62,6 +65,8 @@ class InstructionData:
             if self.opcode in dis.hasjrel
             else None
         )
+
+        self.name = dis.opname[self.opcode]
 
     def bytes(self) -> Iterable[int]:
         # Duplicate semantics of write_op_arg
