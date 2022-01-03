@@ -47,7 +47,8 @@ class CodeData:
     cfg: ControlFlowGraph
 
     # tuple of constants used in the bytecode
-    consts: Tuple[CodeConstant, ...]
+    # All code objects are recursively transformed to CodeData objects
+    consts: Tuple[object, ...]
 
     # tuple of names of local variables
     names: Tuple[str, ...]
@@ -155,21 +156,13 @@ class CodeData:
             )
 
 
-@dataclass
-class ConstanValue:
-    value: object
-
-
-CodeConstant = Union[ConstanValue, CodeData]
-
-
-def to_code_constant(value: object) -> CodeConstant:
+def to_code_constant(value: object) -> object:
     if isinstance(value, CodeType):
         return CodeData.from_code(value)
-    return ConstanValue(value)
+    return value
 
 
-def from_code_constant(value: CodeConstant) -> object:
-    if isinstance(value, ConstanValue):
-        return value.value
-    return value.to_code()
+def from_code_constant(value: object) -> object:
+    if isinstance(value, CodeData):
+        return value.to_code()
+    return value
