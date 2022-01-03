@@ -59,9 +59,9 @@ class InstructionData:
 
         # Copied from dis.findlabels
         self.jump_target_offset = (
-            self.arg * 2
+            self.arg
             if self.opcode in dis.hasjabs
-            else self.offset + 2 + self.arg * 2
+            else self.offset + 2 + self.arg
             if self.opcode in dis.hasjrel
             else None
         )
