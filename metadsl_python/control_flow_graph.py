@@ -46,6 +46,9 @@ class ControlFlowGraph:
         """
         prev_block = None
         for offset, block in self.blocks.items():
+            # Verify block is not empty
+            assert block, f"Block at offset {offset} is empty"
+            # Verify all instructions in this block are after the offset
             for instruction in block:
                 if instruction.jump_target_offset is not None:
                     assert (
