@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import CodeType
-from typing import Tuple, Union
+from typing import Tuple
 
 from .control_flow_graph import ControlFlowGraph, bytes_to_cfg, cfg_to_bytes
 from .line_table import LineTable, NewLineTable, OldLineTable
-from .code_flags_data import CodeFlagsData
+from .flags_data import FlagsData, to_flags_data, from_flags_data
 import sys
 
 
@@ -41,7 +41,7 @@ class CodeData:
     stacksize: int
 
     # code flags
-    flags_data: CodeFlagsData
+    flags_data: FlagsData
 
     # Bytecode instructions
     cfg: ControlFlowGraph
@@ -74,7 +74,7 @@ class CodeData:
 
     @property
     def flags(self) -> int:
-        return self.flags_data.to_flags()
+        return from_flags_data(self.flags_data)
 
     @property
     def code(self) -> bytes:
@@ -100,7 +100,7 @@ class CodeData:
             code.co_kwonlyargcount,
             code.co_nlocals,
             code.co_stacksize,
-            CodeFlagsData.from_flags(code.co_flags),
+            to_flags_data(code.co_flags),
             bytes_to_cfg(code.co_code),
             tuple(map(to_code_constant, code.co_consts)),
             code.co_names,
