@@ -36,8 +36,9 @@ if __name__ == "__main__":
         source = file.read_text()
         code = compile(cast(str, source), str(file), "exec")
     elif cmd is not None:
-        source = cmd
-        code = compile(cmd, "<string>", "exec")
+        # replace escaped newlines with newlines
+        source = cmd.replace("\\n", "\n")
+        code = compile(source, "<string>", "exec")  # type: ignore
     elif mod is not None:
         spec = importlib.util.find_spec(mod)
         assert spec
