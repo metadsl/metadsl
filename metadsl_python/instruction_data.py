@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, Optional
 from itertools import chain
 import dis
+import sys
 
 
 def instructions_from_bytes(b: bytes) -> Iterable[InstructionData]:
@@ -31,6 +32,11 @@ def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
     return bytes(
         chain.from_iterable(instruction.bytes() for instruction in instructions)
     )
+
+
+# Bytecode instructions jumps refer to the instruction offset, instead of byte
+# offset in Python >= 3.10 due to this PR https://github.com/python/cpython/pull/25069
+ATLEAST_310 = sys.version_info >= (3, 10)
 
 
 @dataclass
@@ -59,9 +65,9 @@ class InstructionData:
 
         # Copied from dis.findlabels
         self.jump_target_offset = (
-            self.arg
+            (2 if ATLEAST_310 else 1) * self.arg
             if self.opcode in dis.hasjabs
-            else self.offset + 2 + self.arg
+            else self.offset + 2 + ((2 if ATLEAST_310 else 1) * self.arg)
             if self.opcode in dis.hasjrel
             else None
         )
