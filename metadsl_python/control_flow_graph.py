@@ -26,7 +26,6 @@ def cfg_to_bytes(cfg: ControlFlowGraph) -> bytes:
 
 
 # TODO:
-# Remove instructions numbers, replace with names
 # Remove jump offsets, replace with index of blocks, and make blocks a list of lists
 # Replace value with semantic value, either:
 # 1. constant lookup

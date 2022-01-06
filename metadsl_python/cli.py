@@ -5,7 +5,7 @@ from types import CodeType
 from rich.syntax import Syntax
 import importlib.util
 from typing import Optional, cast
-
+import dis
 from metadsl_python.code_data import CodeData
 
 parser = argparse.ArgumentParser(description="Inspect Python code objects.")
@@ -15,13 +15,13 @@ parser.add_argument(
     "-e", type=str, help="string evalled to make program", metavar="eval"
 )
 parser.add_argument("-m", type=str, help="python library", metavar="mod")
-
+parser.add_argument("--dis", action="store_true", help="print Python's dis analysis")
 
 if __name__ == "__main__":
     from rich.console import Console
 
     args = parser.parse_args()
-    file, cmd, mod, eval_ = args.file, args.c, args.m, args.e
+    file, cmd, mod, eval_, show_dis = args.file, args.c, args.m, args.e, args.dis
 
     if len(list(filter(None, [file, cmd, mod, eval_]))) != 1:
         parser.error("Must specify exactly one of file, cmd, eval, or mod")
@@ -49,6 +49,7 @@ if __name__ == "__main__":
 
     if source is not None:
         console.print(Syntax(source, "python", line_numbers=True))
-
+    if show_dis:
+        dis.dis(code)
     code_data = CodeData.from_code(code)
     console.print(code_data)
