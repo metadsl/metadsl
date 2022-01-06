@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import CodeType
 from typing import Tuple
 
 from .control_flow_graph import ControlFlowGraph, bytes_to_cfg, cfg_to_bytes
-from .line_table import LineTable, NewLineTable, OldLineTable
+from .line_table import (
+    LineTable,
+    from_line_table,
+    to_line_table,
+)
 from .flags_data import FlagsData, to_flags_data, from_flags_data
+from .dataclass_hide_default import DataclassHideDefault
 import sys
 
 
 @dataclass
-class CodeData:
+class CodeData(DataclassHideDefault):
     """
     A code object is what is seralized on disk as PYC file. It is the lowest
     abstraction level CPython provides before execution.
@@ -26,51 +31,51 @@ class CodeData:
     """
 
     # number of arguments (not including keyword only arguments, * or ** args)
-    argcount: int
+    argcount: int = field(default=0)
 
     # number of positional only arguments
-    posonlyargcount: int
+    posonlyargcount: int = field(default=0)
 
     # number of keyword only arguments (not including ** arg)
-    kwonlyargcount: int
+    kwonlyargcount: int = field(default=0)
 
     # number of local variables
-    nlocals: int
+    nlocals: int = field(default=0)
 
     # virtual machine stack space required
-    stacksize: int
+    stacksize: int = field(default=1)
 
     # code flags
-    flags_data: FlagsData
+    flags_data: FlagsData = field(default_factory=set)
 
     # Bytecode instructions
-    cfg: ControlFlowGraph
+    cfg: ControlFlowGraph = field(default_factory=ControlFlowGraph)
 
     # tuple of constants used in the bytecode
     # All code objects are recursively transformed to CodeData objects
-    consts: Tuple[object, ...]
+    consts: Tuple[object, ...] = field(default=(None,))
 
     # tuple of names of local variables
-    names: Tuple[str, ...]
+    names: Tuple[str, ...] = field(default=tuple())
 
     # tuple of names of arguments and local variables
-    varnames: Tuple[str, ...]
+    varnames: Tuple[str, ...] = field(default=tuple())
 
     # name of file in which this code object was created
-    filename: str
+    filename: str = field(default="<string>")
 
     # name with which this code object was defined
-    name: str
+    name: str = field(default="<module>")
 
     # number of first line in Python source code
-    firstlineno: int
+    firstlineno: int = field(default=1)
 
-    line_table: LineTable
+    line_table: LineTable = field(default_factory=to_line_table)
 
     # tuple of names of free variables (referenced via a function’s closure)
-    freevars: Tuple[str, ...]
+    freevars: Tuple[str, ...] = field(default=tuple())
     # tuple of names of cell variables (referenced by containing scopes)
-    cellvars: Tuple[str, ...]
+    cellvars: Tuple[str, ...] = field(default=tuple())
 
     @property
     def flags(self) -> int:
@@ -79,6 +84,10 @@ class CodeData:
     @property
     def code(self) -> bytes:
         return cfg_to_bytes(self.cfg)
+
+    @property
+    def line_table_bytes(self) -> bytes:
+        return from_line_table(self.line_table)
 
     def verify(self) -> None:
         self.cfg.verify()
@@ -91,9 +100,9 @@ class CodeData:
             posonlyargcount = 0
 
         if sys.version_info >= (3, 10):
-            line_mapping = NewLineTable(code.co_linetable)  # type: ignore
+            line_table = to_line_table(code.co_linetable)  # type: ignore
         else:
-            line_mapping = OldLineTable.from_bytes(code.co_lnotab)
+            line_table = to_line_table(code.co_lnotab)
         return cls(
             code.co_argcount,
             posonlyargcount,
@@ -108,7 +117,7 @@ class CodeData:
             code.co_filename,
             code.co_name,
             code.co_firstlineno,
-            line_mapping,
+            line_table,
             code.co_freevars,
             code.co_cellvars,
         )
@@ -132,7 +141,7 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.line_table.to_bytes(),
+                self.line_table_bytes,
                 self.freevars,
                 self.cellvars,
             )
@@ -150,7 +159,7 @@ class CodeData:
                 self.filename,
                 self.name,
                 self.firstlineno,
-                self.line_table.to_bytes(),
+                self.line_table_bytes,
                 self.freevars,
                 self.cellvars,
             )

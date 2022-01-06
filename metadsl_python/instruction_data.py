@@ -11,6 +11,8 @@ from itertools import chain
 import dis
 import sys
 
+from .dataclass_hide_default import DataclassHideDefault
+
 
 def instructions_from_bytes(b: bytes) -> Iterable[InstructionData]:
     args = []
@@ -36,25 +38,25 @@ ATLEAST_310 = sys.version_info >= (3, 10)
 
 
 @dataclass
-class InstructionData:
+class InstructionData(DataclassHideDefault):
     # The bytes offset of the instruction
     offset: int
 
     # The name of the instruction
     name: str
 
+    # The integer value of the arg
+    arg: int
+
     # The number of args, if it differs form the instrsize
     # Note: in Python >= 3.10 we can calculute this from the instruction size,
     # using `instrsize`, but in python < 3.10, sometimes instructions are prefixed
     # with extended args with value 0 (not sure why or how), so we need to save
     # the value manually to recreate the instructions
-    n_args_override: Optional[int] = field(repr=False)
-
-    # The integer value of the arg
-    arg: int
+    n_args_override: Optional[int] = field(repr=False, default=1)
 
     # The bytes offset of the jump target, if it does jump.
-    jump_target_offset: Optional[int]
+    jump_target_offset: Optional[int] = field(default=None)
 
     @classmethod
     def from_bytes(cls, offset: int, opcode: int, args: list[int]) -> InstructionData:

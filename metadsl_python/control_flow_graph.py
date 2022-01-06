@@ -7,7 +7,7 @@ instructions, to the block index.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
 
 from .instruction_data import (
@@ -25,6 +25,21 @@ def cfg_to_bytes(cfg: ControlFlowGraph) -> bytes:
     return instructions_to_bytes(cfg.to_instructions())
 
 
+# TODO:
+# Remove instructions numbers, replace with names
+# Remove jump offsets, replace with index of blocks, and make blocks a list of lists
+# Replace value with semantic value, either:
+# 1. constant lookup
+# 2. a name lookup
+# 3. a local lookup
+# 3. a value
+# 4. A jump target (relative and absolute)
+# 5. An unused value
+# 6. Comparison lookup
+# 7. format value
+# 8. Generator kind
+
+
 @dataclass
 class ControlFlowGraph:
     """
@@ -36,7 +51,7 @@ class ControlFlowGraph:
     """
 
     # Ordered mapping of bytecode offset to "block"
-    blocks: dict[int, list[InstructionData]]
+    blocks: dict[int, list[InstructionData]] = field(default_factory=dict)
 
     def verify(self) -> None:
         """
