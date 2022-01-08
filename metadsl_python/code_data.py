@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from types import CodeType
 from typing import Tuple
 
-from .control_flow_graph import ControlFlowGraph, bytes_to_cfg, cfg_to_bytes
+from .control_flow_graph import ControlFlowGraph, bytes_to_cfg, cfg_to_bytes, verify_cfg
 from .line_table import (
     LineTable,
     from_line_table,
@@ -90,7 +90,7 @@ class CodeData(DataclassHideDefault):
         return from_line_table(self.line_table)
 
     def verify(self) -> None:
-        self.cfg.verify()
+        verify_cfg(self.cfg)
 
     @classmethod
     def from_code(cls, code: CodeType) -> CodeData:

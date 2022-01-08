@@ -26,12 +26,6 @@ def instructions_from_bytes(b: bytes) -> Iterable[InstructionData]:
         args = []
 
 
-def instructions_to_bytes(instructions: Iterable[InstructionData]) -> bytes:
-    return bytes(
-        chain.from_iterable(instruction.bytes() for instruction in instructions)
-    )
-
-
 # Bytecode instructions jumps refer to the instruction offset, instead of byte
 # offset in Python >= 3.10 due to this PR https://github.com/python/cpython/pull/25069
 ATLEAST_310 = sys.version_info >= (3, 10)

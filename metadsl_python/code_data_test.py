@@ -48,6 +48,28 @@ NEWLINE = "\n"
             id="json.scanner",
         ),
         pytest.param(f"x = 1{NEWLINE * 127}\ny=2", id="long line jump"),
+        # https://bugs.python.org/msg26661
+        pytest.param(
+            """
+def f(x):
+    %s
+    %s
+    %s
+    %s
+    %s
+    %s
+    %s
+    %s
+    %s
+    %s
+    while x:
+        x -= 1
+        # EXTENDED_ARG/JUMP_ABSOLUTE here
+    return x
+"""
+            % (("x = x or " + "-x" * 2500,) * 10),
+            id="long jump",
+        ),
     ],
 )
 def test_examples(source):

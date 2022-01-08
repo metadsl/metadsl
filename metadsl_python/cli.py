@@ -16,19 +16,25 @@ parser.add_argument(
 )
 parser.add_argument("-m", type=str, help="python library", metavar="mod")
 parser.add_argument("--dis", action="store_true", help="print Python's dis analysis")
+parser.add_argument(
+    "--dis-after",
+    action="store_true",
+    help="print Python's dis analysis after round tripping to code-data, for testing",
+)
 parser.add_argument("--source", action="store_true", help="print the source code")
 
 if __name__ == "__main__":
     from rich.console import Console
 
     args = parser.parse_args()
-    file, cmd, mod, eval_, show_dis, show_source = (
+    file, cmd, mod, eval_, show_dis, show_source, show_dis_after = (
         args.file,
         args.c,
         args.m,
         args.e,
         args.dis,
         args.source,
+        args.dis_after,
     )
 
     if len(list(filter(None, [file, cmd, mod, eval_]))) != 1:
@@ -61,3 +67,5 @@ if __name__ == "__main__":
         dis.dis(code)
     code_data = CodeData.from_code(code)
     console.print(code_data)
+    if show_dis_after:
+        dis.dis(code_data.to_code())
