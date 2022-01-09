@@ -1,0 +1,48 @@
+DASK:
+    ☐ Get concrete example for success
+        ☐ Reach out to two folks
+LINEA:
+    ☐ Get working code object understading
+        ✔ How to deal with translations? Properties for now, metadsl later..? @started(21-11-22 10:13) @done(21-11-22 10:13) @lasted(32s)
+        ✔ Test on python 3.7-3.10 @done(21-12-06 10:02)
+        ✔ instructions @started(21-12-06 10:04) @done(21-12-10 14:48) @lasted(4d4h44m57s)
+            ✔ add as two bytes @done(21-12-01 12:11)
+            ✔ Add as values with proper number of args @done(21-12-10 14:48)
+        ✔ Add constants? Recursive values and code? @done(21-12-10 14:48)
+        ✔ Move to CFG but keep as building stack @done(21-12-10 14:48)
+            ✔ How does CPython go from CFG to bytecode? We have to do the same if we go backwards for verification. @started(21-12-03 11:53) @done(21-12-06 10:02) @lasted(2d22h9m27s)
+                ✔ In compile.c assmeble @done(21-12-03 11:53)
+                ✔ How does assembler store things? @done(21-12-06 10:02)
+        ☐ code_data
+            ☐ Line mapping! @started(21-12-11 09:20)
+            ☐ Flags as enum?
+            ☐ Spin off existing work as standalone?
+            ☐ Rich?
+        ☐ Move to metadsl
+        ☐ Turn CFG into functions!
+        ☐ Move some to dataflow
+        ☐ Show dataflow and CFG for any module
+        ☐ Add simple dataflow optimizations
+        ☐ Add slicing with modules
+INTERNAL:
+    ☐ Types as first class
+    ☐ Functions as first class
+    ☐ Support non auto API as well
+
+
+OPEN QUESTIONS:
+    ✔ How to convert between SSA as functional form to functional control flow like map? @done(21-12-10 14:49)
+    ✔ How to convert between SSA and bytecode stack? Same as register allocation programs? @done(21-12-10 14:49)
+    ✔ -> Neither required for slicing, only to go back to Python code with control flow @done(21-12-10 14:49)
+        ✔ Can still generate Python code without control flow, with recursion. @done(21-12-10 14:49)
+
+
+CLEANUP:
+    ✔ Github actions @done(21-12-10 14:49)
+    ☐ Make running things on all projects more sensible
+    ☐ Remove old issues or convert to discussions
+    ☐ Move back to supporting Python 3.7
+    ☐ pytest autoreload
+    ☐ pytest hypothesis icontract
+    ☐ Monorepo setup? create one dir per file? One tox per file?
+    ☐ Remove todo file

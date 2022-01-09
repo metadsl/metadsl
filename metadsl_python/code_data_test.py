@@ -8,7 +8,7 @@ from types import CodeType
 from typing import Iterable
 from hypothesis import given, settings, HealthCheck
 import hypothesmith
-
+from datetime import timedelta
 from .code_data import CodeData
 
 NEWLINE = "\n"
@@ -87,7 +87,12 @@ def test_modules():
 
 
 @given(source_code=hypothesmith.from_node())
-@settings(suppress_health_check=(HealthCheck.filter_too_much, HealthCheck.too_slow))
+@settings(
+    suppress_health_check=(HealthCheck.filter_too_much, HealthCheck.too_slow),
+    deadline=timedelta(
+        milliseconds=400
+    ),  # increase deadline to account for slow times in CI
+)
 def test_generated(source_code):
     with warnings.catch_warnings():
         # Ignore syntax warnings in compilation
