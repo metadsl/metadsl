@@ -1,3 +1,19 @@
+# Updates Jan 25, 2022
+
+For mutability, support creating new mutated nodes. Need to be able to track every node and not only what args it mutates, but also views!
+
+i.e.:
+
+```python
+x = []
+y = {}
+y['z'] = x
+y['z'].append(10)
+```
+
+So for args to functions, maybe we need to know whever each arg is a view or a copy? i.e. whether its call by value or call by reference?
+
+
 # A New Base
 
 
