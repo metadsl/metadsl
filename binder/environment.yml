@@ -5,22 +5,21 @@ dependencies:
   - flit
 - black
 - jsonschema
-- pudb
+# - pudb
 - numpy
-- pytest-testmon
+# - pytest-testmon
 - recommonmark
 - sphinx_rtd_theme
 - pip
-- jupyterlab>=1.0.0
+- 'jupyterlab>=1.0.0,<2'
 - nbsphinx
 - IPython
 - nbconvert
 - sphinx-autodoc-typehints
 - sphinx-autobuild
-- ipykernel
 - python-igraph>=0.8.0
 - llvmlite
-- python>=3.8
+- 'python>=3.8,<3.9'
 - mypy
 - sphinx
 name: metadsl
