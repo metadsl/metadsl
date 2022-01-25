@@ -11,7 +11,7 @@ dependencies:
 - recommonmark
 - sphinx_rtd_theme
 - pip
-- jupyterlab>=1.0.0
+- 'jupyterlab>=1.0.0,<2'
 - nbsphinx
 - IPython
 - nbconvert
