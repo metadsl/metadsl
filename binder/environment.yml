@@ -3,25 +3,33 @@ channels:
 dependencies:
 - pip:
   - flit
-- black
-- jsonschema
-# - pudb
-- numpy
-# - pytest-testmon
-- recommonmark
-- sphinx_rtd_theme
+  - beni
+  - pytest-pudb
+- python=3.8
 - pip
-- 'jupyterlab>=1.0.0,<2'
-- nbsphinx
-- IPython
-- "nodejs"
-- nbconvert
-- sphinx-autodoc-typehints
-- sphinx-autobuild
+- typing_extensions
+- typing_inspect
 - python-igraph>=0.8.0
-- llvmlite
-- 'python>=3.8,<3.9'
-- mypy
+- jupyterlab>=1.0.0
+- nbconvert
+- pudb
 - sphinx
+- sphinx-autodoc-typehints
+- sphinx_rtd_theme
+- recommonmark
+- nbsphinx
+- ipykernel
+- ipython
+- sphinx-autobuild
+- pytest>=3.6.0
+- pytest-cov
+- pytest-mypy
+- pytest-randomly
+- pytest-xdist
+- mypy
+- llvmlite
+- numpy
+- jsonschema
+- black
 name: metadsl
 

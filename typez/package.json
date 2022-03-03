@@ -24,15 +24,15 @@
     "extension:disable": "jupyter labextension disable typez"
   },
   "dependencies": {
-    "@jupyterlab/apputils": "^1.1.0",
-    "@jupyterlab/rendermime-interfaces": "^1.4.0",
+    "@jupyterlab/apputils": "^3.3.0",
+    "@jupyterlab/rendermime-interfaces": "^3.3.0",
     "@material-ui/core": "4.4.2",
     "@phosphor/widgets": "^1.9.0",
     "cytoscape": "^3.13.0",
     "cytoscape-dagre": "2.2.2",
     "cytoscape-elk-saul": "1.1.12",
     "cytoscape-klay": "3.1.3",
-    "react": "~16.8.4"
+    "react": "^17.0.1"
   },
   "devDependencies": {
     "@types/cytoscape": "3.8.8",

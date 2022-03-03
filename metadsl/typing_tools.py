@@ -240,7 +240,7 @@ def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
             )
         else:
             raise NotImplementedError(f"Does not support getting type of {signature}")
-    return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]
+    return typing.Callable[arg_hints, type_hints.get("return", typing.Any)] #type: ignore
 
 
 def get_function_replace_type(f: FunctionReplaceTyping) -> typing.Type[typing.Callable]:
