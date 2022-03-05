@@ -445,7 +445,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
 
     # If the type is an OfType[T] then we should really just consider it as T
     if issubclass(t, OfType) and not issubclass(hint, OfType):
-        (t,) = typing_inspect.get_args(t)
+        (t,) = typing_inspect.get_args(t) or [object,]
         return match_types(hint, t)
     if issubclass(hint, OfType) and not issubclass(t, OfType):
         (hint,) = typing_inspect.get_args(hint)

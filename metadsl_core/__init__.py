@@ -15,6 +15,7 @@ from .pair import *
 from .strategies import *
 from .vec import *
 from .mapping import *
+from .state import *
 
 export_from(
     __name__,
@@ -29,6 +30,7 @@ export_from(
     "strategies",
     "vec",
     "mapping",
+    "state"
 )
 
 __version__ = "0.4.0"
