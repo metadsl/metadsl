@@ -1,12 +1,9 @@
-import pytest
-
-
-import metadsl_rewrite
 import metadsl_core as mc
+import metadsl_rewrite
+
 import metadsl_llvm as ml
 
 
-@pytest.mark.skip
 def test_fib():
     ##
     # Constants
