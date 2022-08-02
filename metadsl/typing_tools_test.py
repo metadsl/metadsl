@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import typing
 
 import pytest
@@ -170,6 +171,7 @@ def test_tuple_for_sequence():
     assert fn((1, 2)) == (fn, ((1, 2),), {}, int)
 
 
+@pytest.mark.xfail(sys.version_info > (3, 8), reason="breaks on python 3.8")
 def test_fn_args():
     @i
     def fn(f: typing.Callable) -> int:

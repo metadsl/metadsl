@@ -6,6 +6,7 @@ import dataclasses
 import functools
 import inspect
 import logging
+import sys
 import types
 import typing
 
@@ -475,12 +476,17 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         and typing_inspect.get_origin(hint) == collections.abc.Sequence
         and typing_inspect.get_origin(t) == collections.abc.Sequence
     ):
-        t_inner = typing_inspect.get_args(t)[0]
-
-        # If t's inner arg is just the default one for seuqnce, it hasn't be initialized so assume
-        # it was an empty tuple that created it and just return a match
-        if t_inner == typing_inspect.get_args(typing.Sequence)[0]:
+        try:
+            t_inner = typing_inspect.get_args(t)[0]
+        except IndexError:
+            # Same as below, checking for default one, but in Python 3.9+
+            # where the default sequence has no arg
             return {}
+        if sys.version_info < (3, 9):
+            # If t's inner arg is just the default one for sequence, it hasn't be initialized so assume
+            # it was an empty tuple that created it and just return a match
+            if t_inner == typing_inspect.get_args(typing.Sequence)[0]:
+                return {}
         return match_types(typing_inspect.get_args(hint)[0], t_inner)
 
     if typing_inspect.is_union_type(hint):
