@@ -240,7 +240,7 @@ def get_function_type(fn: typing.Callable) -> typing.Type[typing.Callable]:
             )
         else:
             raise NotImplementedError(f"Does not support getting type of {signature}")
-    return typing.Callable[arg_hints, type_hints.get("return", typing.Any)] #type: ignore
+    return typing.Callable[arg_hints, type_hints.get("return", typing.Any)]  # type: ignore
 
 
 def get_function_replace_type(f: FunctionReplaceTyping) -> typing.Type[typing.Callable]:
@@ -266,11 +266,11 @@ def get_bound_infer_type(b: BoundInfer) -> typing.Type[typing.Callable]:
     owner_origin = get_origin_type(b.owner)
     if b.is_classmethod:
         # If we called this as a class method
-        typevars = match_type(typing.Type[owner_origin], b.owner)
+        typevars = match_type(typing.cast(type, typing.Type[owner_origin]), b.owner)
         skip_first_param = True
     else:
         # we are calling an instance method on the class and passing the instance as the first arg
-        typevars = match_type(typing.Type[owner_origin], b.owner)
+        typevars = match_type(typing.cast(type, typing.Type[owner_origin]), b.owner)
         skip_first_param = False
         hints[first_arg_name] = owner_origin
 
@@ -289,12 +289,15 @@ def get_bound_infer_type(b: BoundInfer) -> typing.Type[typing.Callable]:
             )
         else:
             raise NotImplementedError(f"Does not support getting type of {signature}")
-    return typing.Callable[
-        arg_hints,
-        replace_typevars(
-            typevars, hints.get("return", typing.cast(typing.Type, typing.Any))
-        ),
-    ]
+    return typing.cast(
+        type,
+        typing.Callable[
+            arg_hints,  # type: ignore
+            replace_typevars(
+                typevars, hints.get("return", typing.cast(typing.Type, typing.Any))
+            ),
+        ],
+    )
 
 
 def get_type(v: T) -> typing.Type[T]:
@@ -313,10 +316,13 @@ def get_type(v: T) -> typing.Type[T]:
             )
         )
         rest_arg_types = inner_args[len(v.args) :]  # type: ignore
-        return typing.Callable[
-            [replace_typevars(mapping, arg) for arg in rest_arg_types],
-            replace_typevars(mapping, inner_return),
-        ]
+        return typing.cast(
+            type,
+            typing.Callable[
+                [replace_typevars(mapping, arg) for arg in rest_arg_types],
+                replace_typevars(mapping, inner_return),
+            ],
+        )
 
     if isinstance(v, Infer):
         return get_function_type(v.fn)  # type: ignore
@@ -456,7 +462,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         (t,) = typing_inspect.get_args(t)
 
     if typing_inspect.is_typevar(hint):
-        return {hint: t}
+        return {typing.cast(typing.TypeVar, hint): t}
 
     # This happens with match rule on conversion, like when the value is TypeVar
     if typing_inspect.is_typevar(t):
@@ -520,17 +526,22 @@ def replace_typevars(typevars: TypeVarMapping, hint: T_type) -> T_type:
     Replaces type vars in a type hint with other types.
     """
     if typing_inspect.is_typevar(hint):
-        return typing.cast(T_type, typevars.get(hint, hint))
+        return typing.cast(
+            T_type, typevars.get(typing.cast(typing.TypeVar, hint), hint)
+        )
 
     # Special case empty callable, which raisees error on getting args
     if hint == typing.Callable:  # type: ignore
         return hint
     if typing_inspect.get_origin(hint) == collections.abc.Callable:
         arg_types, return_type = typing_inspect.get_args(hint)
-        return typing.Callable[
-            [replace_typevars(typevars, a) for a in arg_types],
-            replace_typevars(typevars, return_type),
-        ]
+        return typing.cast(
+            T_type,
+            typing.Callable[
+                [replace_typevars(typevars, a) for a in arg_types],
+                replace_typevars(typevars, return_type),
+            ],
+        )
 
     args = typing_inspect.get_args(hint)
     if not args:

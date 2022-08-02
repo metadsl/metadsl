@@ -1,6 +1,5 @@
 print("Importing")
-from metadsl import *
-from metadsl_core import *
+from metadsl_all import *
 
 print("Finished imports")
 
