@@ -3,13 +3,14 @@ Meta language for describing DSLs in JSON.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import dataclasses
-from typing import *
 import json
-import jsonschema
 import pathlib
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set, Tuple, Union
+
 import IPython.core.display
+import jsonschema
 
 __all__ = [
     "Typez",
