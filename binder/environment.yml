@@ -1,33 +1,35 @@
 channels:
-  - conda-forge
+- conda-forge
 dependencies:
-  - pip:
-      - flit
-      - pytest-pudb
-  - python=3.8
-  - pip
-  - typing_extensions
-  - typing_inspect
-  - python-igraph>=0.8.0
-  - jupyterlab>=1.0.0
-  - nbconvert
-  - pudb
-  - sphinx
-  - sphinx-autodoc-typehints
-  - sphinx_rtd_theme
-  - recommonmark
-  - nbsphinx
-  - ipykernel
-  - ipython
-  - sphinx-autobuild
-  - pytest>=3.6.0
-  - pytest-cov
-  - pytest-mypy
-  - pytest-randomly
-  - pytest-xdist
-  - mypy
-  - llvmlite
-  - numpy
-  - jsonschema
-  - black
+- pip:
+  - flit
+  - beni
+  - pytest-pudb
+- python=3.8
+- pip
+- typing_extensions
+- typing_inspect
+- python-igraph>=0.8.0
+- jupyterlab>=1.0.0
+- nbconvert
+- pudb
+- sphinx
+- sphinx-autodoc-typehints
+- sphinx_rtd_theme
+- recommonmark
+- nbsphinx
+- ipykernel
+- ipython
+- sphinx-autobuild
+- pytest>=3.6.0
+- pytest-cov
+- pytest-mypy
+- pytest-randomly
+- pytest-xdist
+- mypy
+- llvmlite
+- numpy
+- jsonschema
+- black
 name: metadsl
+
