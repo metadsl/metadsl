@@ -29,7 +29,8 @@ test = [
     "pytest-randomly",
     "pytest-xdist",
     "pytest-pudb",
-    "mypy"
+    "mypy",
+    "nbval"
 ]
 doc = [
     "sphinx",
