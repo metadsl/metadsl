@@ -14,7 +14,6 @@ jobs:
           - "3.10"
           - "3.9"
           - "3.8"
-          - "3.7"
     steps:
       - name: Setup python ${{ matrix.py }}
         uses: actions/setup-python@v2
@@ -34,7 +33,6 @@ jobs:
           - "3.10"
           - "3.9"
           - "3.8"
-          - "3.7"
     steps:
       - name: Setup python ${{ matrix.py }}
         uses: actions/setup-python@v2
@@ -54,7 +52,6 @@ jobs:
           - "3.10"
           - "3.9"
           - "3.8"
-          - "3.7"
     steps:
       - name: Setup python ${{ matrix.py }}
         uses: actions/setup-python@v2
