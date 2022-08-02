@@ -6,7 +6,6 @@ import dataclasses
 import functools
 import inspect
 import logging
-import sys
 import types
 import typing
 
@@ -476,7 +475,13 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         and typing_inspect.get_origin(hint) == collections.abc.Sequence
         and typing_inspect.get_origin(t) == collections.abc.Sequence
     ):
-        return match_types(_get_inner_sequence_type(hint), _get_inner_sequence_type(t))
+        t_inner = typing_inspect.get_args(t)[0]
+
+        # If t's inner arg is just the default one for seuqnce, it hasn't be initialized so assume
+        # it was an empty tuple that created it and just return a match
+        if t_inner == typing_inspect.get_args(typing.Sequence)[0]:
+            return {}
+        return match_types(typing_inspect.get_args(hint)[0], t_inner)
 
     if typing_inspect.is_union_type(hint):
         # If this is a union, iterate through and use the first that is a subclass
@@ -497,26 +502,6 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
             for inner_hint, inner_t in zip(get_inner_types(hint), get_inner_types(t))
         )
     )
-
-
-def _get_inner_sequence_type(t: typing.Type) -> typing.Type:
-    """
-    Returns the inner type for a sequence type, if it's default returns Any
-    """
-    # In Python 3.8 `get_args(Sequence)` will return a non empty tuple with a default generic
-    # value.
-    # So on that version, check for that
-    if sys.version_info < (3, 9):
-        inner = typing_inspect.get_args(t)[0]
-        if inner == typing_inspect.get_args(typing.Sequence)[0]:
-            return typing.Any  # type: ignore
-        return inner
-    # On Python 3.9, get_args(Sequence) will return an empty tuple, in which case return
-    # Any
-    args = typing_inspect.get_args(t)
-    if not args:
-        return typing.Any
-    return args[0]
 
 
 def get_origin_type(t: typing.Type) -> typing.Type:
