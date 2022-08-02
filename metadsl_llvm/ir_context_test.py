@@ -26,7 +26,10 @@ def test_fib():
         a: ml.ValueExpr,
         b: ml.ValueExpr,
     ) -> ml.ValueExpr:
-        return (n > one).if_(self(n - one, b, a + b), (n.eq(one).if_(b, a)))
+        return (n > one).if_(
+            self(n - one, b, a + b),
+            n.eq(one).if_(b, a),
+        )
 
     @ml.llvm_fn(mod_ref, ml.FnType.create(int_type, int_type))
     @mc.FunctionOne.from_fn
