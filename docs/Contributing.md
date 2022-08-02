@@ -58,22 +58,6 @@ python -m pudb Notebook.py
 sphinx-autobuild docs docs/_build/html/
 ```
 
-### Requirements
-
-You can generate a new `environment.yml` from our project dependencies with:
-
-```bash
-beni pyproject.toml *.pyproject.toml --ignore \
-    typing_extensions\
-    typing_inspect \
-    pytest \
-    pytest-mypy \
-    pytest-xdist \
-    pytest-cov \
-    pytest-testmo \
-> binder/environment.yml
-```
-
 ### Publishing
 
 First bump all versions in Python and JS packages.
