@@ -61,3 +61,14 @@ jobs:
       - run: pip install flit
       - run: make flit-install
       - run: pytest docs/*.ipynb --nbval
+  test-jupyterlab:
+    name: test jupyterlab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+      - uses: actions/checkout@v2
+      - run: pip install jupyterlab
+      - run: jupyter labextension install .
+        working-directory: typez
