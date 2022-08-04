@@ -42,6 +42,28 @@ def test_fib():
     assert metadsl_fn(10) == 55
 
 
+
+def test_if():
+    """
+    Test if using if statement works, have a function that returns 1 if 0, else 0
+    """
+    int_type = ml.Type.create_int(32)
+    zero = ml.ValueExpr.from_value(ml.Value.constant(int_type, 0))
+    one = ml.ValueExpr.from_value(ml.Value.constant(int_type, 1))
+
+    mod_ref = ml.ModRef.create("add")
+
+    @ml.llvm_fn(mod_ref, ml.FnType.create(int_type, int_type))
+    @mc.FunctionOne.from_fn
+    def if_zero(v: ml.ValueExpr) -> ml.ValueExpr:
+        return v.eq(zero).if_(one, zero)
+
+    real_fn = metadsl_rewrite.execute(ml.compile_functions(mod_ref, ml.to_llvm(if_zero)))
+    assert real_fn(10) == 0
+    assert real_fn(0) == 1
+
+
+
 def test_add():
     int_type = ml.Type.create_int(32)
     one = ml.ValueExpr.from_value(ml.Value.constant(int_type, 1))

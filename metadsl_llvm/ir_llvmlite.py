@@ -9,7 +9,6 @@ from __future__ import annotations
 import typing
 
 import llvmlite.ir as ir
-
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
@@ -269,7 +268,7 @@ def builder_cbranch(
 @rule
 def builder_branch(builder: ir.IRBuilder, target: ir.IRBuilder):
     def inner() -> Terminate:
-        builder.branch(target)
+        builder.branch(target.block)
         return box_terminate(builder)
 
     return (
