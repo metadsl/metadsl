@@ -2,16 +2,17 @@
 Normalized expressions, for deduping and single replacements.
 """
 from __future__ import annotations
-import dataclasses
-import typing
-import itertools
+
 import collections
+import dataclasses
 import functools
-import IPython.core.display
+import itertools
+import typing
+
 import igraph
+import IPython.core.display
 
 from .expressions import *
-
 
 __all__ = [
     "ExpressionReference",
@@ -40,8 +41,8 @@ class Graph(igraph.Graph):
     def __init__(self, expr: object):
         super().__init__(directed=True)
 
-        self.fully_add_expression(expr, None)
-        self.assert_integrity()
+        self._fully_add_expression(expr, None)
+        self._assert_integrity()
 
     def _repr_svg_(self):
         return self.plot_custom()._repr_svg_()
@@ -58,7 +59,7 @@ class Graph(igraph.Graph):
             # vertex_shape="hidden",
         )
 
-    def fully_add_expression(
+    def _fully_add_expression(
         self,
         expr: object,
         replace: typing.Optional[typing.Tuple[Hash, object]],
@@ -69,7 +70,7 @@ class Graph(igraph.Graph):
         children = frozenset(
             (
                 index,
-                self.fully_add_expression(
+                self._fully_add_expression(
                     child_expression, replace, id(expr), *parent_ids
                 ),
             )
@@ -90,15 +91,15 @@ class Graph(igraph.Graph):
         # If we are replacing a hash with a new expression and this is the hash of current expression, use the new one instead
         # This means we have added a bunch of nodes we dont need possibly, so we can delete those at the end
         if replace and hash_ == replace[0]:
-            return self.fully_add_expression(replace[1], None, *parent_ids)
+            return self._fully_add_expression(replace[1], None, *parent_ids)
         try:
-            self.lookup(hash_)
+            self._lookup(hash_)
         except ValueError:
             v = self.add_vertex(expression=expr, name=hash_)
 
             for index, child_hash in children:
                 assert isinstance(expr, Expression)
-                child_v = self.lookup(child_hash)
+                child_v = self._lookup(child_hash)
                 self.add_edge(v, child_v, index=index)
                 if isinstance(index, int):
                     expr.args[index] = child_v["expression"]
@@ -106,13 +107,13 @@ class Graph(igraph.Graph):
                     expr.kwargs[index] = child_v["expression"]
         return Hash(hash_)
 
-    def lookup(self, hash_: Hash) -> igraph.Vertex:
+    def _lookup(self, hash_: Hash) -> igraph.Vertex:
         return self.vs.find(name=hash_)
 
     def replace_root(self, expr: object):
         self.delete_vertices(self.vs)
-        self.fully_add_expression(expr, None)
-        self.assert_integrity()
+        self._fully_add_expression(expr, None)
+        self._assert_integrity()
 
     def replace_child(self, expr: object, prev_index: int) -> None:
         # Compute previous hash on the fly instead of passing it in b/c even though previous index
@@ -123,17 +124,17 @@ class Graph(igraph.Graph):
         prev_expr = self.vs[prev_index]["expression"]
         # clear graph
         self.delete_vertices(self.vs)
-        prev_hash = self.fully_add_expression(prev_expr, None)
+        prev_hash = self._fully_add_expression(prev_expr, None)
 
         self.delete_vertices(self.vs)
-        new_hash = self.fully_add_expression(root_expression, (prev_hash, expr))
+        new_hash = self._fully_add_expression(root_expression, (prev_hash, expr))
         # Remove all vertice not children of new root node
         self.delete_vertices(
             set(self.vs.indices) - set(self.subcomponent(new_hash, igraph.OUT))
         )
-        self.assert_integrity()
+        self._assert_integrity()
 
-    def assert_integrity(self):
+    def _assert_integrity(self):
         assert self.is_dag()
         # Verify that this is one connected graph (not multiple roots)
         assert self.is_connected(igraph.WEAK)
