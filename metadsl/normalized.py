@@ -12,8 +12,9 @@ import typing
 import black
 import igraph
 import IPython.core.display
+import typing_inspect
 
-from metadsl.typing_tools import BoundInfer
+from metadsl.typing_tools import BoundInfer, get_type
 
 from .expressions import *
 
@@ -305,7 +306,8 @@ def graph_str(graph: Graph) -> str:
     When printing the function, use the named primitive if it exists or just print it.
     """
     indices = graph.topological_sorting(igraph.IN)
-    temp_index = 0
+    # Mapping from the string type name to the current index of the temp variable
+    tp_name_to_index: typing.DefaultDict[str, int] = collections.defaultdict(lambda: 0)
     hash_to_str: dict[str, str] = {}
     lines = []
     for i in indices:
@@ -348,8 +350,13 @@ def graph_str(graph: Graph) -> str:
             hash_to_str[hash_] = value_str
         else:
             # Multiple references, so save as tmp variable
-            var_name = f"_{temp_index}"
-            temp_index += 1
+            if isinstance(expr, PlaceholderExpression):
+                tp, = typing_inspect.get_args(get_type(expr))
+            else:
+                tp = type(expr)
+            tp_name = tp.__name__.lower()
+            var_name = f"{tp_name}_{tp_name_to_index[tp_name]}"
+            tp_name_to_index[tp_name] += 1
             hash_to_str[hash_] = var_name
             lines.append(f"{var_name} = {value_str}")
     return black.format_str("\n".join(lines), mode=black.FileMode(line_length=140))
