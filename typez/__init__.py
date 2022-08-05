@@ -136,6 +136,7 @@ class CallNode:
     id: str
     function: str
     function_value: FunctionValue
+    type: TypeInstance
     type_params: Optional[Dict[str, TypeInstance]] = None
     args: Optional[List[str]] = None
     kwargs: Optional[Dict[str, str]] = None
@@ -159,10 +160,15 @@ class CallNode:
             id=value["id"],
             function=value["function"],
             function_value=FunctionValue.from_dict(value["function_value"]),
-            type_params={k: type_instance_from_dict(v) for k, v in value.get("type_params", {}).items()},
+            type=type_instance_from_dict(value["type"]),
+            type_params={
+                k: type_instance_from_dict(v)
+                for k, v in value.get("type_params", {}).items()
+            },
             args=value.get("args", None),
             kwargs=value.get("kwargs", None),
         )
+
 
 @dataclass(frozen=True)
 class FunctionValue:
@@ -199,9 +205,12 @@ class PrimitiveNode:
 
 def parse_nodes(nodes: List[dict]) -> Nodes:
     return [
-        CallNode.from_dict(node) if "function" in node else PrimitiveNode.from_dict(node)
+        CallNode.from_dict(node)
+        if "function" in node
+        else PrimitiveNode.from_dict(node)
         for node in nodes
     ]
+
 
 TypeInstance = Union["DeclaredTypeInstance", "ExternalTypeInstance"]
 
@@ -209,6 +218,8 @@ TypeInstance = Union["DeclaredTypeInstance", "ExternalTypeInstance"]
 @dataclass(frozen=True)
 class DeclaredTypeInstance:
     type: str
+    name: str
+    module: str
     params: Optional[Dict[str, TypeInstance]] = None
 
     def __post_init__(self):
@@ -219,22 +230,34 @@ class DeclaredTypeInstance:
     def from_dict(cls, value: dict) -> DeclaredTypeInstance:
         return DeclaredTypeInstance(
             type=value["type"],
-            params={k: type_instance_from_dict(v) for k, v in value.get("params", {}).items()},
+            name=value["name"],
+            module=value["module"],
+            params={
+                k: type_instance_from_dict(v)
+                for k, v in value.get("params", {}).items()
+            },
         )
+
 
 @dataclass(frozen=True)
 class ExternalTypeInstance:
     repr: str
+    name: str
+    module: str
 
     @classmethod
     def from_dict(cls, value: dict) -> ExternalTypeInstance:
-        return ExternalTypeInstance(repr=value["repr"])
+        return ExternalTypeInstance(
+            repr=value["repr"], name=value["name"], module=value["module"]
+        )
+
 
 def type_instance_from_dict(value: dict) -> TypeInstance:
     if "type" in value:
         return DeclaredTypeInstance.from_dict(value)
     else:
         return ExternalTypeInstance.from_dict(value)
+
 
 @dataclass(frozen=True)
 class States:

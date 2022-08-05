@@ -24,7 +24,12 @@ from metadsl_rewrite import *
 from typez import *
 from typez import FunctionValue
 
-__all__ = ["ExpressionDisplay", "SHOW_MODULE", "expr_to_json_value", "json_value_to_expr"]
+__all__ = [
+    "ExpressionDisplay",
+    "SHOW_MODULE",
+    "expr_to_json_value",
+    "json_value_to_expr",
+]
 
 
 @functools.singledispatch
@@ -112,6 +117,7 @@ def convert_to_nodes(ref: metadsl.ExpressionReference, save_pickle=False) -> Nod
                     metadsl.typing_tools.get_fn_typevars(value.function)
                 )
                 or None,
+                type=type_to_typeinstance(type(value)),
                 function=black.format_str(
                     f"{func_str}\n{value._type_str}" if SHOW_TYPES else func_str,
                     mode=black_file_mode,
@@ -142,6 +148,7 @@ def expression_to_function_value(expr: metadsl.Expression) -> FunctionValue:
         name=fn.fn.__name__,
         class_=fn.owner.__name__ if isinstance(fn, BoundInfer) else None,
     )
+
 
 def function_value_to_fn(fv: FunctionValue) -> types.FunctionType:
     v: typing.Any = importlib.import_module(fv.module)
@@ -181,7 +188,7 @@ def json_value_to_expr(value: dict) -> metadsl.Expression:
             assert node.python_pickle
             expression = load_pickle(node.python_pickle)
         else:
-            expression = Expression(
+            expression = type_instance_to_type(node.type)(
                 # TODO: replace typevars as well
                 function=function_value_to_fn(node.function_value),
                 args=[graph.lookup(Hash(a))["expression"] for a in node.args or []],
@@ -192,8 +199,15 @@ def json_value_to_expr(value: dict) -> metadsl.Expression:
             )
         graph.add_vertex(expression=expression, name=node.id)
     assert typez.states
-    return graph.lookup(Hash(typez.states.initial))['expression']
+    return graph.lookup(Hash(typez.states.initial))["expression"]
 
+def type_instance_to_type(type_instance: TypeInstance) -> type:
+    """
+    Converts a type instance to a type.
+    """
+    tp = getattr(importlib.import_module(type_instance.module), type_instance.name)
+    # TODO: replace typevars as well
+    return tp
 
 def typevars_to_typeparams(
     typevars: metadsl.typing_tools.TypeVarMapping,
@@ -211,6 +225,8 @@ def type_to_typeinstance(tp: typing.Type) -> TypeInstance:
     if issubclass(tp, metadsl.Expression):
         return DeclaredTypeInstance(
             type=function_or_type_repr(typing_inspect.get_origin(tp) or tp),
+            name=tp.__name__,
+            module=tp.__module__,
             params=typevars_to_typeparams(
                 metadsl.typing_tools.match_types(
                     metadsl.typing_tools.get_origin_type(tp), tp
@@ -218,7 +234,9 @@ def type_to_typeinstance(tp: typing.Type) -> TypeInstance:
             )
             or None,
         )
-    return ExternalTypeInstance(repr=function_or_type_repr(tp))
+    return ExternalTypeInstance(
+        repr=function_or_type_repr(tp), name=tp.__name__, module=tp.__module__
+    )
 
 
 _builtins = inspect.getmodule(int)

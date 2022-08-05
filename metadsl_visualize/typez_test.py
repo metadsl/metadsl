@@ -16,4 +16,6 @@ from metadsl_visualize.typez import expr_to_json_value, json_value_to_expr
 )
 def test_to_from_json(v: Expression) -> None:
     json_value =  expr_to_json_value(v)
-    assert json_value_to_expr(json_value) == v
+    new_v = json_value_to_expr(json_value)
+    assert new_v == v
+    assert type(new_v) == type(v)
