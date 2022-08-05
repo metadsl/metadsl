@@ -7,7 +7,7 @@ import dataclasses
 import json
 import pathlib
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, ItemsView, List, Optional, Set, Tuple, Union
 
 import IPython.core.display
 import jsonschema
@@ -61,6 +61,15 @@ class Typez:
         )
         # jsonschema.validate(dict_, typez_schema)
         return dict_
+
+    @classmethod
+    def from_dict(cls, value: dict) -> Typez:
+        return Typez(
+            # Skip these for now
+            definitions=None,
+            nodes=parse_nodes(value.get("nodes", [])),
+            states=States.from_dict(value.get("states", {})),
+        )
 
     def _repr_mimebundle_(self, include=None, exclude=None):
         return {"application/x.typez+json": self.asdict()}
@@ -126,6 +135,7 @@ Nodes = List[Union["CallNode", "PrimitiveNode"]]
 class CallNode:
     id: str
     function: str
+    function_value: FunctionValue
     type_params: Optional[Dict[str, TypeInstance]] = None
     args: Optional[List[str]] = None
     kwargs: Optional[Dict[str, str]] = None
@@ -143,13 +153,55 @@ class CallNode:
         if self.args is not None:
             object.__setattr__(self, "args", Hashablelist(self.args))
 
+    @classmethod
+    def from_dict(cls, value: dict) -> CallNode:
+        return CallNode(
+            id=value["id"],
+            function=value["function"],
+            function_value=FunctionValue.from_dict(value["function_value"]),
+            type_params={k: type_instance_from_dict(v) for k, v in value.get("type_params", {}).items()},
+            args=value.get("args", None),
+            kwargs=value.get("kwargs", None),
+        )
+
+@dataclass(frozen=True)
+class FunctionValue:
+    module: str
+    name: str
+    class_: Optional[str]
+
+    @classmethod
+    def from_dict(cls, value: dict) -> FunctionValue:
+        return FunctionValue(
+            module=value["module"],
+            name=value["name"],
+            class_=value.get("class_", None),
+        )
+
 
 @dataclass(frozen=True)
 class PrimitiveNode:
     id: str
     type: str
     repr: str
+    # Python data pickled with protocol 5
+    python_pickle: Optional[str]
 
+    @classmethod
+    def from_dict(cls, value: dict) -> PrimitiveNode:
+        return PrimitiveNode(
+            id=value["id"],
+            type=value["type"],
+            repr=value["repr"],
+            python_pickle=value.get("python_pickle", None),
+        )
+
+
+def parse_nodes(nodes: List[dict]) -> Nodes:
+    return [
+        CallNode.from_dict(node) if "function" in node else PrimitiveNode.from_dict(node)
+        for node in nodes
+    ]
 
 TypeInstance = Union["DeclaredTypeInstance", "ExternalTypeInstance"]
 
@@ -163,16 +215,38 @@ class DeclaredTypeInstance:
         if self.params is not None:
             object.__setattr__(self, "params", Hashabledict(self.params))
 
+    @classmethod
+    def from_dict(cls, value: dict) -> DeclaredTypeInstance:
+        return DeclaredTypeInstance(
+            type=value["type"],
+            params={k: type_instance_from_dict(v) for k, v in value.get("params", {}).items()},
+        )
 
 @dataclass(frozen=True)
 class ExternalTypeInstance:
     repr: str
 
+    @classmethod
+    def from_dict(cls, value: dict) -> ExternalTypeInstance:
+        return ExternalTypeInstance(repr=value["repr"])
+
+def type_instance_from_dict(value: dict) -> TypeInstance:
+    if "type" in value:
+        return DeclaredTypeInstance.from_dict(value)
+    else:
+        return ExternalTypeInstance.from_dict(value)
 
 @dataclass(frozen=True)
 class States:
     initial: str
     states: Optional[List["State"]] = None
+
+    @classmethod
+    def from_dict(cls, value: dict) -> States:
+        return States(
+            initial=value["initial"],
+            states=[State.from_dict(state) for state in value.get("states", [])],
+        )
 
 
 @dataclass(frozen=True)
@@ -181,6 +255,15 @@ class State:
     rule: str
     logs: str
     label: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, value: dict) -> State:
+        return State(
+            node=value["node"],
+            rule=value["rule"],
+            logs=value["logs"],
+            label=value.get("label"),
+        )
 
 
 @dataclass

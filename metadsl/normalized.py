@@ -2,16 +2,17 @@
 Normalized expressions, for deduping and single replacements.
 """
 from __future__ import annotations
-import dataclasses
-import typing
-import itertools
+
 import collections
+import dataclasses
 import functools
-import IPython.core.display
+import itertools
+import typing
+
 import igraph
+import IPython.core.display
 
 from .expressions import *
-
 
 __all__ = [
     "ExpressionReference",
@@ -37,11 +38,11 @@ class Graph(igraph.Graph):
     * `index`: int or string
     """
 
-    def __init__(self, expr: object):
+    def __init__(self, expr: object=None):
         super().__init__(directed=True)
-
-        self.fully_add_expression(expr, None)
-        self.assert_integrity()
+        if expr is not None:
+            self.fully_add_expression(expr, None)
+            self.assert_integrity()
 
     def _repr_svg_(self):
         return self.plot_custom()._repr_svg_()

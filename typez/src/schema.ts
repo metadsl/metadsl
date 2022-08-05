@@ -111,9 +111,18 @@ export type CallNode = {
 };
 
 /**
+ * The value of the function, either a top level one or a class method
+ */
+export type FunctionValue = {
+  module: string;
+  name: string;
+  class_?: string;
+}
+
+/**
  * A primitive node that represents some type in  the host language
  */
-type PrimitiveNode = { id: string; type: string; repr: string };
+type PrimitiveNode = { id: string; type: string; repr: string; python_pickle?: string };
 
 /**
  * A type that is passed into a function to set one of its  type
