@@ -103,6 +103,7 @@ export type Nodes = Array<CallNode | PrimitiveNode>;
 export type CallNode = {
   id: string;
   function: string;
+  type: TypeInstance;
   type_params?: { [name: string]: TypeInstance };
   // An array of the ids of the argument nodes
   args?: Array<string>;
