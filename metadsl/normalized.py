@@ -354,7 +354,8 @@ def graph_str(graph: Graph) -> str:
                 tp, = typing_inspect.get_args(get_type(expr))
             else:
                 tp = type(expr)
-            tp_name = tp.__name__.lower()
+            # Special case Any on Python < 3.10, it doesnt have a __name__
+            tp_name = tp.__name__.lower() if tp != typing.Any else "any"
             var_name = f"{tp_name}_{tp_name_to_index[tp_name]}"
             tp_name_to_index[tp_name] += 1
             hash_to_str[hash_] = var_name
