@@ -325,7 +325,12 @@ def graph_str(graph: Graph) -> str:
             # If this is a method, record it like that
             if isinstance(expr.function, BoundInfer) and not expr.function.is_classmethod:
                 obj, *args = args
-                value_str = f"{obj}.{expr.function.fn.__name__}({', '.join(args)})"
+                method_name = expr.function.fn.__name__
+                # Special case some dunder methods
+                if method_name == "__getitem__":
+                    value_str = f"{obj}[{args[0]}]"
+                else:
+                    value_str = f"{obj}.{method_name}({', '.join(args)})"
             else:
                 value_str = f"{expr._function_str}({', '.join(args)})"
             no_temp_var = False
