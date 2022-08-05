@@ -34,19 +34,11 @@ def execute_and_visualize(ref: ExpressionReference, strategy: Strategy) -> objec
 
 def monkeypatch():
     """
-    Monkeypatches Expression should it displays the result as well as each intermediate step.
+    Monkeypatches execute so that it also displays each step
     """
-    Expression._ipython_display_ = _expression_ipython_display  # type: ignore
     # only change if we are in a kernel
     if IPython.get_ipython():
         execute.execute = execute_and_visualize  # type: ignore
-
-
-def _expression_ipython_display(self):
-    res = execute(self)
-    # Only display result if we get back a non expression object
-    if not isinstance(res, Expression):
-        IPython.core.display.display(res)
 
 
 monkeypatch()

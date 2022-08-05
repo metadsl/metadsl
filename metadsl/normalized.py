@@ -9,10 +9,13 @@ import functools
 import itertools
 import typing
 
+import black
 import igraph
 import IPython.core.display
+import typing_inspect
 
 from .expressions import *
+from .typing_tools import BoundInfer, get_type
 
 __all__ = [
     "ExpressionReference",
@@ -38,11 +41,11 @@ class Graph(igraph.Graph):
     * `index`: int or string
     """
 
-    def __init__(self, expr: object):
+    def __init__(self, expr: object = None):
         super().__init__(directed=True)
-
-        self._fully_add_expression(expr, None)
-        self._assert_integrity()
+        if expr is not None:
+            self._fully_add_expression(expr, None)
+            self._assert_integrity()
 
     def _repr_svg_(self):
         return self.plot_custom()._repr_svg_()
@@ -291,3 +294,76 @@ def expression_children(
         return
     yield from enumerate(expr.args)
     yield from expr.kwargs.items()
+
+
+def graph_str(graph: Graph) -> str:
+    """
+    Returns a string of the graph.
+
+    Order vertices by topological order, print the leaves first as tmp variables.
+    If a leaf is a primitive (1, "dfd", None), don't create a temp variables for it.
+    When printing the function, use the named primitive if it exists or just print it.
+    """
+    indices = graph.topological_sorting(igraph.IN)
+    # Mapping from the string type name to the current index of the temp variable
+    tp_name_to_index: typing.DefaultDict[str, int] = collections.defaultdict(lambda: 0)
+    hash_to_str: dict[str, str] = {}
+    lines = []
+    for i in indices:
+        n = graph.vs[i]
+        hash_ = n["name"]
+        expr = n["expression"]
+        if isinstance(expr, Expression):
+            args = [
+                (f"{e['index']}=" if isinstance(e["index"], str) else "")
+                + hash_to_str[e.target_vertex["name"]]
+                # Sort edges with positional first, then keyword
+                for e in sorted(
+                    n.out_edges(),
+                    key=lambda e: (isinstance(e["index"], int), e["index"]),
+                )
+            ]
+            # If this is a method, record it like that
+            if (
+                isinstance(expr.function, BoundInfer)
+                and not expr.function.is_classmethod
+            ):
+                obj, *args = args
+                method_name = expr.function.fn.__name__
+                # Special case some dunder methods
+                if method_name == "__getitem__":
+                    value_str = f"{obj}[{args[0]}]"
+                else:
+                    value_str = f"{obj}.{method_name}({', '.join(args)})"
+            else:
+                value_str = f"{expr._function_str}({', '.join(args)})"
+            no_temp_var = False
+        else:
+            value_str = repr(expr)
+            # Never save a primitive value as a temp variable
+            no_temp_var = True
+
+        n_references = len(n.in_edges())
+        if n_references == 0:
+            # Last node
+            lines.append(value_str)
+        elif n_references == 1 or no_temp_var:
+            # If just one reference, don't create a temp variable
+            hash_to_str[hash_] = value_str
+        else:
+            # Multiple references, so save as tmp variable
+            if isinstance(expr, PlaceholderExpression):
+                (tp,) = typing_inspect.get_args(get_type(expr))
+            else:
+                tp = type(expr)
+            # Special case Any on Python < 3.10, it doesnt have a __name__
+            tp_name = tp.__name__.lower() if tp != typing.Any else "any"
+            var_name = f"{tp_name}_{tp_name_to_index[tp_name]}"
+            tp_name_to_index[tp_name] += 1
+            hash_to_str[hash_] = var_name
+            lines.append(f"{var_name} = {value_str}")
+    return black.format_str("\n".join(lines), mode=black.FileMode(line_length=140))
+
+
+# Override the repr for an expression to display it as a string
+Expression.__repr__ = lambda self: graph_str(Graph(self))  # type: ignore
