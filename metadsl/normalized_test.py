@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import pytest
 import typing
 
+import pytest
+
 from .expressions import *
-from .normalized import *
 from .expressions_test import TEST_EXPRESSIONS
+from .normalized import *
+from .normalized import Graph, graph_str
 
 
 @pytest.mark.parametrize("expr", TEST_EXPRESSIONS)
@@ -105,3 +107,16 @@ def test_doesnt_remember_replacements():
     ref.replace(a(b(c())))
 
     assert ref.expression == a(b(c()))
+
+
+@pytest.mark.parametrize(
+    "expr,s",
+    [
+        pytest.param(1, "1", id="primitive top level"),
+        pytest.param(c(), "c()", id="single"),
+        pytest.param(b(c()), "b(c())", id="nested"),
+        pytest.param(e(c(), c()), "_0 = c()\ne(_0, _0)", id="temp"),
+    ],
+)
+def test_graph_str(expr, s):
+    assert graph_str(Graph(expr)) == s

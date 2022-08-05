@@ -9,6 +9,7 @@ import functools
 import itertools
 import typing
 
+import black
 import igraph
 import IPython.core.display
 
@@ -38,7 +39,7 @@ class Graph(igraph.Graph):
     * `index`: int or string
     """
 
-    def __init__(self, expr: object=None):
+    def __init__(self, expr: object = None):
         super().__init__(directed=True)
         if expr is not None:
             self.fully_add_expression(expr, None)
@@ -291,3 +292,56 @@ def expression_children(
         return
     yield from enumerate(expr.args)
     yield from expr.kwargs.items()
+
+
+def graph_str(graph: Graph) -> str:
+    """
+    Returns a string of the graph.
+
+    Order vertices by topological order, print the leaves first as tmp variables.
+    If a leaf is a primitive (1, "dfd", None), don't create a temp variables for it.
+    When printing the function, use the named primitive if it exists or just print it.
+    """
+    indices = graph.topological_sorting(igraph.IN)
+    temp_index = 0
+    hash_to_str: dict[str, str] = {}
+    lines = []
+    for i in indices:
+        n = graph.vs[i]
+        hash_ = n["name"]
+        expr = n["expression"]
+        if isinstance(expr, Expression):
+            args = (
+                (f"{e['index']}=" if isinstance(e["index"], str) else "")
+                + hash_to_str[e.target_vertex["name"]]
+                # Sort edges with positional first, then keyword
+                for e in sorted(
+                    n.out_edges(),
+                    key=lambda e: (isinstance(e["index"], int), e["index"]),
+                )
+            )
+            value_str = f"{expr._function_str}({', '.join(args)})"
+            no_temp_var = False
+        else:
+            value_str = repr(expr)
+            # Never save a primitive value as a temp variable
+            no_temp_var = True
+
+        n_references = len(n.in_edges())
+        if n_references == 0:
+            # Last node
+            lines.append(value_str)
+        elif n_references == 1 or no_temp_var:
+            # If just one reference, don't create a temp variable
+            hash_to_str[hash_] = value_str
+        else:
+            # Multiple references, so save as tmp variable
+            var_name = f"_{temp_index}"
+            temp_index += 1
+            hash_to_str[hash_] = var_name
+            lines.append(f"{var_name} = {value_str}")
+    return black.format_str("\n".join(lines), mode=black.FileMode(line_length=140))
+
+
+# Override the repr for an expression to display it as a string
+Expression.__repr__ = lambda self: graph_str(Graph(self))  # type: ignore
