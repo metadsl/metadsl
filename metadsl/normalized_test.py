@@ -109,6 +109,16 @@ def test_doesnt_remember_replacements():
     assert ref.expression == a(b(c()))
 
 
+class E(Expression):
+    @expression
+    @classmethod
+    def create(cls) -> E:
+        ...
+    
+    @expression
+    def method(self, other: typing.Any) -> typing.Any:
+        ... 
+
 @pytest.mark.parametrize(
     "expr,s",
     [
@@ -116,7 +126,9 @@ def test_doesnt_remember_replacements():
         pytest.param(c(), "c()", id="single"),
         pytest.param(b(c()), "b(c())", id="nested"),
         pytest.param(e(c(), c()), "_0 = c()\ne(_0, _0)", id="temp"),
+        pytest.param(E.create(), "E.create()", id="class method"),
+        pytest.param(E.create().method(c()), "E.create().method(c())", id="instance method"),
     ],
 )
 def test_graph_str(expr, s):
-    assert graph_str(Graph(expr)) == s
+    assert graph_str(Graph(expr)) == s + "\n"

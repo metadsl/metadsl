@@ -13,6 +13,8 @@ import black
 import igraph
 import IPython.core.display
 
+from metadsl.typing_tools import BoundInfer
+
 from .expressions import *
 
 __all__ = [
@@ -311,7 +313,7 @@ def graph_str(graph: Graph) -> str:
         hash_ = n["name"]
         expr = n["expression"]
         if isinstance(expr, Expression):
-            args = (
+            args = [
                 (f"{e['index']}=" if isinstance(e["index"], str) else "")
                 + hash_to_str[e.target_vertex["name"]]
                 # Sort edges with positional first, then keyword
@@ -319,8 +321,13 @@ def graph_str(graph: Graph) -> str:
                     n.out_edges(),
                     key=lambda e: (isinstance(e["index"], int), e["index"]),
                 )
-            )
-            value_str = f"{expr._function_str}({', '.join(args)})"
+            ]
+            # If this is a method, record it like that
+            if isinstance(expr.function, BoundInfer) and not expr.function.is_classmethod:
+                obj, *args = args
+                value_str = f"{obj}.{expr.function.fn.__name__}({', '.join(args)})"
+            else:
+                value_str = f"{expr._function_str}({', '.join(args)})"
             no_temp_var = False
         else:
             value_str = repr(expr)
