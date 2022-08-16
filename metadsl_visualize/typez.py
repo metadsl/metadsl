@@ -191,15 +191,15 @@ def json_value_to_expr(value: dict) -> metadsl.Expression:
             expression = type_instance_to_type(node.type)(
                 # TODO: replace typevars as well
                 function=function_value_to_fn(node.function_value),
-                args=[graph.lookup(Hash(a))["expression"] for a in node.args or []],
+                args=[graph._lookup(Hash(a))["expression"] for a in node.args or []],
                 kwargs={
-                    k: graph.lookup(Hash(v))["expression"]
+                    k: graph._lookup(Hash(v))["expression"]
                     for k, v in (node.kwargs or {}).items()
                 },
             )
         graph.add_vertex(expression=expression, name=node.id)
     assert typez.states
-    return graph.lookup(Hash(typez.states.initial))["expression"]
+    return graph._lookup(Hash(typez.states.initial))["expression"]
 
 def type_instance_to_type(type_instance: TypeInstance) -> type:
     """
