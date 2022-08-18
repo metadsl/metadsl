@@ -5,15 +5,14 @@ Dataflow based LLVMLite IR to create LLVMLite IR.
 from __future__ import annotations
 
 import typing
-import functools
 
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
-from .strategies import *
 
-from .ir import *
 from .integration import *
+from .ir import *
+from .strategies import *
 
 __all__ = ["llvm_fn", "to_llvm", "ValueExpr"]
 
@@ -131,14 +130,14 @@ def to_llvm(fn: AllFns) -> Fn:
 
 @typing.overload
 def _fn_n_rule(
-    mod_ref: ModRef, fn_n: FunctionOne[ValueExpr, ValueExpr], fn_tp: FnType,
+    mod_ref: ModRef, fn_n: FunctionOne[ValueExpr, ValueExpr], fn_tp: FnType
 ) -> R[FunctionOne[ValueExpr, ValueExpr]]:
     ...
 
 
 @typing.overload
 def _fn_n_rule(
-    mod_ref: ModRef, fn_n: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], fn_tp: FnType,
+    mod_ref: ModRef, fn_n: FunctionTwo[ValueExpr, ValueExpr, ValueExpr], fn_tp: FnType
 ) -> R[FunctionTwo[ValueExpr, ValueExpr, ValueExpr]]:
     ...
 
@@ -152,7 +151,7 @@ def _fn_n_rule(
     ...
 
 
-def _fn_n_rule(mod_ref: ModRef, fn_n: AllFns, fn_tp: FnType,) -> R[AllFns]:
+def _fn_n_rule(mod_ref: ModRef, fn_n: AllFns, fn_tp: FnType) -> R[AllFns]:
     fn_ref = mod_ref.fn(fn_n.name, fn_tp, "fastcc")
 
     # Use this to pass into fixed point operator so it can call itself
@@ -187,10 +186,7 @@ def _fn_n_rule(mod_ref: ModRef, fn_n: AllFns, fn_tp: FnType,) -> R[AllFns]:
         fn_n = from_llvm_fn_2(fn)
     else:
         fn_n = from_llvm_fn_3(fn)
-    return (
-        fn_expr,
-        fn_n,
-    )
+    return (fn_expr, fn_n)
 
 
 @register_context
@@ -301,7 +297,7 @@ def build_sub(l_exp: ValueExpr, r_exp: ValueExpr, block_ctx: BlockCtx) -> R[Valu
 @register_context
 @rule
 def build_icmp_signed(
-    l_exp: ValueExpr, r_exp: ValueExpr, operator: str, block_ctx: BlockCtx,
+    l_exp: ValueExpr, r_exp: ValueExpr, operator: str, block_ctx: BlockCtx
 ) -> R[ValueCtx]:
     target = l_exp.icmp_signed(operator, r_exp).build(block_ctx)
     l, block_ctx = l_exp.build(block_ctx).spread
@@ -319,7 +315,7 @@ def switch_block(
 @register_context
 @rule
 def build_cbranch(
-    cond_exp: ValueExpr, true_exp: ValueExpr, false_exp: ValueExpr, block_ctx: BlockCtx,
+    cond_exp: ValueExpr, true_exp: ValueExpr, false_exp: ValueExpr, block_ctx: BlockCtx
 ) -> R[ValueCtx]:
     """
     Builds a cbranch from two expressions, by creating a block for the true and false
