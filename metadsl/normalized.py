@@ -2,16 +2,20 @@
 Normalized expressions, for deduping and single replacements.
 """
 from __future__ import annotations
-import dataclasses
-import typing
-import itertools
+
 import collections
+import dataclasses
 import functools
-import IPython.core.display
+import itertools
+import typing
+
+import black
 import igraph
+import IPython.core.display
+import typing_inspect
 
 from .expressions import *
-
+from .typing_tools import BoundInfer, get_type
 
 __all__ = [
     "ExpressionReference",
@@ -37,11 +41,11 @@ class Graph(igraph.Graph):
     * `index`: int or string
     """
 
-    def __init__(self, expr: object):
+    def __init__(self, expr: object = None):
         super().__init__(directed=True)
-
-        self.fully_add_expression(expr, None)
-        self.assert_integrity()
+        if expr is not None:
+            self._fully_add_expression(expr, None)
+            self._assert_integrity()
 
     def _repr_svg_(self):
         return self.plot_custom()._repr_svg_()
@@ -58,7 +62,7 @@ class Graph(igraph.Graph):
             # vertex_shape="hidden",
         )
 
-    def fully_add_expression(
+    def _fully_add_expression(
         self,
         expr: object,
         replace: typing.Optional[typing.Tuple[Hash, object]],
@@ -69,7 +73,7 @@ class Graph(igraph.Graph):
         children = frozenset(
             (
                 index,
-                self.fully_add_expression(
+                self._fully_add_expression(
                     child_expression, replace, id(expr), *parent_ids
                 ),
             )
@@ -90,15 +94,15 @@ class Graph(igraph.Graph):
         # If we are replacing a hash with a new expression and this is the hash of current expression, use the new one instead
         # This means we have added a bunch of nodes we dont need possibly, so we can delete those at the end
         if replace and hash_ == replace[0]:
-            return self.fully_add_expression(replace[1], None, *parent_ids)
+            return self._fully_add_expression(replace[1], None, *parent_ids)
         try:
-            self.lookup(hash_)
+            self._lookup(hash_)
         except ValueError:
             v = self.add_vertex(expression=expr, name=hash_)
 
             for index, child_hash in children:
                 assert isinstance(expr, Expression)
-                child_v = self.lookup(child_hash)
+                child_v = self._lookup(child_hash)
                 self.add_edge(v, child_v, index=index)
                 if isinstance(index, int):
                     expr.args[index] = child_v["expression"]
@@ -106,13 +110,13 @@ class Graph(igraph.Graph):
                     expr.kwargs[index] = child_v["expression"]
         return Hash(hash_)
 
-    def lookup(self, hash_: Hash) -> igraph.Vertex:
+    def _lookup(self, hash_: Hash) -> igraph.Vertex:
         return self.vs.find(name=hash_)
 
     def replace_root(self, expr: object):
         self.delete_vertices(self.vs)
-        self.fully_add_expression(expr, None)
-        self.assert_integrity()
+        self._fully_add_expression(expr, None)
+        self._assert_integrity()
 
     def replace_child(self, expr: object, prev_index: int) -> None:
         # Compute previous hash on the fly instead of passing it in b/c even though previous index
@@ -123,17 +127,17 @@ class Graph(igraph.Graph):
         prev_expr = self.vs[prev_index]["expression"]
         # clear graph
         self.delete_vertices(self.vs)
-        prev_hash = self.fully_add_expression(prev_expr, None)
+        prev_hash = self._fully_add_expression(prev_expr, None)
 
         self.delete_vertices(self.vs)
-        new_hash = self.fully_add_expression(root_expression, (prev_hash, expr))
+        new_hash = self._fully_add_expression(root_expression, (prev_hash, expr))
         # Remove all vertice not children of new root node
         self.delete_vertices(
             set(self.vs.indices) - set(self.subcomponent(new_hash, igraph.OUT))
         )
-        self.assert_integrity()
+        self._assert_integrity()
 
-    def assert_integrity(self):
+    def _assert_integrity(self):
         assert self.is_dag()
         # Verify that this is one connected graph (not multiple roots)
         assert self.is_connected(igraph.WEAK)
@@ -290,3 +294,76 @@ def expression_children(
         return
     yield from enumerate(expr.args)
     yield from expr.kwargs.items()
+
+
+def graph_str(graph: Graph) -> str:
+    """
+    Returns a string of the graph.
+
+    Order vertices by topological order, print the leaves first as tmp variables.
+    If a leaf is a primitive (1, "dfd", None), don't create a temp variables for it.
+    When printing the function, use the named primitive if it exists or just print it.
+    """
+    indices = graph.topological_sorting(igraph.IN)
+    # Mapping from the string type name to the current index of the temp variable
+    tp_name_to_index: typing.DefaultDict[str, int] = collections.defaultdict(lambda: 0)
+    hash_to_str: dict[str, str] = {}
+    lines = []
+    for i in indices:
+        n = graph.vs[i]
+        hash_ = n["name"]
+        expr = n["expression"]
+        if isinstance(expr, Expression):
+            args = [
+                (f"{e['index']}=" if isinstance(e["index"], str) else "")
+                + hash_to_str[e.target_vertex["name"]]
+                # Sort edges with positional first, then keyword
+                for e in sorted(
+                    n.out_edges(),
+                    key=lambda e: (isinstance(e["index"], int), e["index"]),
+                )
+            ]
+            # If this is a method, record it like that
+            if (
+                isinstance(expr.function, BoundInfer)
+                and not expr.function.is_classmethod
+            ):
+                obj, *args = args
+                method_name = expr.function.fn.__name__
+                # Special case some dunder methods
+                if method_name == "__getitem__":
+                    value_str = f"{obj}[{args[0]}]"
+                else:
+                    value_str = f"{obj}.{method_name}({', '.join(args)})"
+            else:
+                value_str = f"{expr._function_str}({', '.join(args)})"
+            no_temp_var = False
+        else:
+            value_str = repr(expr)
+            # Never save a primitive value as a temp variable
+            no_temp_var = True
+
+        n_references = len(n.in_edges())
+        if n_references == 0:
+            # Last node
+            lines.append(value_str)
+        elif n_references == 1 or no_temp_var:
+            # If just one reference, don't create a temp variable
+            hash_to_str[hash_] = value_str
+        else:
+            # Multiple references, so save as tmp variable
+            if isinstance(expr, PlaceholderExpression):
+                (tp,) = typing_inspect.get_args(get_type(expr))
+            else:
+                tp = type(expr)
+            # Special case Any on Python < 3.10, it doesnt have a __name__
+            tp_name = tp.__name__.lower() if tp != typing.Any else "any"
+            var_name = f"{tp_name}_{tp_name_to_index[tp_name]}"
+            tp_name_to_index[tp_name] += 1
+            hash_to_str[hash_] = var_name
+            lines.append(f"{var_name} = {value_str}")
+    return black.format_str("\n".join(lines), mode=black.FileMode(line_length=140))
+
+
+# Override the repr for an expression to display it as a string
+Expression.__repr__ = lambda self: graph_str(Graph(self))  # type: ignore

@@ -3,10 +3,10 @@ Generate LLVM IR
 """
 
 from __future__ import annotations
+
 import typing
 
 import llvmlite.ir as ir
-
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
@@ -111,7 +111,7 @@ class _Uniq:
         return str(id(self))
 
     def __repr__(self) -> str:
-        return f"#{self}"
+        return "_Uniq()"
 
 
 class FnRef(Expression):

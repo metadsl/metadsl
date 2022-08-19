@@ -22,6 +22,41 @@
           },
           "type": "object"
         },
+        "type": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "params": {
+                  "additionalProperties": {
+                    "$ref": "#/definitions/alias-src%2Fschema.ts-3551-3690-src%2Fschema.ts-0-4814391487194"
+                  },
+                  "type": "object"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "repr": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "repr"
+              ],
+              "type": "object"
+            }
+          ],
+          "description": "A type that is passed into a function to set one of its  type"
+        },
         "type_params": {
           "additionalProperties": {
             "anyOf": [
@@ -30,7 +65,7 @@
                 "properties": {
                   "params": {
                     "additionalProperties": {
-                      "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4603391487194"
+                      "$ref": "#/definitions/alias-src%2Fschema.ts-3551-3690-src%2Fschema.ts-0-4814391487194"
                     },
                     "type": "object"
                   },
@@ -63,7 +98,28 @@
       },
       "required": [
         "id",
-        "function"
+        "function",
+        "type"
+      ],
+      "type": "object"
+    },
+    "FunctionValue": {
+      "additionalProperties": false,
+      "description": "The value of the function, either a top level one or a class method",
+      "properties": {
+        "class_": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "module",
+        "name"
       ],
       "type": "object"
     },
@@ -79,6 +135,9 @@
             "description": "A primitive node that represents some type in  the host language",
             "properties": {
               "id": {
+                "type": "string"
+              },
+              "python_pickle": {
                 "type": "string"
               },
               "repr": {
@@ -147,7 +206,7 @@
                               "properties": {
                                 "params": {
                                   "additionalProperties": {
-                                    "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
+                                    "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4814328996174"
                                   },
                                   "type": "object"
                                 },
@@ -212,7 +271,7 @@
                                 "properties": {
                                   "params": {
                                     "additionalProperties": {
-                                      "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
+                                      "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4814328996174"
                                     },
                                     "type": "object"
                                   },
@@ -273,7 +332,7 @@
                         "properties": {
                           "params": {
                             "additionalProperties": {
-                              "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
+                              "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4814328996174"
                             },
                             "type": "object"
                           },
@@ -368,7 +427,7 @@
       },
       "type": "object"
     },
-    "alias-src/schema.ts-2494-2600-src/schema.ts-0-4603328996174": {
+    "alias-src/schema.ts-2494-2600-src/schema.ts-0-4814328996174": {
       "anyOf": [
         {
           "additionalProperties": false,
@@ -387,7 +446,7 @@
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4603328996174"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-2494-2600-src%2Fschema.ts-0-4814328996174"
               },
               "type": "object"
             },
@@ -419,14 +478,14 @@
       ],
       "description": "A type we use  to define a function."
     },
-    "alias-src/schema.ts-3340-3479-src/schema.ts-0-4603391487194": {
+    "alias-src/schema.ts-3551-3690-src/schema.ts-0-4814391487194": {
       "anyOf": [
         {
           "additionalProperties": false,
           "properties": {
             "params": {
               "additionalProperties": {
-                "$ref": "#/definitions/alias-src%2Fschema.ts-3340-3479-src%2Fschema.ts-0-4603391487194"
+                "$ref": "#/definitions/alias-src%2Fschema.ts-3551-3690-src%2Fschema.ts-0-4814391487194"
               },
               "type": "object"
             },
