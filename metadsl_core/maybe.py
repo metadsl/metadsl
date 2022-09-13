@@ -1,12 +1,13 @@
 from __future__ import annotations
+
 import typing
 
 from metadsl import *
 from metadsl_rewrite import *
 
 from .abstraction import *
-from .strategies import *
 from .pair import *
+from .strategies import *
 
 __all__ = ["Maybe", "collapse_maybe"]
 T = typing.TypeVar("T")
@@ -66,6 +67,24 @@ class Maybe(Expression, typing.Generic[T]):
     @expression
     def flat_map(self, just: Abstraction[T, Maybe[U]]) -> Maybe[U]:
         return collapse_maybe(self.map(just))
+
+    @expression
+    def expect(self) -> T:
+        """
+        If the maybe is something, it returns that value, if it is nothing,
+        then it will never resolve.
+
+        >>> execute(Maybe.just(10).expect())
+        10
+        >>> execute(Maybe.nothing().expect())
+        Maybe.nothing().expect()
+        """
+        ...
+
+@register_core
+@rule
+def expect_maybe(x: T) -> R[T]:
+    return Maybe.just(x).expect(), x
 
 
 @expression

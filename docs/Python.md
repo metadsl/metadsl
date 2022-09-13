@@ -3,7 +3,8 @@
 ## CPython Code Execution Entrypoints
 
 What are the ways that CPython code can be executed? Here are some entrypoints
-with the tracebacks for code xecution
+with the tracebacks for code exection (found by setting breakpoints and triggering
+these all...):
 
 1. `eval(...)`
     1. `_PyEval_EvalFrameDefault`
@@ -75,5 +76,17 @@ with the tracebacks for code xecution
     10. `PyRun_AnyFileExFlags`
     11. `pymain_run_stdin`
     12. ...
- 
- 
+7. Function call
+    1. `_PyEval_EvalFrameDefault`
+    2. `_PyEval_EvalFrame`
+    3. `_PyEval_Vector`
+    4. `_PyFunction_Vectorcall`
+    5. `builtin___build_class__`
+    6. `cfunction_vectorcall_FASTCALL_KEYWORDS`
+    7. ...
+8. TODO: `gen_send_ex2` for generators calls `_PyEval_EvalFrame` as well
+
+
+Now what we can think about is which function to recreate in metadsl in order
+to do symbolic execution of CPython. One common denominator is `_PyEval_Vector`
+so lets try to replicate this function in metadsl...
