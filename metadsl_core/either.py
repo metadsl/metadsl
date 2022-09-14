@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import typing
 
 from metadsl import *
 from metadsl_rewrite import *
+
+from .abstraction import *
 from .conversion import *
 from .maybe import *
-from .abstraction import *
 from .strategies import *
 
 __all__ = ["Either"]
@@ -15,18 +17,15 @@ U = typing.TypeVar("U")
 V = typing.TypeVar("V")
 
 
-class Either(Expression, typing.Generic[T, U]):
-    @expression
+class Either(Expression, typing.Generic[T, U], wrap_methods=True):
     @classmethod
     def left(cls, value: T) -> Either[T, U]:
         ...
 
-    @expression
     @classmethod
     def right(cls, value: U) -> Either[T, U]:
         ...
 
-    @expression
     def match(self, left: Abstraction[T, V], right: Abstraction[U, V]) -> V:
         ...
 

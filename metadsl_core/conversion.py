@@ -21,8 +21,8 @@ V = typing.TypeVar("V")
 X = typing.TypeVar("X")
 
 
-class Converter(Expression, typing.Generic[T]):
-    @expression
+class Converter(Expression, typing.Generic[T], wrap_methods=True):
+
     @classmethod
     def convert(cls, value: object) -> Maybe[T]:
         """

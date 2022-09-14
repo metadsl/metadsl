@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing
 
 from metadsl import *
-
 from metadsl_rewrite import *
 
 from .abstraction import *
@@ -17,31 +16,24 @@ T = typing.TypeVar("T")
 U = typing.TypeVar("U")
 
 
-class Boolean(Expression):
-    # TODO: Remove this
-    @expression
+class Boolean(Expression, wrap_methods=True):
     @classmethod
     def create(cls, b: bool) -> Boolean:
         ...
 
-    @expression
     def if_(self, true: T, false: T) -> T:
         ...
 
-    @expression
     def and_(self, other: Boolean) -> Boolean:
         ...
 
-    @expression
     def or_(self, other: Boolean) -> Boolean:
         ...
 
-    @expression
     @classmethod
     def true(cls) -> Boolean:
         return Boolean.create(True)
 
-    @expression
     @classmethod
     def false(cls) -> Boolean:
         return Boolean.create(False)

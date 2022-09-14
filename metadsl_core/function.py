@@ -8,15 +8,15 @@ function.
 """
 from __future__ import annotations
 
+import typing
 
 from metadsl import *
 from metadsl_rewrite import *
 
-from .strategies import *
 from .abstraction import *
 from .conversion import *
 from .maybe import *
-import typing
+from .strategies import *
 
 __all__ = ["FunctionZero", "FunctionOne", "FunctionTwo", "FunctionThree"]
 
@@ -27,49 +27,42 @@ V = typing.TypeVar("V")
 X = typing.TypeVar("X")
 
 
-class FunctionZero(Expression, typing.Generic[T]):
+class FunctionZero(Expression, typing.Generic[T], wrap_methods=True):
     """
     Function with zero args.
     """
 
-    @expression
     @classmethod
     def from_fn(cls, fn: typing.Callable[[], T]) -> FunctionZero[T]:
         return cls.create(fn.__name__, fn())
 
-    @expression
     def __call__(self) -> T:
         ...
 
-    @expression
     @classmethod
     def create(cls, name: str, val: T) -> FunctionZero[T]:
         ...
 
     @property  # type: ignore
-    @expression
     def value(self) -> T:
         ...
 
-    @expression  # type: ignore
     @property
     def name(self) -> str:
         ...
 
 
-class FunctionOne(Expression, typing.Generic[T, U]):
+class FunctionOne(Expression, typing.Generic[T, U], wrap_methods=True):
     """
     Function with one arg.
     """
 
-    @expression
     @classmethod
     def from_fn(
         cls, fn: typing.Callable[[T], U], name=Maybe[str].nothing()
     ) -> FunctionOne[T, U]:
         return cls.create(name.default(fn.__name__), Abstraction.from_fn(fn))
 
-    @expression
     @classmethod
     def from_fn_recursive(
         cls, fn: typing.Callable[[FunctionOne[T, U], T], U]
@@ -87,37 +80,31 @@ class FunctionOne(Expression, typing.Generic[T, U]):
 
         return cls.create(fn.__name__, inner)
 
-    @expression
     def __call__(self, arg: T) -> U:
         ...
 
-    @expression
     @classmethod
     def create(cls, name: str, val: Abstraction[T, U]) -> FunctionOne[T, U]:
         ...
 
-    @expression  # type: ignore
     @property
     def abstraction(self) -> Abstraction[T, U]:
         ...
 
-    @expression  # type: ignore
     @property
     def name(self) -> str:
         ...
 
-    @expression  # type: ignore
     @property
     def unfix(self) -> Abstraction[FunctionOne[T, U], FunctionOne[T, U]]:
         ...
 
 
-class FunctionTwo(Expression, typing.Generic[T, U, V]):
+class FunctionTwo(Expression, typing.Generic[T, U, V], wrap_methods=True):
     """
     Function with two args.
     """
 
-    @expression
     @classmethod
     def from_fn(cls, fn: typing.Callable[[T, U], V]) -> FunctionTwo[T, U, V]:
         def inner(arg1: T) -> Abstraction[U, V]:
@@ -128,7 +115,6 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
 
         return cls.create(fn.__name__, Abstraction.from_fn(inner))
 
-    @expression
     @classmethod
     def from_fn_recursive(
         cls, fn: typing.Callable[[FunctionTwo[T, U, V], T, U], V]
@@ -152,39 +138,33 @@ class FunctionTwo(Expression, typing.Generic[T, U, V]):
 
         return cls.create(fn.__name__, inner)
 
-    @expression
     def __call__(self, arg1: T, arg2: U) -> V:
         ...
 
-    @expression
     @classmethod
     def create(
         cls, name: str, val: Abstraction[T, Abstraction[U, V]]
     ) -> FunctionTwo[T, U, V]:
         ...
 
-    @expression  # type: ignore
     @property
     def abstraction(self) -> Abstraction[T, Abstraction[U, V]]:
         ...
 
-    @expression  # type: ignore
     @property
     def name(self) -> str:
         ...
 
-    @expression  # type: ignore
     @property
     def unfix(self) -> Abstraction[FunctionTwo[T, U, V], FunctionTwo[T, U, V]]:
         ...
 
 
-class FunctionThree(Expression, typing.Generic[T, U, V, X]):
+class FunctionThree(Expression, typing.Generic[T, U, V, X], wrap_methods=True):
     """
     Function with three args.
     """
 
-    @expression
     @classmethod
     def from_fn(cls, fn: typing.Callable[[T, U, V], X]) -> FunctionThree[T, U, V, X]:
         @Abstraction.from_fn
@@ -201,7 +181,6 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
 
         return cls.create(fn.__name__, inner)
 
-    @expression
     @classmethod
     def from_fn_recursive(
         cls, fn: typing.Callable[[FunctionThree[T, U, V, X], T, U, V], X]
@@ -229,28 +208,23 @@ class FunctionThree(Expression, typing.Generic[T, U, V, X]):
 
         return cls.create(fn.__name__, inner)
 
-    @expression
     def __call__(self, arg1: T, arg2: U, arg3: V) -> X:
         ...
 
-    @expression
     @classmethod
     def create(
         cls, name: str, val: Abstraction[T, Abstraction[U, Abstraction[V, X]]]
     ) -> FunctionThree[T, U, V, X]:
         ...
 
-    @expression  # type: ignore
     @property
     def abstraction(self) -> Abstraction[T, Abstraction[U, Abstraction[V, X]]]:
         ...
 
-    @expression  # type: ignore
     @property
     def name(self) -> str:
         ...
 
-    @expression  # type: ignore
     @property
     def unfix(
         self,

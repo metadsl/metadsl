@@ -16,72 +16,56 @@ __all__ = ["Integer"]
 T = typing.TypeVar("T")
 
 
-class Integer(Expression):
-    @expression
+class Integer(Expression, wrap_methods=True):
     @classmethod
     def from_int(cls, i: int) -> Integer:
         ...
 
-    @expression
     def __add__(self, other: Integer) -> Integer:
         ...
 
-    @expression
     def __sub__(self, other: Integer) -> Integer:
         ...
 
-    @expression
     def __mul__(self, other: Integer) -> Integer:
         ...
 
-    @expression
     def __floordiv__(self, other: Integer) -> Integer:
         ...
 
-    @expression
     def __mod__(self, other: Integer) -> Integer:
         ...
 
-    @expression
     def eq(self, other: Integer) -> Boolean:
         ...
 
-    @expression
     def __lt__(self, other: Integer) -> Boolean:
         ...
 
-    @expression
     def __le__(self, other: Integer) -> Boolean:
         ...
 
-    @expression
     def __gt__(self, other: Integer) -> Boolean:
         ...
 
-    @expression
     def __ge__(self, other: Integer) -> Boolean:
         ...
 
-    @expression
     def fold(self, initial: T, fn: Abstraction[Integer, Abstraction[T, T]]) -> T:
         ...
 
-    @expression
     @classmethod
     def zero(cls) -> Integer:
         return Integer.from_int(0)
 
-    @expression
     @classmethod
     def one(cls) -> Integer:
         return cls.zero().inc
 
-    @expression  # type: ignore
     @property
     def inc(self) -> Integer:
         return self + Integer.from_int(1)
 
-    @expression
     @classmethod
     def infinity(cls) -> Integer:
         ...
