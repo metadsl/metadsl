@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import typing
 
 from metadsl import *
@@ -14,7 +15,7 @@ V = typing.TypeVar("V")
 
 
 class Pair(Expression, typing.Generic[T, U]):
-    @expression  # type: ignore
+    @expression  # type: ignore 
     @property
     def left(self) -> T:
         ...

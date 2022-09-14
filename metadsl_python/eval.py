@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from types import CodeType
+
 from metadsl import Expression, expression
 from metadsl_core import Abstraction, Either, Integer, Maybe, Pair
 from metadsl_core.boolean import Boolean
 from metadsl_rewrite import R, default_rule, register, rule
-
-from .code import Code, FunctionCodeType
 
 register_eval = register[__name__]
 
@@ -25,6 +25,7 @@ def _PyEval_Vector(
     """
     f = _PyEval_MakeFrameVector(state, tstate, con, locals, args, argcount, kwnames)
 
+    if code
     # This is a corootuine if it has a function type and that type is a coroutine type.
     is_coro = tstate.code.type.match(
         Boolean.false,
@@ -65,7 +66,7 @@ class PyFrameObject(Expression):
 class PyThreadState(Expression):
     @expression
     @property
-    def code(self) -> Code:
+    def code(self) -> CodeType:
         ...
 
 
@@ -74,7 +75,7 @@ class PyFrameConstructor(Expression):
     # TODO
     @expression
     @property
-    def code(self) -> Code:
+    def code(self) -> CodeType:
         ...
 
 
