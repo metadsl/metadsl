@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import typing
-import typing_inspect
+
 import pytest
+import typing_inspect
 
 from .expressions import *
 
@@ -139,3 +140,22 @@ U = typing.TypeVar("U")
 def test_clone_expression_generic():
     assert clone_expression(Generic[T].create()) == Generic[T].create()
     assert clone_expression(Generic[U].create()) == Generic[U].create()
+
+
+class A(Expression, wrap_methods=True):
+    @classmethod
+    def create(cls) -> A:
+        ...
+
+    def method(self) -> A:
+        ...
+
+    @property
+    def prop(self) -> A:
+        ...
+    
+
+def test_wrap_method() -> None:
+    assert A.create() == A(A.create, [], {})
+    assert A.create().method() == A(A.method, [A(A.create, [], {})], {})
+    assert A.create().prop == A(A.prop, [A(A.create, [], {})], {})
