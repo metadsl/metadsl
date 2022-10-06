@@ -88,16 +88,14 @@ class Selection(Expression):
 register_ds(default_rule(Selection.create_slice_optional))
 
 
-class Vec(Expression, typing.Generic[T]):
+class Vec(Expression, typing.Generic[T], wrap_methods=True):
     """
     A tuple of homogonous types.
     """
 
-    @expression
     def __getitem__(self, index: Integer) -> T:
         ...
 
-    @expression
     def select(self, selection: Selection) -> Vec[T]:
         ...
 
@@ -107,20 +105,16 @@ class Vec(Expression, typing.Generic[T]):
     # @expression
     # def full_single_index
 
-    @expression
     @classmethod
     def create(cls, *items: T) -> Vec[T]:
         ...
 
-    @expression
     def map(self, fn: Abstraction[T, U]) -> Vec[U]:
         ...
 
-    @expression
     def append(self, x: T) -> Vec[T]:
         ...
 
-    @expression
     def fold(self, initial: U, fn: Abstraction[U, Abstraction[T, U]]) -> U:
         """
         Like this:
@@ -132,54 +126,43 @@ class Vec(Expression, typing.Generic[T]):
                 return ret
         """
 
-    @expression
     def __add__(self, other: Vec[T]) -> Vec[T]:
         ...
 
-    @expression  # type: ignore
     @property
     def length(self) -> Integer:
         ...
 
-    @expression
     def take(self, i: Integer) -> Vec[T]:
         ...
 
-    @expression
     def drop(self, i: Integer) -> Vec[T]:
         ...
 
-    @expression
     def pop(self) -> Pair[Vec[T], T]:
         """
         Pops the first element off the vector and returns it and the rest of the vector.
         """
         ...
 
-    @expression
     @classmethod
     def create_fn(cls, length: Integer, fn: Abstraction[Integer, T]) -> Vec[T]:
         ...
 
-    @expression
     @classmethod
     def lift_maybe(cls, vec: Vec[Maybe[T]]) -> Maybe[Vec[T]]:
         ...
 
-    @expression
     def set(self, i: Integer, value: T) -> Vec[T]:
         ...
 
-    @expression
     def set_selection(self, s: Selection, values: Vec[T]) -> Vec[T]:
         ...
 
-    @expression  # type: ignore
     @property
     def empty(self) -> Boolean:
         return self.length.eq(Integer.zero())
 
-    @expression  # type: ignore
     @property
     def first(self) -> Maybe[T]:
         return self.empty.if_(Maybe[T].nothing(), Maybe.just(self[Integer.zero()]))

@@ -15,37 +15,31 @@ U = typing.TypeVar("U")
 V = typing.TypeVar("V")
 
 
-class Maybe(Expression, typing.Generic[T]):
+class Maybe(Expression, typing.Generic[T], wrap_methods=True):
     """
     An optional value.
     """
 
-    @expression
     @classmethod
     def nothing(cls) -> Maybe[T]:
         ...
 
-    @expression
     @classmethod
     def just(cls, value: T) -> Maybe[T]:
         ...
 
-    @expression
     def match(self, nothing: U, just: Abstraction[T, U]) -> U:
         ...
 
-    @expression
     def default(self, value: T) -> T:
         return self.match(value, Abstraction[T, T].from_fn(lambda i: i))
 
-    @expression
     def __or__(self, other: Maybe[T]) -> Maybe[T]:
         """
         Like the <|> function https://en.wikibooks.org/wiki/Haskell/Alternative_and_MonadPlus
         """
         ...
 
-    @expression
     def __and__(self, other: Maybe[U]) -> Maybe[Pair[T, U]]:
         """
         >>> execute(Maybe[int].nothing() & Maybe.just("")) == Maybe[Pair[int, str]].nothing()
@@ -57,14 +51,12 @@ class Maybe(Expression, typing.Generic[T]):
         """
         ...
 
-    @expression
     def map(self, just: Abstraction[T, U]) -> Maybe[U]:
         return self.match(
             Maybe[U].nothing(),
             Abstraction[U, Maybe[U]].from_fn(lambda v: Maybe.just(v)) + just,  # type: ignore
         )
 
-    @expression
     def flat_map(self, just: Abstraction[T, Maybe[U]]) -> Maybe[U]:
         return collapse_maybe(self.map(just))
 

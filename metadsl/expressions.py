@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import itertools
+import types
 import typing
 
 import typing_inspect
@@ -101,7 +102,19 @@ class Expression(GenericCheck):
             and self.args == value.args
             and self.kwargs == value.kwargs
         )
-
+    
+    @classmethod
+    def __init_subclass__(cls, /, wrap_methods=False, **kwargs) -> None:
+        """
+        If `wrap_methods` is passed in a subclass, wrap all methods in an `expresion` decorator.
+        """
+        super().__init_subclass__(**kwargs)
+        if not wrap_methods:
+            return
+        for k, v in cls.__dict__.items():
+            if isinstance(v, (types.FunctionType, property, classmethod)):
+                # Need to use this setattr, instead of `setattr` so we can set the descriptor
+                type(cls).__setattr__(cls, k, expression(typing.cast(typing.Callable, v)))
 
 def clone_expression(expr: T) -> T:
     if isinstance(expr, Expression):

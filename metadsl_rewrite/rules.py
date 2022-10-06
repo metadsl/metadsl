@@ -25,7 +25,7 @@ from metadsl.typing_tools import *
 
 from .strategies import *
 
-__all__ = ["R", "NoMatch", "rule", "default_rule", "create_wildcard"]
+__all__ = ["R", "NoMatch", "rule", "default_rule", "create_wildcard", "datatype_rule"]
 
 T = typing.TypeVar("T")
 
@@ -62,6 +62,81 @@ def default_rule(fn: typing.Callable) -> Strategy:
     Creates a strategy based on the body of a passed in expression function
     """
     return DefaultRule(fn)
+
+
+def datatype_rule(cls: type[Expression]) -> Strategy:
+    """
+    Creates a rule that matches a datatype and returns the replacement value
+    """
+
+    # For this rule, we generate a match function we can use for a regular rul,e
+    # and use that functionality to match on it.
+
+
+    # First determine the names and types of the fields in the dataclass, by looking
+    # at the create function
+    if not hasattr(cls, "create"):
+        raise ValueError(f"{cls} must have create method")
+    create_fn = cls.create #type: ignore
+    if not isinstance(create_fn, BoundInfer):
+        raise ValueError(f"create method of {cls} must be an expression")
+    if not create_fn.is_classmethod:
+        raise ValueError(f"create method of {cls} must be a classmethod")
+    fields = dict(create_fn.__annotations__)
+    if fields.pop("return") not in {cls, cls.__qualname__}:
+        raise ValueError(f"create method of {cls} must return {cls}")
+
+    n_fields = len(fields)
+
+    # Then verify that for each field there is a getter property and a setter method
+    for k, v in fields.items():
+        getter = getattr(cls, k)
+        if not isinstance(getter, BoundInfer):
+            raise ValueError(f"{k} method of {cls} must be an expression")
+        if v != getter.fn.__annotations__['return']:
+            raise ValueError(f"Type of {cls}.{k} does not match type of {cls}.create({k})")
+        
+        setter_name = f"set_{k}"
+        setter = getattr(cls, setter_name)
+        if not isinstance(setter, BoundInfer):
+            raise ValueError(f"{setter_name} method of {cls} must be an expression")
+            
+        setter_annotations = setter.fn.__annotations__
+        if setter_annotations != {k: v, "return": cls} and setter_annotations != {k: v, "return": cls.__qualname__}:
+            raise ValueError(f"{setter_name} of {cls} has incorrect signature {setter_annotations}")
+
+    # Now create a custom match function that will replace each getter and setter
+
+    def match_fn(*args, n_fields=n_fields, fields=fields, cls=cls):
+        # We will pass into the functions two sets of wildcards of each arg, one for the initial value
+        # and one for the replaced value. We will call the second one {k}_prime
+        initial_args = args[:n_fields]
+        setter_args = args[n_fields:]
+        obj = cls.create(*initial_args) #type: ignore
+        for i, k in enumerate(fields):
+            # accessor
+            yield getattr(obj, k), args[i]
+            # setter
+            replaced_value = setter_args[i]
+            with_replaced_value = [setter_args[i_] if i_ == i else initial_args[i_] for i_ in range(n_fields)]
+            yield getattr(obj, f"set_{k}")(replaced_value), cls.create(*with_replaced_value) #type: ignore
+
+    # Now update the annotations, signature, and naming so that the rule can introspect it.
+    match_fn.__annotations__ = {**fields, **{f"{k}_prime": v for k, v in fields.items()}}
+    match_fn.__signature__ = inspect.Signature(  #type: ignore
+        [
+            inspect.Parameter(k, inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=v)
+            for k, v in fields.items()
+        ]
+        + [
+            inspect.Parameter(f"{k}_prime", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=v)
+            for k, v in fields.items()
+        ]
+    )
+
+    match_fn.__module__ = cls.__module__
+    match_fn.__qualname__ = cls.__qualname__
+    return Rule(match_fn)
 
 
 @dataclasses.dataclass(unsafe_hash=True)
