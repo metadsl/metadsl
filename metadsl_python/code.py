@@ -1,5 +1,8 @@
 """
 Wrapper around code_data types, so that we can mach against them.
+
+All types are prefixed with `M` to differentiate between the wrapped versions in a
+concise way.
 """
 
 from __future__ import annotations
@@ -15,8 +18,6 @@ from metadsl_core import Integer, Maybe
 from metadsl_core.vec import Vec
 from metadsl_rewrite import R, datatype_rule, register, rule
 from metadsl_rewrite.rules import default_rule
-
-register_code = register[__name__]
 
 
 class MCode(Expression, wrap_methods=True):
@@ -99,21 +100,6 @@ class MCode(Expression, wrap_methods=True):
 
     @classmethod
     def from_code_data(cls, code_data: CodeData) -> MCode:
-        ...
-
-    @classmethod
-    def from_code(cls, code: CodeType) -> MCode:
-        return cls.from_code_data(CodeData.from_code(code))
-
-
-register_code(datatype_rule(MCode))
-register_code(default_rule(MCode.from_code))
-
-
-@register_code
-@rule
-def _mcode_from_code_data(code_data: CodeData) -> R[MCode]:
-    def inner():
         return MCode.create(
             MBlocks.from_blocks(code_data.blocks),
             code_data.filename,
@@ -125,7 +111,9 @@ def _mcode_from_code_data(code_data: CodeData) -> R[MCode]:
             code_data.future_annotations,
         )
 
-    return MCode.from_code_data(code_data), inner
+    @classmethod
+    def from_code(cls, code: CodeType) -> MCode:
+        return cls.from_code_data(CodeData.from_code(code))
 
 
 class MBlocks(Expression, wrap_methods=True):
@@ -149,9 +137,6 @@ class MBlocks(Expression, wrap_methods=True):
         )
 
 
-register_code(default_rule(MBlocks.from_blocks))
-
-
 class MInstruction(Expression, wrap_methods=True):
     """
     A single instruction
@@ -168,9 +153,6 @@ class MInstruction(Expression, wrap_methods=True):
             MArg.from_arg(instruction.arg),
             instruction.line_number,
         )
-
-
-register_code(default_rule(MInstruction.from_instruction))
 
 
 class MArg(Expression, wrap_methods=True):
@@ -226,9 +208,6 @@ class MArg(Expression, wrap_methods=True):
         return MArg.none()
 
 
-register_code(default_rule(MArg.from_arg))
-
-
 class MTypeOfCode(Expression, wrap_methods=True):
     @classmethod
     def none(cls) -> MTypeOfCode:
@@ -264,10 +243,6 @@ class MTypeOfCode(Expression, wrap_methods=True):
             type_of_code.docstring,
             MFunctionType.from_function_type(type_of_code.type),
         )
-
-
-register_code(datatype_rule(MTypeOfCode))
-register_code(default_rule(MTypeOfCode.from_type_of_code))
 
 
 class MArgs(Expression, wrap_methods=True):
@@ -317,13 +292,6 @@ class MArgs(Expression, wrap_methods=True):
         )
 
 
-register_code(datatype_rule(MArgs))
-register_code(default_rule(MArgs.from_args))
-
-
-T = TypeVar("T")
-
-
 class MFunctionType(Expression, wrap_methods=True):
     @classmethod
     def generator(cls) -> MFunctionType:
@@ -358,11 +326,32 @@ class MFunctionType(Expression, wrap_methods=True):
         return MFunctionType.normal()
 
 
+
+T = TypeVar("T")
+
+register_code = register[__name__]
+
+
+register_code(datatype_rule(MCode))
+register_code(default_rule(MCode.from_code))
+register_code(default_rule(MCode.from_code_data))
+
+register_code(default_rule(MBlocks.from_blocks))
+
+register_code(default_rule(MInstruction.from_instruction))
+
+register_code(default_rule(MArg.from_arg))
+
+register_code(datatype_rule(MTypeOfCode))
+register_code(default_rule(MTypeOfCode.from_type_of_code))
+
+register_code(datatype_rule(MArgs))
+register_code(default_rule(MArgs.from_args))
+
+
 @register_code
 @rule
-def _m_function_type_match(
-    generator: T, coroutine: T, async_generator: T, normal: T
-):
+def _m_function_type_match(generator: T, coroutine: T, async_generator: T, normal: T):
     yield MFunctionType.generator().match(
         generator, coroutine, async_generator, normal
     ), generator
