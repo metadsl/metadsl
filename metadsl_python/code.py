@@ -1,110 +1,280 @@
 """
-
+Wrapper around code_data types, so that we can mach against them.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from types import CodeType
-from typing import Optional
+from typing import Optional, TypeVar
 
-from code_data import CodeData, Function, TypeOfCode
+from code_data import (Arg, Args, Blocks, Cellvar, CodeData, Constant,
+                       ConstantValue, Freevar, FunctionType, Instruction, Jump,
+                       Name, NoArg, TypeOfCode, Varname)
 from metadsl import Expression
-from metadsl.expressions import expression
-from metadsl_core import Abstraction, Either, Integer, Maybe, Pair
-from metadsl_core.boolean import Boolean
-from metadsl_core.function import FunctionTwo
+from metadsl_core import Integer, Maybe
 from metadsl_core.vec import Vec
-from metadsl_rewrite import R, register, rule
+from metadsl_rewrite import R, datatype_rule, register, rule
+from metadsl_rewrite.rules import default_rule
 
 register_code = register[__name__]
 
 
-class Code(Expression):
+class MCode(Expression, wrap_methods=True):
     """
     A python bytecode objects.
 
     1. List of instructions, each which deal with the stack
     2.
-
     """
 
-    @expression
+    @classmethod
+    def create(
+        cls,
+        blocks: MBlocks,
+        filename: str,
+        first_line_number: int,
+        name: str,
+        stacksize: int,
+        type: MTypeOfCode,
+        freevars: Vec[str],
+        future_annotations: bool,
+    ) -> MCode:
+        ...
+
     @property
-    def type(self) -> Maybe[FunctionCodeType]:
+    def blocks(self) -> MBlocks:
         ...
 
-    # @expression
-    # @classmethod
-    # def create(
-    #     cls,
-    #     # Make this vec of state -> state?
-    #     fn: Abstraction[State, State],
-    #     filename: str,
-    #     line_number: int,
-    #     name: str,
-    #     type: TypeOfCode,
-    #     freevars: tuple[str, ...],
-    #     future_annotations: bool,
-    # ) -> Code:
-    #     ...
+    @property
+    def filename(self) -> str:
+        ...
 
-    @expression
-    @classmethod
-    def from_code_data(cls, code_data: CodeData) -> Code:
+    @property
+    def first_line_number(self) -> int:
+        ...
+
+    @property
+    def name(self) -> str:
+        ...
+
+    @property
+    def stacksize(self) -> int:
+        ...
+
+    @property
+    def type(self) -> MTypeOfCode:
+        ...
+
+    @property
+    def freevars(self) -> Vec[str]:
+        ...
+
+    @property
+    def future_annotations(self) -> bool:
+        ...
+
+    def set_blocks(self, blocks: MBlocks) -> MCode:
+        ...
+
+    def set_filename(self, filename: str) -> MCode:
+        ...
+
+    def set_first_line_number(self, first_line_number: int) -> MCode:
+        ...
+
+    def set_name(self, name: str) -> MCode:
+        ...
+
+    def set_stacksize(self, stacksize: int) -> MCode:
+        ...
+
+    def set_type(self, type: MTypeOfCode) -> MCode:
+        ...
+
+    def set_freevars(self, freevars: Vec[str]) -> MCode:
+        ...
+
+    def set_future_annotations(self, future_annotations: bool) -> MCode:
         ...
 
     @classmethod
-    def from_code(cls, code: CodeType) -> Code:
+    def from_code_data(cls, code_data: CodeData) -> MCode:
+        ...
+
+    @classmethod
+    def from_code(cls, code: CodeType) -> MCode:
         return cls.from_code_data(CodeData.from_code(code))
 
 
-class FunctionCodeType(Expression):
-    @expression
+register_code(datatype_rule(MCode))
+register_code(default_rule(MCode.from_code))
+
+
+@register_code
+@rule
+def _mcode_from_code_data(code_data: CodeData) -> R[MCode]:
+    def inner():
+        return MCode.create(
+            MBlocks.from_blocks(code_data.blocks),
+            code_data.filename,
+            code_data.first_line_number,
+            code_data.name,
+            code_data.stacksize,
+            MTypeOfCode.from_type_of_code(code_data.type),
+            Vec.create(*code_data.freevars),
+            code_data.future_annotations,
+        )
+
+    return MCode.from_code_data(code_data), inner
+
+
+class MBlocks(Expression, wrap_methods=True):
+    """
+    A list of blocks
+    """
+
     @classmethod
-    def from_data(cls, code_data_function: Function) -> FunctionType:
+    def create(cls, blocks: Vec[Vec[MInstruction]]) -> MBlocks:
         ...
 
-    @expression
+    @classmethod
+    def from_blocks(cls, blocks: Blocks) -> MBlocks:
+        return MBlocks.create(
+            Vec.create(
+                *(
+                    Vec.create(*(MInstruction.from_instruction(i) for i in b))
+                    for b in blocks
+                )
+            )
+        )
+
+
+register_code(default_rule(MBlocks.from_blocks))
+
+
+class MInstruction(Expression, wrap_methods=True):
+    """
+    A single instruction
+    """
+
+    @classmethod
+    def create(cls, name: str, arg: MArg, line_number: Optional[int]) -> MInstruction:
+        ...
+
+    @classmethod
+    def from_instruction(cls, instruction: Instruction) -> MInstruction:
+        return MInstruction.create(
+            instruction.name,
+            MArg.from_arg(instruction.arg),
+            instruction.line_number,
+        )
+
+
+register_code(default_rule(MInstruction.from_instruction))
+
+
+class MArg(Expression, wrap_methods=True):
+    @classmethod
+    def int(cls, value: int) -> MArg:
+        ...
+
+    @classmethod
+    def jump(cls, target: Integer) -> MArg:
+        ...
+
+    @classmethod
+    def name(cls, name: str) -> MArg:
+        ...
+
+    @classmethod
+    def varname(cls, varname: str) -> MArg:
+        ...
+
+    @classmethod
+    def constant(cls, constant: ConstantValue) -> MArg:
+        ...
+
+    @classmethod
+    def freevar(cls, freevar: str) -> MArg:
+        ...
+
+    @classmethod
+    def cellvar(cls, cellvar: str) -> MArg:
+        ...
+
+    @classmethod
+    def none(cls) -> MArg:
+        ...
+
+    @classmethod
+    def from_arg(cls, arg: Arg) -> MArg:
+        if isinstance(arg, int):
+            return MArg.int(arg)
+        if isinstance(arg, Jump):
+            return MArg.jump(Integer.from_int(arg.target))
+        if isinstance(arg, Name):
+            return MArg.name(arg.name)
+        if isinstance(arg, Varname):
+            return MArg.varname(arg.varname)
+        if isinstance(arg, Constant):
+            return MArg.constant(arg.constant)
+        if isinstance(arg, Freevar):
+            return MArg.freevar(arg.freevar)
+        if isinstance(arg, Cellvar):
+            return MArg.cellvar(arg.cellvar)
+        assert isinstance(arg, NoArg)
+        return MArg.none()
+
+
+register_code(default_rule(MArg.from_arg))
+
+
+class MTypeOfCode(Expression, wrap_methods=True):
+    @classmethod
+    def none(cls) -> MTypeOfCode:
+        ...
+
+    @classmethod
+    def create(
+        cls,
+        args_: MArgs,
+        docstring: Optional[str],
+        type: MFunctionType,
+    ) -> MTypeOfCode:
+        ...
+
     @property
-    def docstring() -> Maybe[str]:
+    def docstring(self) -> Maybe[str]:
         ...
 
-    @expression
     @property
-    def type(self) -> FunctionType:
+    def type(self) -> MFunctionType:
         ...
 
-    @expression
     @property
-    def args(self) -> Args:
+    def args_(self) -> MArgs:
         ...
 
+    @classmethod
+    def from_type_of_code(cls, type_of_code: TypeOfCode) -> MTypeOfCode:
+        if type_of_code is None:
+            return MTypeOfCode.none()
+        return cls.create(
+            MArgs.from_args(type_of_code.args),
+            type_of_code.docstring,
+            MFunctionType.from_function_type(type_of_code.type),
+        )
 
-class Args(Expression):
+
+register_code(datatype_rule(MTypeOfCode))
+register_code(default_rule(MTypeOfCode.from_type_of_code))
+
+
+class MArgs(Expression, wrap_methods=True):
     """
     The arguments of a function.
-
-    >>> a = Args.create(
-        positional_only=Vec.create("a"),
-        positional_or_keyword=Vec.create("b"),
-        var_positional=Maybe.just("c"),
-        keyword_only=Vec.create("d"),
-        var_keyword=Maybe.just("e"),
-    )
-    >>> execute(a.positional_only)
-    Vec.create("a")
-    >>> execute(a.positional_or_keyword)
-    Vec.create("b")
-    >>> execute(a.var_positional)
-    Maybe.just("c")
-    >>> execute(a.keyword_only)
-    Vec.create("d")
-    >>> execute(a.var_keyword)
-    Maybe.just("e")
     """
 
-    @expression
     @classmethod
     def create(
         cls,
@@ -113,163 +283,95 @@ class Args(Expression):
         var_positional: Maybe[str],
         keyword_only: Vec[str],
         var_keyword: Maybe[str],
-    ) -> Args:
+    ) -> MArgs:
         ...
 
-    @expression
     @property
     def positional_only(self) -> Vec[str]:
         ...
 
-    @expression
     @property
     def positional_or_keyword(self) -> Vec[str]:
         ...
 
-    @expression
     @property
     def var_positional(self) -> Maybe[str]:
         ...
 
-    @expression
     @property
     def keyword_only(self) -> Vec[str]:
         ...
 
-    @expression
     @property
     def var_keyword(self) -> Maybe[str]:
         ...
 
+    @classmethod
+    def from_args(cls, args: Args) -> MArgs:
+        return cls.create(
+            Vec.create(*args.positional_only),
+            Vec.create(*args.positional_or_keyword),
+            Maybe.from_optional(args.var_positional),
+            Vec.create(*args.keyword_only),
+            Maybe.from_optional(args.var_keyword),
+        )
+
+
+register_code(datatype_rule(MArgs))
+register_code(default_rule(MArgs.from_args))
+
+
+T = TypeVar("T")
+
+
+class MFunctionType(Expression, wrap_methods=True):
+    @classmethod
+    def generator(cls) -> MFunctionType:
+        ...
+
+    @classmethod
+    def coroutine(cls) -> MFunctionType:
+        ...
+
+    @classmethod
+    def async_generator(cls) -> MFunctionType:
+        ...
+
+    @classmethod
+    def normal(cls) -> MFunctionType:
+        ...
+
+    # TODO: Maybe make enum creator class like the dataclass creator rules,
+    # to use for this and either
+    def match(self, generator: T, coroutine: T, async_generator: T, normal: T) -> T:
+        ...
+
+    @classmethod
+    def from_function_type(cls, function_type: FunctionType) -> MFunctionType:
+        if function_type == "GENERATOR":
+            return MFunctionType.generator()
+        if function_type == "COROUTINE":
+            return MFunctionType.coroutine()
+        if function_type == "ASYNC_GENERATOR":
+            return MFunctionType.async_generator()
+        assert function_type is None
+        return MFunctionType.normal()
+
 
 @register_code
 @rule
-def args_rules(
-    positional_only: Vec[str],
-    positional_or_keyword: Vec[str],
-    var_positional: Maybe[str],
-    keyword_only: Vec[str],
-    var_keyword: Maybe[str],
+def _m_function_type_match(
+    generator: T, coroutine: T, async_generator: T, normal: T
 ):
-    a = Args.create(
-        positional_only=positional_only,
-        positional_or_keyword=positional_or_keyword,
-        var_positional=var_positional,
-        keyword_only=keyword_only,
-        var_keyword=var_keyword,
-    )
-    yield a.positional_only, positional_only
-    yield a.positional_or_keyword, positional_or_keyword
-    yield a.var_positional, var_positional
-    yield a.keyword_only, keyword_only
-    yield a.var_keyword, var_keyword
-
-
-class FunctionType(Expression):
-    @expression
-    @property
-    @classmethod
-    def generator(cls) -> FunctionType:
-        ...
-
-    @expression
-    @property
-    @classmethod
-    def coroutine(cls) -> FunctionType:
-        ...
-
-    @expression
-    @property
-    @classmethod
-    def async_generator(cls) -> FunctionType:
-        ...
-
-    @expression
-    @property
-    @classmethod
-    def normal(cls) -> FunctionType:
-        ...
-
-    @expression
-    @property
-    def is_coro(self) -> Boolean:
-        ...
-
-
-@register_code
-@rule
-def _code_rules(code_data: CodeData, fn: Function):
-    yield Code.from_code_data(code_data).type, lambda: Maybe.just(
-        FunctionType.from_data(code_data.type)
-    ) if code_data.type else Maybe[FunctionType].nothing()
-
-    yield FunctionCodeType.from_data(fn).type, lambda: (
-        FunctionType.generator
-        if fn.type == "GENERATOR"
-        else FunctionType.coroutine
-        if fn.type == "COROUTINE"
-        else FunctionType.async_generator
-        if fn.type == "ASYNC_GENERATOR"
-        else FunctionType.normal
-    )
-    yield FunctionType.generator.is_coro, Boolean.true
-    yield FunctionType.coroutine.is_coro, Boolean.true
-    yield FunctionType.async_generator.is_coro, Boolean.true
-    yield FunctionType.normal.is_coro, Boolean.false
-
-
-# Below here is old
-
-
-# @expression
-# @classmethod
-# def create(
-#     cls, stack: Vec[Object], code: FunctionTwo[State, Integer, State]
-# ) -> State:
-#     ...
-
-# @expression
-# def execute_instruction(self, instruction: Instruction) -> State:
-#     ...
-
-# TODO: Move jump here?
-
-
-# class Instruction(Expression):
-#     """
-#     A bytecode instruction.
-#     """
-
-#     @expression
-#     @classmethod
-#     def pop_top(cls) -> Instruction:
-#         ...
-
-#     @expression
-#     @classmethod
-#     def jump(cls, target: int) -> Instruction:
-#         ...
-
-
-# @register_stack
-# @rule
-# def stack_instructions(stack: Vec[Object]) -> R[Pair[Vec[Object], Object]]:
-#     yield (
-#         State.create(stack).execute_instruction(Instruction.pop_top()),
-#         State.create(stack.pop().left),
-#     )
-#     yield state.jump(target)
-
-
-# @FunctionTwo.from_fn_recursive
-# def some_state(
-#     fn: FunctionTwo[State, Integer, State], state: State, block: Integer
-# ) -> State:
-#     return Vec[Abstraction[State, State]].create(
-#         Abstraction[State, State].from_fn(
-#             lambda state: state.execute_instruction(Instruction.jump(1))
-#         ),
-#         Abstraction[State, State].from_fn(
-#             lambda state: state.execute_instruction(Instruction.pop_top())
-#         ),
-#     )[block](state)
+    yield MFunctionType.generator().match(
+        generator, coroutine, async_generator, normal
+    ), generator
+    yield MFunctionType.coroutine().match(
+        generator, coroutine, async_generator, normal
+    ), coroutine
+    yield MFunctionType.async_generator().match(
+        generator, coroutine, async_generator, normal
+    ), async_generator
+    yield MFunctionType.normal().match(
+        generator, coroutine, async_generator, normal
+    ), normal

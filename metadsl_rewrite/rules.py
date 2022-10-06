@@ -88,6 +88,8 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
 
     n_fields = len(fields)
 
+    # Set of fields which have setters 
+    setter_fields = set()
     # Then verify that for each field there is a getter property and a setter method
     for k, v in fields.items():
         getter = getattr(cls, k)
@@ -97,6 +99,9 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
             raise ValueError(f"Type of {cls}.{k} does not match type of {cls}.create({k})")
         
         setter_name = f"set_{k}"
+        if not hasattr(cls, setter_name):
+            continue
+        setter_fields.add(k)
         setter = getattr(cls, setter_name)
         if not isinstance(setter, BoundInfer):
             raise ValueError(f"{setter_name} method of {cls} must be an expression")
@@ -116,7 +121,10 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
         for i, k in enumerate(fields):
             # accessor
             yield getattr(obj, k), args[i]
+            
             # setter
+            if k not in setter_fields:
+                continue
             replaced_value = setter_args[i]
             with_replaced_value = [setter_args[i_] if i_ == i else initial_args[i_] for i_ in range(n_fields)]
             yield getattr(obj, f"set_{k}")(replaced_value), cls.create(*with_replaced_value) #type: ignore

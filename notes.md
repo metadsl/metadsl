@@ -153,3 +153,9 @@ Some questions it would bring up:
 * Do we allow untyped objects? Or do we try to pick up typings from PYI files? 
 
 Maybe the data type support would atleast help here..
+
+
+## Recursive types
+
+We currently don't support recursive types. MyPy [now supports them](https://github.com/python/mypy/issues/731#issuecomment-1260976955)
+so we should try doing that too!

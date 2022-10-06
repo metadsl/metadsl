@@ -60,7 +60,6 @@ class Maybe(Expression, typing.Generic[T], wrap_methods=True):
     def flat_map(self, just: Abstraction[T, Maybe[U]]) -> Maybe[U]:
         return collapse_maybe(self.map(just))
 
-    @expression
     def expect(self) -> T:
         """
         If the maybe is something, it returns that value, if it is nothing,
@@ -72,6 +71,20 @@ class Maybe(Expression, typing.Generic[T], wrap_methods=True):
         Maybe.nothing().expect()
         """
         ...
+    
+    @classmethod
+    def from_optional(cls, value: typing.Optional[T]) -> Maybe[T]:
+        """
+        >>> execute(Maybe.from_optional(None))
+        Maybe.nothing()
+        >>> execute(Maybe.from_optional(10))
+        Maybe.just(10)
+        """
+        ...
+        if value is None:
+            return cls.nothing()
+        else:
+            return cls.just(value)
 
 @register_core
 @rule
@@ -89,6 +102,7 @@ def collapse_maybe(x: Maybe[Maybe[T]]) -> Maybe[T]:
 register_core(default_rule(Maybe[T].map))
 register_core(default_rule(Maybe[T].default))
 register_core(default_rule(Maybe[T].flat_map))
+register_core(default_rule(Maybe[T].from_optional))
 register_core(default_rule(collapse_maybe))
 
 
