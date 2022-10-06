@@ -339,7 +339,11 @@ def graph_str(graph: Graph) -> str:
                 value_str = f"{expr._function_str}({', '.join(args)})"
             no_temp_var = False
         else:
-            value_str = repr(expr)
+            # Special case object repr so that its formattable
+            if type(expr) == object:
+                value_str = f"object({hex(id(expr))})"
+            else:
+                value_str = repr(expr)
             # Never save a primitive value as a temp variable
             no_temp_var = True
 
