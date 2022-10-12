@@ -25,7 +25,7 @@ def _PyEval_Vector(
     """
     f = _PyEval_MakeFrameVector(state, tstate, con, locals, args, argcount, kwnames)
 
-    if code
+    # if code
     # This is a corootuine if it has a function type and that type is a coroutine type.
     is_coro = tstate.code.type.match(
         Boolean.false,
@@ -52,7 +52,7 @@ def _PyEval_MakeFrameVector(
     total_args = co.type.match(
         Integer.from_int(0),
         # TODO: Add ability to get total number of args from code object args.
-        Abstraction[FunctionCodeType, Integer].from_fn(lambda fct: fct.args.),
+        # Abstraction[FunctionCodeType, Integer].from_fn(lambda fct: fct.args.),
     )
 
 @expression

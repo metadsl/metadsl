@@ -3,6 +3,7 @@ Normalized expressions, for deduping and single replacements.
 """
 from __future__ import annotations
 
+import ast
 import collections
 import dataclasses
 import functools
@@ -11,7 +12,6 @@ import typing
 
 import black
 import igraph
-import IPython.core.display
 import typing_inspect
 
 from .expressions import *
@@ -344,6 +344,11 @@ def graph_str(graph: Graph) -> str:
                 value_str = f"object({hex(id(expr))})"
             else:
                 value_str = repr(expr)
+                # if we cannot parse the repr as a python expression, turn it into a string instead
+                try:
+                    ast.parse(value_str, mode="eval")
+                except SyntaxError:
+                    value_str = repr(value_str)
             # Never save a primitive value as a temp variable
             no_temp_var = True
 

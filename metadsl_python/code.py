@@ -8,15 +8,15 @@ concise way.
 from __future__ import annotations
 
 from types import CodeType
-from typing import Optional, TypeVar
+from typing import Optional, Sequence, TypeVar
 
-from code_data import (Arg, Args, Blocks, Cellvar, CodeData, Constant,
-                       ConstantValue, Freevar, FunctionType, Instruction, Jump,
-                       Name, NoArg, TypeOfCode, Varname)
+from code_data import (Arg, Args, Cellvar, CodeData, Constant, ConstantValue,
+                       Freevar, FunctionType, Instruction, Jump, Name, NoArg,
+                       TypeOfCode, Varname)
 from metadsl import Expression
 from metadsl_core import Integer, Maybe
 from metadsl_core.vec import Vec
-from metadsl_rewrite import R, datatype_rule, register, rule
+from metadsl_rewrite import datatype_rule, register, rule
 from metadsl_rewrite.rules import default_rule
 
 
@@ -24,8 +24,10 @@ class MCode(Expression, wrap_methods=True):
     """
     A python bytecode objects.
 
-    1. List of instructions, each which deal with the stack
-    2.
+    >>> from metadsl_rewrite import execute
+    >>> def fn(a: int):
+    ...     return a * 2
+    >>> execute(MCode.from_code(fn.__code__))
     """
 
     @classmethod
@@ -126,7 +128,7 @@ class MBlocks(Expression, wrap_methods=True):
         ...
 
     @classmethod
-    def from_blocks(cls, blocks: Blocks) -> MBlocks:
+    def from_blocks(cls, blocks: Sequence[Sequence[Instruction]]) -> MBlocks:
         return MBlocks.create(
             Vec.create(
                 *(
@@ -217,7 +219,7 @@ class MTypeOfCode(Expression, wrap_methods=True):
     def create(
         cls,
         args_: MArgs,
-        docstring: Optional[str],
+        docstring: Maybe[str],
         type: MFunctionType,
     ) -> MTypeOfCode:
         ...
@@ -240,7 +242,7 @@ class MTypeOfCode(Expression, wrap_methods=True):
             return MTypeOfCode.none()
         return cls.create(
             MArgs.from_args(type_of_code.args),
-            type_of_code.docstring,
+            Maybe.from_optional(type_of_code.docstring),
             MFunctionType.from_function_type(type_of_code.type),
         )
 
