@@ -25,9 +25,28 @@ class MCode(Expression, wrap_methods=True):
     A python bytecode objects.
 
     >>> from metadsl_rewrite import execute
-    >>> def fn(a: int):
-    ...     return a * 2
-    >>> execute(MCode.from_code(fn.__code__))
+    >>> execute(MCode.from_code(compile("x[y]", "<string>", "eval")))
+    marg_0 = MArg.none()
+    MCode.create(
+        MBlocks.create(
+            Vec.create(
+                Vec.create(
+                    MInstruction.create("LOAD_NAME", MArg.name("x"), 1),
+                    MInstruction.create("LOAD_NAME", MArg.name("y"), 1),
+                    MInstruction.create("BINARY_SUBSCR", marg_0, 1),
+                    MInstruction.create("RETURN_VALUE", marg_0, 1),
+                )
+            )
+        ),
+        "<string>",
+        1,
+        "<module>",
+        2,
+        MTypeOfCode.none(),
+        Vec.create(),
+        True,
+    )
+    <BLANKLINE>    
     """
 
     @classmethod
@@ -244,7 +263,7 @@ class MTypeOfCode(Expression, wrap_methods=True):
             return MTypeOfCode.none()
         return cls.create(
             MArgs.from_args(type_of_code.args),
-            Maybe.from_optional(type_of_code.docstring),
+            Maybe[str].from_optional(type_of_code.docstring),
             MFunctionType.from_function_type(type_of_code.type),
         )
 

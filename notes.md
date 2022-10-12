@@ -1,5 +1,5 @@
 
-## data types
+## data types ✅
 Difference between Using constructors for a union versus a type with a match?
 
 It's really cumbersome to construct data types... See Args for code data. Have to test
@@ -159,3 +159,31 @@ Maybe the data type support would atleast help here..
 
 We currently don't support recursive types. MyPy [now supports them](https://github.com/python/mypy/issues/731#issuecomment-1260976955)
 so we should try doing that too!
+
+
+## Type DSL
+
+It would be helpful to have a DSL for representing our types, to aid in the type calculations.
+Currently, things like `Optional[T]` are not working as type definitions unfortunately...
+
+Would need to have some sort of type abstractions for typevars, and deal with that binding...
+
+
+### Don't use builtin python types
+
+If we had this type DSL, this also opens up the door to not use the builtin Pyton types
+(also allowing us to override things like `__init__` more easily...) In that case we would
+have something like this:
+
+```python
+@expression
+class A:
+    def __init__(self, a: int, b: str) -> A:
+        ...
+```
+
+Which calling it would not give you a real instance of `A` but instead an instance of
+`Expression`? Which has the right dunder methods to look like it has all the same methods...
+
+Then each method could simply be represented entirely in the DSL, not as builtin Python
+methods... Making a bit "cleaner"...
