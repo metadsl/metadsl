@@ -174,8 +174,10 @@ class MArg(Expression, wrap_methods=True):
     def varname(cls, varname: str) -> MArg:
         ...
 
+    # The type of constant should be ConstantValue, but get_type_hints doesn't
+    # support recursive types yet 
     @classmethod
-    def constant(cls, constant: ConstantValue) -> MArg:
+    def constant(cls, constant: object) -> MArg:
         ...
 
     @classmethod
