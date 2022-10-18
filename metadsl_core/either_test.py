@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-
 from metadsl import *
+from metadsl_rewrite import *
+
+from .abstraction import *
 from .conversion import *
 from .either import *
-from .abstraction import *
 from .maybe import *
-from metadsl_rewrite import *
 
 
 class Int(Expression):

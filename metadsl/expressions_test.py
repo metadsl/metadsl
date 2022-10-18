@@ -153,7 +153,7 @@ class A(Expression, wrap_methods=True):
     @property
     def prop(self) -> A:
         ...
-    
+
 
 def test_wrap_method() -> None:
     assert A.create() == A(A.create, [], {})

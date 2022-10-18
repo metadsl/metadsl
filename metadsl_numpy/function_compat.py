@@ -1,16 +1,16 @@
 from __future__ import annotations
+
 import typing
-import types
-import functools
+
 import typing_inspect
 
 from metadsl import *
-from metadsl_core import *
 from metadsl.typing_tools import ToCallable, get_type
+from metadsl_core import *
 from metadsl_rewrite import *
 
-from .injest import *
 from .boxing import *
+from .injest import *
 
 __all__: typing.List[str] = []
 

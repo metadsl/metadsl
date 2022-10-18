@@ -1,6 +1,7 @@
 from __future__ import annotations
-import logging
+
 import dataclasses
+import logging
 import typing
 
 __all__ = ["toggle_debug_logging", "CaptureLogging"]
@@ -46,7 +47,7 @@ class CaptureLogging:
         with CaputureLogging() as results:
             ...
         # results contains a list of all log messages, formatted
-    
+
 
     Some inspiration from unittest.assertLogs
     """

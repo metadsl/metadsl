@@ -256,6 +256,7 @@ def take_drop_rule(xs: typing.Sequence[T], i: int) -> R[Vec[T]]:
         lambda: Vec[T].create(*xs[i:]),
     )
 
+
 @register_ds
 @rule
 def pop_rule(xs: typing.Sequence[T], x: T) -> R[Pair[Vec[T], T]]:
@@ -263,6 +264,7 @@ def pop_rule(xs: typing.Sequence[T], x: T) -> R[Pair[Vec[T], T]]:
         Vec[T].create(*xs, x).pop(),
         lambda: Pair.create(Vec[T].create(*xs), x),
     )
+
 
 @register_ds  # type: ignore
 @rule

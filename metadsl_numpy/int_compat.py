@@ -1,13 +1,14 @@
 from __future__ import annotations
-import typing
 
+import typing
 
 from metadsl import *
 from metadsl_core import *
-from .bool_compat import *
-from .injest import *
-from .boxing import *
 from metadsl_rewrite import *
+
+from .bool_compat import *
+from .boxing import *
+from .injest import *
 
 __all__ = ["IntCompat"]
 

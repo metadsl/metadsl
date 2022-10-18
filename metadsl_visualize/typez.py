@@ -14,13 +14,12 @@ import typing
 import warnings
 
 import black
-import metadsl
 import typing_inspect
-from metadsl.expressions import Expression
+
+import metadsl
 from metadsl.normalized import Graph, Hash
 from metadsl.typing_tools import BoundInfer, Infer
 from metadsl_rewrite import *
-
 from typez import *
 from typez import FunctionValue
 
@@ -201,6 +200,7 @@ def json_value_to_expr(value: dict) -> metadsl.Expression:
     assert typez.states
     return graph._lookup(Hash(typez.states.initial))["expression"]
 
+
 def type_instance_to_type(type_instance: TypeInstance) -> type:
     """
     Converts a type instance to a type.
@@ -208,6 +208,7 @@ def type_instance_to_type(type_instance: TypeInstance) -> type:
     tp = getattr(importlib.import_module(type_instance.module), type_instance.name)
     # TODO: replace typevars as well
     return tp
+
 
 def typevars_to_typeparams(
     typevars: metadsl.typing_tools.TypeVarMapping,

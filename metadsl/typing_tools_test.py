@@ -177,7 +177,7 @@ def test_fn_args():
     def fn(f: typing.Callable) -> int:
         ...
 
-    f = lambda i: 10
+    f = lambda i: 10  # noqa: E731
     assert fn(f) == (fn, (f,), {}, int)
 
 

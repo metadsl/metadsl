@@ -1,8 +1,8 @@
-import metadsl_core as mc
-import metadsl_rewrite
 import pytest
 
+import metadsl_core as mc
 import metadsl_llvm as ml
+import metadsl_rewrite
 
 
 @pytest.mark.skip
@@ -44,7 +44,6 @@ def test_fib():
     assert metadsl_fn(10) == 55
 
 
-
 def test_if():
     """
     Test if using if statement works, have a function that returns 1 if 0, else 0
@@ -60,10 +59,11 @@ def test_if():
     def if_zero(v: ml.ValueExpr) -> ml.ValueExpr:
         return v.eq(zero).if_(one, zero)
 
-    real_fn = metadsl_rewrite.execute(ml.compile_functions(mod_ref, ml.to_llvm(if_zero)))
+    real_fn = metadsl_rewrite.execute(
+        ml.compile_functions(mod_ref, ml.to_llvm(if_zero))
+    )
     assert real_fn(10) == 0
     assert real_fn(0) == 1
-
 
 
 def test_add():

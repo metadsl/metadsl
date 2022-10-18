@@ -45,5 +45,16 @@ dev = [
     "jupyterlab>=1.0.0",
     "nbconvert",
     "pudb",
-    "beni"
+    "pre-commit",
+    "beni",
+    "black",
+    "flake8",
+    "isort"
 ]
+
+[tool.black]
+extend-exclude = '(docs/conf\.py)'
+
+[tool.isort]
+profile = "black"
+skip_gitignore = true

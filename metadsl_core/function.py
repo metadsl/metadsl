@@ -396,7 +396,9 @@ def function_zero_convert(
 @register_convert
 @rule
 def function_one_convert(
-    name: str, callable_one: typing.Callable[[T], U], abs_one: Abstraction[T, U],
+    name: str,
+    callable_one: typing.Callable[[T], U],
+    abs_one: Abstraction[T, U],
 ) -> R[Maybe[FunctionOne[V, Maybe[X]]]]:
     yield (
         Converter[FunctionOne[V, Maybe[X]]].convert(callable_one),

@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
 
 from .bool_compat import *
 from .injest import *
-
 
 t = BoolCompat.from_maybe_boolean(Maybe.just(Boolean.create(True)))
 f = BoolCompat.from_maybe_boolean(Maybe.just(Boolean.create(False)))

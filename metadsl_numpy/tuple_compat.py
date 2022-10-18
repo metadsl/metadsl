@@ -1,17 +1,18 @@
 from __future__ import annotations
+
 import typing
+
 import typing_inspect
 
 from metadsl import *
-from metadsl_core import *
 from metadsl.typing_tools import get_type
+from metadsl_core import *
 from metadsl_rewrite import *
 
 from .bool_compat import *
+from .boxing import *
 from .injest import *
 from .int_compat import *
-from .boxing import *
-
 
 __all__ = ["HomoTupleCompat"]
 
@@ -22,7 +23,7 @@ U = typing.TypeVar("U")
 
 class HomoTupleCompat(Expression, typing.Generic[T, U]):
     """
-    Should follow Python API for tuple with homogoneous types. 
+    Should follow Python API for tuple with homogoneous types.
 
 
     T is the outer type, when we are getting the item.
