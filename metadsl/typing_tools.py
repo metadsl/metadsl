@@ -339,7 +339,7 @@ def get_type(v: T) -> typing.Type[T]:
             return typing.Sequence[get_type(v[0])]  # type: ignore
         return typing.Sequence  # type: ignore
     # Special case, also support function types.
-    if tp == types.FunctionType:
+    if tp == types.FunctionType:  # noqa: E721
         return get_function_type(v)  # type: ignore
 
     return tp
@@ -492,7 +492,7 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
     if typing_inspect.is_union_type(hint):
         possible_types = typing_inspect.get_args(hint)
         # If union has a None type in it, and this value is None, there is a match
-        if typing_inspect.is_optional_type(t) and t == type(None):
+        if typing_inspect.is_optional_type(t) and isinstance(None, t):
             return {}
         # If this is a union, iterate through and try each
         for inner_type in possible_types:
@@ -500,7 +500,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
                 return match_types(inner_type, t)
             except TypeError:
                 pass
-        raise TypeError(f"Cannot match concrete type {t} with any of the union types {possible_types}")
+        raise TypeError(
+            f"Cannot match concrete type {t} with any of the union types {possible_types}"
+        )
 
     logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
     if not issubclass(t, hint):
@@ -813,12 +815,12 @@ class BoundInfer(typing.Generic[T, U]):
     def __repr__(self):
         return f"{type_repr(self.owner)}.{self.fn.__name__}"
 
-    
+
 def type_repr(tp: type) -> str:
     """
     Returns the repr for the type, preserving any generic params.
 
-    Unlike the builtin generic type repr, it does not include the module. 
+    Unlike the builtin generic type repr, it does not include the module.
     """
     if isinstance(tp, (typing.TypeVar, typing._SpecialForm)):
         return repr(tp)
@@ -827,6 +829,7 @@ def type_repr(tp: type) -> str:
     if args:
         return f"{tp_name}[{', '.join(map(type_repr, args))}]"
     return tp_name
+
 
 def infer(
     fn: typing.Callable[..., T], wrapper: WrapperType[T, U]

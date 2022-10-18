@@ -1,0 +1,6 @@
+; https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
+[flake8]
+max-line-length = 88
+extend-ignore = E203,F403,F405,E501,E741,F722,E742
+per-file-ignores =
+    */__init__.py:F401

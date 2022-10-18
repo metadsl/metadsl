@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 import typing
 
+import metadsl.typing_tools
 from metadsl import *
 from metadsl_rewrite import *
-import metadsl.typing_tools
+
 from .strategies import *
 
 __all__ = ["Abstraction", "Variable"]
@@ -87,7 +88,7 @@ fix_rule = register.post(default_rule(Abstraction.fix))
 
 def _replace(body: U, var: T, arg: T) -> U:
     """
-    Replaces all instances of `var` with `arg` inside of `body`, 
+    Replaces all instances of `var` with `arg` inside of `body`,
     except for local bindings of `var` as declared in other `from_fn`s inside.
     """
     if body == var:

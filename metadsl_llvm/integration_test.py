@@ -1,6 +1,6 @@
-import metadsl_rewrite
 import metadsl_core as mc
 import metadsl_llvm as ml
+import metadsl_rewrite
 
 
 def test_fib():
@@ -21,7 +21,9 @@ def test_fib():
     # Function Refs
     ##
     fib_more_ref = mod_ref.fn(
-        "fib_more", ml.FnType.create(int_type, int_type, int_type, int_type), "fastcc",
+        "fib_more",
+        ml.FnType.create(int_type, int_type, int_type, int_type),
+        "fastcc",
     )
 
     fib_ref = mod_ref.fn("fib", ml.FnType.create(int_type, int_type), "fastcc")
@@ -112,7 +114,9 @@ def test_add():
 
     mod_ref = ml.ModRef.create("add")
     fn_ref = mod_ref.fn(
-        "add", ml.FnType.create(int_type, int_type, int_type), "fastcc",
+        "add",
+        ml.FnType.create(int_type, int_type, int_type),
+        "fastcc",
     )
 
     l = fn_ref.arguments[mc.Integer.from_int(0)]

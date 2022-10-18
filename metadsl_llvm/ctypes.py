@@ -1,11 +1,12 @@
 from __future__ import annotations
-import typing
-import ctypes
 
+import ctypes
+import typing
 
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
+
 from .strategies import *
 
 __all__ = ["CType", "CFunctionType"]

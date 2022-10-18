@@ -23,25 +23,6 @@ jobs:
       - run: pip install flit
       - run: make flit-install
       - run: pytest
-  mypy:
-    name: mypy ${{ matrix.py }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        py:
-          - "3.10"
-          - "3.9"
-          - "3.8"
-    steps:
-      - name: Setup python ${{ matrix.py }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.py }}
-      - uses: actions/checkout@v2
-      - run: pip install flit
-      - run: make flit-install
-      - run: mypy .
   test-docs:
     name: test docs ${{ matrix.py }}
     runs-on: ubuntu-latest
@@ -60,7 +41,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: pip install flit
       - run: make flit-install
-      - run: pytest docs/*.ipynb --nbval
+      - run: pytest docs/*.ipynb --nbval  -n=1
   test-jupyterlab:
     name: test jupyterlab
     runs-on: ubuntu-latest
