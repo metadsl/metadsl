@@ -144,6 +144,9 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
 
     match_fn.__module__ = cls.__module__
     match_fn.__qualname__ = cls.__qualname__
+
+    # Set __wrapped__ so that get_type_hints finds looks at the globals for this function
+    match_fn.__wrapped__ = create_fn.fn
     return Rule(match_fn)
 
 
