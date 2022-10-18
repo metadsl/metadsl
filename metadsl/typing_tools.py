@@ -489,6 +489,10 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
                 return {}
         return match_types(typing_inspect.get_args(hint)[0], t_inner)
 
+    # Special case optional types to avoid... For Maybe[T].from_optional
+    if typing_inspect.is_optional_type(hint):
+        return {}
+
     if typing_inspect.is_union_type(hint):
         # If this is a union, iterate through and use the first that is a subclass
         for inner_type in typing_inspect.get_args(hint):
