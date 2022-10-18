@@ -95,8 +95,9 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
         getter = getattr(cls, k)
         if not isinstance(getter, BoundInfer):
             raise ValueError(f"{k} method of {cls} must be an expression")
-        if v != getter.fn.__annotations__['return']:
-            raise ValueError(f"Type of {cls}.{k} does not match type of {cls}.create({k})")
+        return_tp = getter.fn.__annotations__['return']
+        if v != return_tp:
+            raise ValueError(f"Type of accessor {cls.__name__}.{k} -> {return_tp} does not match type of creator {cls.__name__}.create({k}: {v})")
         
         setter_name = f"set_{k}"
         if not hasattr(cls, setter_name):
