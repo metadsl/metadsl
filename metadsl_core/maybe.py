@@ -75,10 +75,10 @@ class Maybe(Expression, typing.Generic[T], wrap_methods=True):
     @classmethod
     def from_optional(cls, value: typing.Optional[T]) -> Maybe[T]:
         """
-        >>> execute(Maybe.from_optional(None))
-        Maybe.nothing()
-        >>> execute(Maybe.from_optional(10))
-        Maybe.just(10)
+        >>> execute(Maybe[int].from_optional(None))
+        Maybe[int].nothing()
+        >>> execute(Maybe[int].from_optional(10))
+        Maybe[int].just(10)
         """
         ...
         if value is None:
