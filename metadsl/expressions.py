@@ -104,7 +104,7 @@ class Expression(GenericCheck):
         )
     
     @classmethod
-    def __init_subclass__(cls, /, wrap_methods=False, **kwargs) -> None:
+    def __init_subclass__(cls, wrap_methods=False, **kwargs) -> None:
         """
         If `wrap_methods` is passed in a subclass, wrap all methods in an `expresion` decorator.
         """

@@ -20,6 +20,7 @@ import types
 import typing
 
 import typing_inspect
+
 from metadsl import *
 from metadsl.typing_tools import *
 
@@ -147,7 +148,7 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
     match_fn.__qualname__ = cls.__qualname__
 
     # Set __wrapped__ so that get_type_hints finds looks at the globals for this function
-    match_fn.__wrapped__ = create_fn.fn
+    match_fn.__wrapped__ = create_fn.fn # type: ignore
     return Rule(match_fn)
 
 
