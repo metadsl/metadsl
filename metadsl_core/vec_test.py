@@ -73,4 +73,4 @@ class TestVec:
         )
 
     def test_pop(self):
-        assert execute(Vec.create(10, 11).pop()) == Pair.create(Vec.create(10), 11)
+        assert execute(Vec.create(10, 11).pop()) == Pair.create(Vec[int].create(10), 11)

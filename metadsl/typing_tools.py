@@ -494,13 +494,17 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         return {}
 
     if typing_inspect.is_union_type(hint):
-        # If this is a union, iterate through and use the first that is a subclass
-        for inner_type in typing_inspect.get_args(hint):
-            if issubclass(t, inner_type):
-                hint = inner_type
-                break
-        else:
-            raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
+        possible_types = typing_inspect.get_args(hint)
+        # If union has a None type in it, and this value is None, there is a match
+        if typing_inspect.is_optional_type(t) and t == type(None):
+            return {}
+        # If this is a union, iterate through and try each
+        for inner_type in possible_types:
+            try:
+                return match_types(inner_type, t)
+            except TypeError:
+                pass
+        raise TypeError(f"Cannot match concrete type {t} with any of the union types {possible_types}")
 
     logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
     if not issubclass(t, hint):
@@ -811,10 +815,22 @@ class BoundInfer(typing.Generic[T, U]):
         return res
 
     def __repr__(self):
-        # Generic types are already formatted nicely
-        owner_str = self.owner.__name__
-        return f"{owner_str}.{self.fn.__name__}"
+        return f"{type_repr(self.owner)}.{self.fn.__name__}"
 
+    
+def type_repr(tp: type) -> str:
+    """
+    Returns the repr for the type, preserving any generic params.
+
+    Unlike the builtin generic type repr, it does not include the module. 
+    """
+    if isinstance(tp, (typing.TypeVar, typing._SpecialForm)):
+        return repr(tp)
+    tp_name = tp.__qualname__
+    args = getattr(tp, "__args__", [])
+    if args:
+        return f"{tp_name}[{', '.join(map(type_repr, args))}]"
+    return tp_name
 
 def infer(
     fn: typing.Callable[..., T], wrapper: WrapperType[T, U]

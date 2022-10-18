@@ -137,4 +137,4 @@ class E(Expression):
     ],
 )
 def test_graph_str(expr, s):
-    assert graph_str(Graph(expr)) == s + "\n"
+    assert graph_str(Graph(expr)) == s

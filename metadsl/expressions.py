@@ -52,6 +52,9 @@ class Expression(GenericCheck):
 
     @property
     def _function_str(self):
+        # If this is a bound function, use it's repr so that get the generic params and the method
+        if isinstance(self.function, BoundInfer):
+            return repr(self.function)
         return getattr(self.function, "__qualname__", str(self.function))
 
     @property
@@ -104,7 +107,7 @@ class Expression(GenericCheck):
         )
     
     @classmethod
-    def __init_subclass__(cls, /, wrap_methods=False, **kwargs) -> None:
+    def __init_subclass__(cls, wrap_methods=False, **kwargs) -> None:
         """
         If `wrap_methods` is passed in a subclass, wrap all methods in an `expresion` decorator.
         """
