@@ -10,8 +10,8 @@ from __future__ import annotations
 from types import CodeType
 from typing import Optional, Sequence, TypeVar
 
-from code_data import (Arg, Args, Cellvar, CodeData, Constant, ConstantValue,
-                       Freevar, FunctionType, Instruction, Jump, Name, NoArg,
+from code_data import (Arg, Args, Cellvar, CodeData, Constant, Freevar,
+                       FunctionType, Instruction, Jump, Name, NoArg,
                        TypeOfCode, Varname)
 from metadsl import Expression
 from metadsl_core import Integer, Maybe

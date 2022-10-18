@@ -536,25 +536,21 @@ class _Datatype(Expression):
     @expression
     @classmethod
     def create(cls, i: int, b: str) -> _Datatype:
-        pass
+        ...
 
     @expression  # type: ignore
     @property
     def i(self) -> int:
-        pass
+        ...
 
     @expression  # type: ignore
     @property
     def b(self) -> str:
-        pass
+        ...
 
     @expression
-    def set_i(self, i: int) -> _Datatype:
-        pass
-
-    @expression
-    def set_b(self, b: str) -> _Datatype:
-        pass
+    def update(self, i: int, b: int) -> _Datatype:
+        ...
 
 
 datatypes_rule_ = datatype_rule(_Datatype)
