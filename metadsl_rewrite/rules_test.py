@@ -536,12 +536,12 @@ class _Datatype(Expression):
     @expression
     @classmethod
     def create(cls, i: int, b: str) -> _Datatype:
-        pass
+        ...
 
     @expression  # type: ignore
     @property
     def i(self) -> int:
-        pass
+        ...
 
     @expression  # type: ignore
     @property
