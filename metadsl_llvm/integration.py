@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ctypes
 import typing
 
 from metadsl import *
@@ -30,7 +29,10 @@ def make_c_wrapper(mod_ref: ModRef, original_fn_ref: FnRef) -> typing.Tuple[str,
     making sure the calling convention is default.
     """
     new_name = concat_strings("entry_", original_fn_ref.name)
-    fn_ref = mod_ref.fn(new_name, original_fn_ref.type,)
+    fn_ref = mod_ref.fn(
+        new_name,
+        original_fn_ref.type,
+    )
     block_ref = fn_ref.block(True, "entry")
     return (
         new_name,
@@ -67,7 +69,9 @@ def llvm_to_c_fn_int():
 
 @expression
 def compile_function(
-    mod: Mod, fn_ref: FnRef, optimization: int = 1,
+    mod: Mod,
+    fn_ref: FnRef,
+    optimization: int = 1,
 ) -> typing.Callable:
     new_name, wrapper_fn = make_c_wrapper(mod.ref, fn_ref)
     module_ref = ModuleRef.create(mod_str(mod.add_fn(wrapper_fn)))
@@ -77,7 +81,10 @@ def compile_function(
 
 
 def compile_functions(
-    mod_ref: ModRef, fn: Fn, *fns: Fn, optimization: int = 1,
+    mod_ref: ModRef,
+    fn: Fn,
+    *fns: Fn,
+    optimization: int = 1,
 ) -> typing.Callable:
     mod = mod_ref.mod(fn, *fns)
     return compile_function(mod, fn.ref)

@@ -4,12 +4,10 @@ Rewrite rules for metadsl expressions
 
 from metadsl import export_from
 
-
+from .combinators import *  # type: ignore
 from .normalize import *  # type: ignore
 from .rules import *  # type: ignore
 from .strategies import *  # type: ignore
-from .combinators import *  # type: ignore
-
 
 strategy = StrategyNormalize()
 execute = Executor(strategy)

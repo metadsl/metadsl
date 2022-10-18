@@ -559,6 +559,7 @@ class _Datatype(Expression):
 
 datatypes_rule_ = datatype_rule(_Datatype)
 
+
 class TestDatatypeRule:
     def test_getters(self):
         expr = _Datatype.create(1, "a")

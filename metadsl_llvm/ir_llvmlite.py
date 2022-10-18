@@ -9,6 +9,7 @@ from __future__ import annotations
 import typing
 
 import llvmlite.ir as ir
+
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
@@ -175,7 +176,10 @@ def fn_ref_arguments(fn: ir.Function):
 @register_llvmlite
 @rule
 def block_ref_create(
-    is_first: bool, fn: ir.Function, name: typing.Union[str, None], _: _Uniq,
+    is_first: bool,
+    fn: ir.Function,
+    name: typing.Union[str, None],
+    _: _Uniq,
 ):
     def inner() -> BlockRef:
         # If this is not the first block, make sure the first has already been appeneded
@@ -223,7 +227,8 @@ def block_ref_call_2(
 ):
     return (
         box_block_ref(builder).call(
-            box_fn_ref(function), Vec.create(box_value(arg1), box_value(arg2)),
+            box_fn_ref(function),
+            Vec.create(box_value(arg1), box_value(arg2)),
         ),
         lambda: box_value(builder.call(function, (arg1, arg2))),
     )

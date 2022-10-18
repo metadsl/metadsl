@@ -5,8 +5,6 @@ import itertools
 import types
 import typing
 
-import typing_inspect
-
 from .typing_tools import *
 
 __all__ = [
@@ -35,7 +33,7 @@ class Expression(GenericCheck):
     with the args and kwargs should resualt in an equivalent expression:
 
     replace_fn_typevars(self.function, self.typevars)(*self.args, **self.kwargs) == self
-    
+
     The return type of the function, inferred by replacing the typevars in and with these args and kwargs,
     should match the type of the expression. If the return type of the function is not subclass of expression,
     then this should be a PlaceholderExpression of that type.
@@ -81,8 +79,6 @@ class Expression(GenericCheck):
         Map a function on all args and recreate function.
 
         """
-        new_type: typing.Type[T_expression] = typing_inspect.get_generic_type(self)
-
         new_expr = type(self)(
             function=function_fn(self.function) if function_fn else self.function,  # type: ignore
             args=[fn(typing.cast(T, arg)) for arg in self.args],
@@ -105,7 +101,7 @@ class Expression(GenericCheck):
             and self.args == value.args
             and self.kwargs == value.kwargs
         )
-    
+
     @classmethod
     def __init_subclass__(cls, wrap_methods=False, **kwargs) -> None:
         """
@@ -117,7 +113,10 @@ class Expression(GenericCheck):
         for k, v in cls.__dict__.items():
             if isinstance(v, (types.FunctionType, property, classmethod)):
                 # Need to use this setattr, instead of `setattr` so we can set the descriptor
-                type(cls).__setattr__(cls, k, expression(typing.cast(typing.Callable, v)))
+                type(cls).__setattr__(
+                    cls, k, expression(typing.cast(typing.Callable, v))
+                )
+
 
 def clone_expression(expr: T) -> T:
     if isinstance(expr, Expression):

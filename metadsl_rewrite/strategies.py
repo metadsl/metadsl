@@ -8,8 +8,9 @@ and this paper
 """
 from __future__ import annotations
 
-import typing
 import dataclasses
+import typing
+
 from metadsl import *
 
 __all__ = ["Strategy", "Executor", "Result"]
@@ -68,9 +69,7 @@ class Strategy(typing.Protocol):
         ...
 
     def optimize(self, executor: Executor, strategy: Strategy) -> None:
-        """
-
-        """
+        """ """
         ...
 
 

@@ -73,12 +73,11 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
     # For this rule, we generate a match function we can use for a regular rul,e
     # and use that functionality to match on it.
 
-
     # First determine the names and types of the fields in the dataclass, by looking
     # at the create function
     if not hasattr(cls, "create"):
         raise ValueError(f"{cls} must have create method")
-    create_fn = cls.create #type: ignore
+    create_fn = cls.create  # type: ignore
     if not isinstance(create_fn, BoundInfer):
         raise ValueError(f"create method of {cls} must be an expression")
     if not create_fn.is_classmethod:
@@ -89,17 +88,19 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
 
     n_fields = len(fields)
 
-    # Set of fields which have setters 
+    # Set of fields which have setters
     setter_fields = set()
     # Then verify that for each field there is a getter property and a setter method
     for k, v in fields.items():
         getter = getattr(cls, k)
         if not isinstance(getter, BoundInfer):
             raise ValueError(f"{k} method of {cls} must be an expression")
-        return_tp = getter.fn.__annotations__['return']
+        return_tp = getter.fn.__annotations__["return"]
         if v != return_tp:
-            raise ValueError(f"Type of accessor {cls.__name__}.{k} -> {return_tp} does not match type of creator {cls.__name__}.create({k}: {v})")
-        
+            raise ValueError(
+                f"Type of accessor {cls.__name__}.{k} -> {return_tp} does not match type of creator {cls.__name__}.create({k}: {v})"
+            )
+
         setter_name = f"set_{k}"
         if not hasattr(cls, setter_name):
             continue
@@ -107,10 +108,15 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
         setter = getattr(cls, setter_name)
         if not isinstance(setter, BoundInfer):
             raise ValueError(f"{setter_name} method of {cls} must be an expression")
-            
+
         setter_annotations = setter.fn.__annotations__
-        if setter_annotations != {k: v, "return": cls} and setter_annotations != {k: v, "return": cls.__qualname__}:
-            raise ValueError(f"{setter_name} of {cls} has incorrect signature {setter_annotations}")
+        if setter_annotations != {k: v, "return": cls} and setter_annotations != {
+            k: v,
+            "return": cls.__qualname__,
+        }:
+            raise ValueError(
+                f"{setter_name} of {cls} has incorrect signature {setter_annotations}"
+            )
 
     # Now create a custom match function that will replace each getter and setter
 
@@ -119,27 +125,35 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
         # and one for the replaced value. We will call the second one {k}_prime
         initial_args = args[:n_fields]
         setter_args = args[n_fields:]
-        obj = cls.create(*initial_args) #type: ignore
+        obj = cls.create(*initial_args)  # type: ignore
         for i, k in enumerate(fields):
             # accessor
             yield getattr(obj, k), args[i]
-            
+
             # setter
             if k not in setter_fields:
                 continue
             replaced_value = setter_args[i]
-            with_replaced_value = [setter_args[i_] if i_ == i else initial_args[i_] for i_ in range(n_fields)]
-            yield getattr(obj, f"set_{k}")(replaced_value), cls.create(*with_replaced_value) #type: ignore
+            with_replaced_value = [
+                setter_args[i_] if i_ == i else initial_args[i_]
+                for i_ in range(n_fields)
+            ]
+            yield getattr(obj, f"set_{k}")(replaced_value), cls.create(*with_replaced_value)  # type: ignore
 
     # Now update the annotations, signature, and naming so that the rule can introspect it.
-    match_fn.__annotations__ = {**fields, **{f"{k}_prime": v for k, v in fields.items()}}
-    match_fn.__signature__ = inspect.Signature(  #type: ignore
+    match_fn.__annotations__ = {
+        **fields,
+        **{f"{k}_prime": v for k, v in fields.items()},
+    }
+    match_fn.__signature__ = inspect.Signature(  # type: ignore
         [
             inspect.Parameter(k, inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=v)
             for k, v in fields.items()
         ]
         + [
-            inspect.Parameter(f"{k}_prime", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=v)
+            inspect.Parameter(
+                f"{k}_prime", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=v
+            )
             for k, v in fields.items()
         ]
     )
@@ -148,7 +162,7 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
     match_fn.__qualname__ = cls.__qualname__
 
     # Set __wrapped__ so that get_type_hints finds looks at the globals for this function
-    match_fn.__wrapped__ = create_fn.fn # type: ignore
+    match_fn.__wrapped__ = create_fn.fn  # type: ignore
     return Rule(match_fn)
 
 
@@ -175,7 +189,7 @@ class DefaultRule(Strategy):
 
         Then, all it has to do is get the type variable mapping given the current args
         and apply it to the return value. This is so that if the body uses generic type
-        variables, they are turned into the actual instantiations. 
+        variables, they are turned into the actual instantiations.
         """
         with CaptureLogging() as results:
             expr = ref.expression
@@ -291,7 +305,6 @@ class Rule(Strategy):
             )
 
     def optimize(self, executor: Executor, strategy: Strategy) -> None:
-        new_results: typing.List[R] = []
 
         for i, result in enumerate(self.results):
             template, expression_thunk = result
@@ -391,7 +404,7 @@ class ReplaceTypevarsExpression:
     Make sure all functions have typevars attached to them, so when we call those functions
     the typevars will be replaced.
 
-    Use a class instead of a function so we can partially apply it and have equality based on typevars 
+    Use a class instead of a function so we can partially apply it and have equality based on typevars
     """
 
     typevars: TypeVarMapping

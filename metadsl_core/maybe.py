@@ -71,7 +71,7 @@ class Maybe(Expression, typing.Generic[T], wrap_methods=True):
         Maybe.nothing().expect()
         """
         ...
-    
+
     @classmethod
     def from_optional(cls, value: typing.Optional[T]) -> Maybe[T]:
         """
@@ -85,6 +85,7 @@ class Maybe(Expression, typing.Generic[T], wrap_methods=True):
             return cls.nothing()
         else:
             return cls.just(value)
+
 
 @register_core
 @rule
@@ -156,7 +157,10 @@ def push_down_maybe_maybe_match(
 
 @register_core
 @rule
-def match_identity(m: Maybe[T], var: T,) -> R[Maybe[T]]:
+def match_identity(
+    m: Maybe[T],
+    var: T,
+) -> R[Maybe[T]]:
     """
     If we have a match that has each branch just create the same maybe, then remove the match.
     """

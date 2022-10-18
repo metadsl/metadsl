@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import metadsl.typing_tools
 import pytest
-from metadsl import *
 
+import metadsl.typing_tools
+from metadsl import *
 from metadsl_rewrite import *
 
 from .abstraction import *
@@ -209,9 +209,12 @@ class TestFunctionConversion:
             Abstraction[FunctionOne[V, Maybe[X]], Maybe[X]].from_fn(lambda fn: fn(v()))
         )
 
-        desired: Maybe[X] = Converter[T].convert(v()).map(
-            Abstraction[T, U].from_fn(fn_one)
-        ).flat_map(Abstraction[U, Maybe[X]].from_fn(Converter[X].convert))
+        desired: Maybe[X] = (
+            Converter[T]
+            .convert(v())
+            .map(Abstraction[T, U].from_fn(fn_one))
+            .flat_map(Abstraction[U, Maybe[X]].from_fn(Converter[X].convert))
+        )
 
         with register.tmp(u_to_x_rule, v_to_t_rule):
             assert execute(result) == execute(desired)

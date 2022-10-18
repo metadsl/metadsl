@@ -101,4 +101,3 @@
 #     a: numpy_api.NDArray, idx: Either[Integer, Vec[Integer]]
 # ) -> R[numpy.ndarray]:
 #     return a[idx].to_ndarray(), ndarray_getitem(a.to_ndarray(), unbox_idxs(idx))
-

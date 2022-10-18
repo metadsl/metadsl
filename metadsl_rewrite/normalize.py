@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import typing
-import dataclasses
 import collections
-import functools
 import contextlib
+import dataclasses
+import functools
+import typing
 
 from metadsl import *
-from .strategies import *
+
 from .combinators import *
+from .strategies import *
 
 __all__ = ["StrategyNormalize", "Registrator"]
 
@@ -69,7 +70,7 @@ class StrategyNormalize(Strategy):
     A strategy combinator that expresses strategies in a number of phases. Each phase can
     execute strategies in all the phases before it. After each phase has no more matches,
     a label is set. This lets you explore when each phase is done executing.
-    
+
     """
 
     pre: typing.Set[Strategy] = dataclasses.field(default_factory=set)
@@ -119,6 +120,6 @@ class StrategyNormalize(Strategy):
                     "pre", StrategyRepeat(StrategyFold(StrategySequence(*self.pre)))
                 ),
                 *self.phase_strategies,
-                StrategyLabel("post", StrategyFold(StrategySequence(*self.post)))
+                StrategyLabel("post", StrategyFold(StrategySequence(*self.post))),
             )
         )

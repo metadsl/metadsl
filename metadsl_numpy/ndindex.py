@@ -10,9 +10,6 @@
 # import numpy
 
 
-
-
-
 # __all__ = ["NDIndex", "NumPyIndex"]
 
 # NumPyIndexInnerType = typing.Union[slice, ellipsis, int]

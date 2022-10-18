@@ -1,11 +1,11 @@
 from __future__ import annotations
+
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *
 
-from .int_compat import *
 from .injest import *
-
+from .int_compat import *
 
 zero = IntCompat.from_maybe_integer(Maybe.just(Integer.from_int(0)))
 one = IntCompat.from_maybe_integer(Maybe.just(Integer.from_int(1)))

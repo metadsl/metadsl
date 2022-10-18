@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import typing
 
-import llvmlite.ir as ir
 from metadsl import *
 from metadsl_core import *
 from metadsl_rewrite import *

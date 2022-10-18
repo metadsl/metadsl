@@ -1,5 +1,5 @@
 print("Importing")
-from metadsl_all import *
+from metadsl_all import *  # noqa: E402
 
 print("Finished imports")
 

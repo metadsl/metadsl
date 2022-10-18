@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from metadsl import *
 from metadsl_rewrite import *
 
