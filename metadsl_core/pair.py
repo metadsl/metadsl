@@ -15,8 +15,9 @@ V = typing.TypeVar("V")
 
 # TODO: Update with dataclass helper
 
+
 class Pair(Expression, typing.Generic[T, U]):
-    @expression  # type: ignore 
+    @expression  # type: ignore
     @property
     def left(self) -> T:
         ...

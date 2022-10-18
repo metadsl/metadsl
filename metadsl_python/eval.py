@@ -22,6 +22,8 @@ register_eval = register[__name__]
 
 
 T = TypeVar("T")
+
+
 class Unset(Expression, Generic[T]):
     """
     An unset value.
@@ -31,14 +33,14 @@ class Unset(Expression, Generic[T]):
     def create(cls) -> T:
         ...
 
+
 def unset(tp: Type[T]) -> T:
-    return Unset[tp].create() #type: ignore
-
-
+    return Unset[tp].create()  # type: ignore
 
 
 class PyFrameObject(Expression, wrap_methods=True):
     pass
+
 
 class PyThreadState(Expression, wrap_methods=True):
     @property
@@ -46,11 +48,8 @@ class PyThreadState(Expression, wrap_methods=True):
         ...
 
 
-
-
 class PyObject(Expression, wrap_methods=True):
     pass
-
 
 
 class State(Expression):
@@ -58,10 +57,11 @@ class State(Expression):
     State is a data type that represents a state of the program and external state.
     """
 
-class _PyInterpreterFrame(Expression, wrap_methods=True):
 
+class _PyInterpreterFrame(Expression, wrap_methods=True):
     @classmethod
-    def create(cls,
+    def create(
+        cls,
         f_funcobj: PyObject,
         f_globals: PyObject,
         f_builtins: PyObject,
@@ -80,57 +80,59 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
     @property
     def f_funcobj(self) -> PyObject:
         ...
-    
+
     @property
     def f_globals(self) -> PyObject:
         ...
-    
+
     @property
     def f_builtins(self) -> PyObject:
         ...
-    
+
     @property
     def f_locals(self) -> PyObject:
         ...
-    
+
     @property
     def f_code(self) -> MCode:
         ...
-    
+
     @property
     def frame_obk(self) -> PyFrameObject:
         ...
-    
+
     @property
     def previous(self) -> _PyInterpreterFrame:
         ...
-    
+
     @property
     def prev_instr(self) -> Integer:
         ...
-    
+
     @property
     def stacktop(self) -> Integer:
         ...
-    
+
     @property
     def is_entry(self) -> Boolean:
         ...
-    
+
     @property
     def owner(self) -> Integer:
         ...
 
+
 register_eval(datatype_rule(_PyInterpreterFrame))
 
+
 class PyFunctionObject(Expression, wrap_methods=True):
-    
     @property
     def code(self) -> MCode:
         ...
 
 
 # TODO: Create update with varargs!
+
 
 @expression
 def _PyEval_Vector(
@@ -146,7 +148,8 @@ def _PyEval_Vector(
     Evaluate a code object in a frame.
     """
     state, frame = _PyEvalFramePushAndInit(
-        state, tstate, func, locals, args, argcount, kwnames).spread
+        state, tstate, func, locals, args, argcount, kwnames
+    ).spread
     # TODO
     # retval = _PyEval_EvalFrame(state, tstate, frame, Integer.from_int(0))
 
@@ -163,7 +166,9 @@ def _PyEval_Vector(
     # #     normal=_other,
     # # )
 
+
 register_eval(default_rule(_PyEval_Vector))
+
 
 def _PyEvalFramePushAndInit(
     state: State,
@@ -191,9 +196,10 @@ def _PyEvalFramePushAndInit(
     # }
     # return frame;
 
+
 register_eval(default_rule(_PyEvalFramePushAndInit))
 
-    
+
 @expression
 def _PyFrame_InitializeSpecials(
     frame: _PyInterpreterFrame,
@@ -204,6 +210,7 @@ def _PyFrame_InitializeSpecials(
     """
     Initialize the special variables in a frame.
     """
+
 
 #     frame->f_funcobj = (PyObject *)func;
 #     frame->f_code = (PyCodeObject *)Py_NewRef(code);
@@ -220,7 +227,7 @@ def _PyFrame_InitializeSpecials(
 
 register_eval(default_rule(_PyFrame_InitializeSpecials))
 
-        
+
 # typedef struct _PyInterpreterFrame {
 #     /* "Specials" section */
 #     PyObject *f_funcobj; /* Strong reference */
@@ -243,9 +250,10 @@ register_eval(default_rule(_PyFrame_InitializeSpecials))
 #     PyObject *localsplus[1];
 # } _PyInterpreterFrame;
 
-         
+
 # TODO: Add update method to dataclasses instead of each setter?
-    
+
+
 @expression
 def _PyThreadState_PushFrame(
     tstate: PyThreadState, size: Integer
@@ -269,7 +277,9 @@ def _PyThreadState_PushFrame(
         unset(Vec[PyObject]),
     )
 
+
 register_eval(default_rule(_PyThreadState_PushFrame))
+
 
 @expression
 def get_code_framesize(code: MCode) -> Integer:
@@ -277,8 +287,6 @@ def get_code_framesize(code: MCode) -> Integer:
     Get the size of the frame for a code object. co_framesize
     """
     ...
-
-
 
 
 # @expression
@@ -291,12 +299,12 @@ def get_code_framesize(code: MCode) -> Integer:
 #     argcount: Integer,
 #     kwnames: PyObject,
 # ) -> PyFrameObject:
-    # TODO:
-    # co = con.code
-    # co_args = co.type.args_
-    # total_args = co_args.positional_only.length + co_args.keyword_only.length + co_args.positional_or_keyword.length
-    # f = _PyFrame_New_NoTrack(state, tstate, con, locals)
-    
+# TODO:
+# co = con.code
+# co_args = co.type.args_
+# total_args = co_args.positional_only.length + co_args.keyword_only.length + co_args.positional_or_keyword.length
+# f = _PyFrame_New_NoTrack(state, tstate, con, locals)
+
 
 # # TODO: Create PyFrameObject dataclass from frameobject.h
 # @expression

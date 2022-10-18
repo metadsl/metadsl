@@ -10,9 +10,22 @@ from __future__ import annotations
 from types import CodeType
 from typing import Optional, Sequence, TypeVar
 
-from code_data import (Arg, Args, Cellvar, CodeData, Constant, Freevar,
-                       FunctionType, Instruction, Jump, Name, NoArg,
-                       TypeOfCode, Varname)
+from code_data import (
+    Arg,
+    Args,
+    Cellvar,
+    CodeData,
+    Constant,
+    Freevar,
+    FunctionType,
+    Instruction,
+    Jump,
+    Name,
+    NoArg,
+    TypeOfCode,
+    Varname,
+)
+
 from metadsl import Expression
 from metadsl_core import Integer, Maybe
 from metadsl_core.vec import Vec
@@ -46,7 +59,7 @@ class MCode(Expression, wrap_methods=True):
         Vec.create(),
         True,
     )
-    <BLANKLINE>    
+    <BLANKLINE>
     """
 
     @classmethod
@@ -194,7 +207,7 @@ class MArg(Expression, wrap_methods=True):
         ...
 
     # The type of constant should be ConstantValue, but get_type_hints doesn't
-    # support recursive types yet 
+    # support recursive types yet
     @classmethod
     def constant(cls, constant: object) -> MArg:
         ...
@@ -347,7 +360,6 @@ class MFunctionType(Expression, wrap_methods=True):
             return MFunctionType.async_generator()
         assert function_type is None
         return MFunctionType.normal()
-
 
 
 T = TypeVar("T")
