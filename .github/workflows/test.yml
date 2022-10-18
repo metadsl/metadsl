@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: pip install flit
       - run: make flit-install
-      - run: pytest docs/*.ipynb --nbval
+      - run: pytest docs/*.ipynb --nbval  -n=1
   test-jupyterlab:
     name: test jupyterlab
     runs-on: ubuntu-latest
