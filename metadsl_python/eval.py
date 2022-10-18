@@ -16,7 +16,7 @@ from metadsl import Expression, expression
 from metadsl_core import Boolean, Integer, Pair, Vec
 from metadsl_rewrite import datatype_rule, default_rule, register
 
-from .code import MCode
+from .code_data import MCodeData
 
 register_eval = register[__name__]
 
@@ -44,7 +44,7 @@ class PyFrameObject(Expression, wrap_methods=True):
 
 class PyThreadState(Expression, wrap_methods=True):
     @property
-    def code(self) -> MCode:
+    def code(self) -> MCodeData:
         ...
 
 
@@ -66,7 +66,7 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
         f_globals: PyObject,
         f_builtins: PyObject,
         f_locals: PyObject,
-        f_code: MCode,
+        f_code: MCodeData,
         frame_obk: PyFrameObject,
         previous: _PyInterpreterFrame,
         prev_instr: Integer,
@@ -94,7 +94,7 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
         ...
 
     @property
-    def f_code(self) -> MCode:
+    def f_code(self) -> MCodeData:
         ...
 
     @property
@@ -127,7 +127,7 @@ register_eval(datatype_rule(_PyInterpreterFrame))
 
 class PyFunctionObject(Expression, wrap_methods=True):
     @property
-    def code(self) -> MCode:
+    def code(self) -> MCodeData:
         ...
 
 
@@ -205,7 +205,7 @@ def _PyFrame_InitializeSpecials(
     frame: _PyInterpreterFrame,
     func: PyFunctionObject,
     locals: Vec[PyObject],
-    code: MCode,
+    code: MCodeData,
 ) -> _PyInterpreterFrame:
     """
     Initialize the special variables in a frame.
@@ -267,7 +267,7 @@ def _PyThreadState_PushFrame(
         unset(PyObject),
         unset(PyObject),
         unset(PyObject),
-        unset(MCode),
+        unset(MCodeData),
         unset(PyFrameObject),
         unset(_PyInterpreterFrame),
         unset(Integer),
@@ -282,7 +282,7 @@ register_eval(default_rule(_PyThreadState_PushFrame))
 
 
 @expression
-def get_code_framesize(code: MCode) -> Integer:
+def get_code_framesize(code: MCodeData) -> Integer:
     """
     Get the size of the frame for a code object. co_framesize
     """

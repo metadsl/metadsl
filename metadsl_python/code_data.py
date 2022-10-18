@@ -33,14 +33,14 @@ from metadsl_rewrite import datatype_rule, register, rule
 from metadsl_rewrite.rules import default_rule
 
 
-class MCode(Expression, wrap_methods=True):
+class MCodeData(Expression, wrap_methods=True):
     """
     A python bytecode objects.
 
     >>> from metadsl_rewrite import execute
-    >>> execute(MCode.from_code(compile("x[y]", "<string>", "eval")))
+    >>> execute(MCodeData.from_code(compile("x[y]", "<string>", "eval")))
     marg_0 = MArg.none()
-    MCode.create(
+    MCodeData.create(
         MBlocks.create(
             Vec.create(
                 Vec.create(
@@ -59,7 +59,6 @@ class MCode(Expression, wrap_methods=True):
         Vec.create(),
         True,
     )
-    <BLANKLINE>
     """
 
     @classmethod
@@ -73,7 +72,7 @@ class MCode(Expression, wrap_methods=True):
         type: MTypeOfCode,
         freevars: Vec[str],
         future_annotations: bool,
-    ) -> MCode:
+    ) -> MCodeData:
         ...
 
     @property
@@ -108,33 +107,33 @@ class MCode(Expression, wrap_methods=True):
     def future_annotations(self) -> bool:
         ...
 
-    def set_blocks(self, blocks: MBlocks) -> MCode:
+    def set_blocks(self, blocks: MBlocks) -> MCodeData:
         ...
 
-    def set_filename(self, filename: str) -> MCode:
+    def set_filename(self, filename: str) -> MCodeData:
         ...
 
-    def set_first_line_number(self, first_line_number: int) -> MCode:
+    def set_first_line_number(self, first_line_number: int) -> MCodeData:
         ...
 
-    def set_name(self, name: str) -> MCode:
+    def set_name(self, name: str) -> MCodeData:
         ...
 
-    def set_stacksize(self, stacksize: int) -> MCode:
+    def set_stacksize(self, stacksize: int) -> MCodeData:
         ...
 
-    def set_type(self, type: MTypeOfCode) -> MCode:
+    def set_type(self, type: MTypeOfCode) -> MCodeData:
         ...
 
-    def set_freevars(self, freevars: Vec[str]) -> MCode:
+    def set_freevars(self, freevars: Vec[str]) -> MCodeData:
         ...
 
-    def set_future_annotations(self, future_annotations: bool) -> MCode:
+    def set_future_annotations(self, future_annotations: bool) -> MCodeData:
         ...
 
     @classmethod
-    def from_code_data(cls, code_data: CodeData) -> MCode:
-        return MCode.create(
+    def from_code_data(cls, code_data: CodeData) -> MCodeData:
+        return MCodeData.create(
             MBlocks.from_blocks(code_data.blocks),
             code_data.filename,
             code_data.first_line_number,
@@ -146,7 +145,7 @@ class MCode(Expression, wrap_methods=True):
         )
 
     @classmethod
-    def from_code(cls, code: CodeType) -> MCode:
+    def from_code(cls, code: CodeType) -> MCodeData:
         return cls.from_code_data(CodeData.from_code(code))
 
 
@@ -367,9 +366,9 @@ T = TypeVar("T")
 register_code = register[__name__]
 
 
-register_code(datatype_rule(MCode))
-register_code(default_rule(MCode.from_code))
-register_code(default_rule(MCode.from_code_data))
+register_code(datatype_rule(MCodeData))
+register_code(default_rule(MCodeData.from_code))
+register_code(default_rule(MCodeData.from_code_data))
 
 register_code(default_rule(MBlocks.from_blocks))
 
