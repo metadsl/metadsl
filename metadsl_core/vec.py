@@ -139,6 +139,12 @@ class Vec(Expression, typing.Generic[T], wrap_methods=True):
     def drop(self, i: Integer) -> Vec[T]:
         ...
 
+    def pop(self) -> Pair[Vec[T], T]:
+        """
+        Pops the first element off the vector and returns it and the rest of the vector.
+        """
+        ...
+
     @classmethod
     def create_fn(cls, length: Integer, fn: Abstraction[Integer, T]) -> Vec[T]:
         ...
@@ -192,10 +198,13 @@ def create_fn_rules(
     yield v.length, l
     yield v.take(n), Vec.create_fn(l - n, fn)
     yield v.drop(n), Vec.create_fn(
-        l - n, Abstraction[Integer, T].from_fn(lambda i: fn(i + n)),
+        l - n,
+        Abstraction[Integer, T].from_fn(lambda i: fn(i + n)),
     )
+    yield v.pop(), Pair.create(Vec.create_fn(l - one, fn), v[l])
     yield v.select(s), Vec.create_fn(
-        s.length(l), Abstraction[Integer, T].from_fn(lambda i: v[s.new_to_old(i)]),
+        s.length(l),
+        Abstraction[Integer, T].from_fn(lambda i: v[s.new_to_old(i)]),
     )
     yield v.set(n, x), Vec.create_fn(
         l, Abstraction[Integer, T].from_fn(lambda i: i.eq(n).if_(x, fn(i)))
@@ -247,6 +256,13 @@ def take_drop_rule(xs: typing.Sequence[T], i: int) -> R[Vec[T]]:
         lambda: Vec[T].create(*xs[i:]),
     )
 
+@register_ds
+@rule
+def pop_rule(xs: typing.Sequence[T], x: T) -> R[Pair[Vec[T], T]]:
+    yield (
+        Vec[T].create(*xs, x).pop(),
+        lambda: Pair.create(Vec[T].create(*xs), x),
+    )
 
 @register_ds  # type: ignore
 @rule

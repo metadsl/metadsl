@@ -1,16 +1,17 @@
 from __future__ import annotations
-import pytest
 
+import pytest
 from metadsl import *
 from metadsl_rewrite import *
 
+from .abstraction import *
 from .conversion import *
 from .either import *
-from .abstraction import *
-from .strategies import *
-from .maybe import *
-from .vec import *
 from .integer import *
+from .maybe import *
+from .pair import *
+from .strategies import *
+from .vec import *
 
 
 class Int(Expression):
@@ -70,3 +71,6 @@ class TestVec:
         assert (
             execute(Converter[Vec[Int]].convert(("hi",))) == Maybe[Vec[Int]].nothing()
         )
+
+    def test_pop(self):
+        assert execute(Vec.create(10, 11).pop()) == Pair.create(Vec.create(10), 11)
