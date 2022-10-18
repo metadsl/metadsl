@@ -820,9 +820,9 @@ def type_repr(tp: type) -> str:
 
     Unlike the builtin generic type repr, it does not include the module. 
     """
-    if isinstance(tp, typing.TypeVar):
+    if isinstance(tp, (typing.TypeVar, typing._SpecialForm)):
         return repr(tp)
-    tp_name = tp.__name__
+    tp_name = tp.__qualname__
     args = getattr(tp, "__args__", [])
     if args:
         return f"{tp_name}[{', '.join(map(type_repr, args))}]"
