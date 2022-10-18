@@ -489,18 +489,18 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
                 return {}
         return match_types(typing_inspect.get_args(hint)[0], t_inner)
 
-    # Special case optional types to avoid... For Maybe[T].from_optional
-    if typing_inspect.is_optional_type(hint):
-        return {}
-
     if typing_inspect.is_union_type(hint):
-        # If this is a union, iterate through and use the first that is a subclass
-        for inner_type in typing_inspect.get_args(hint):
-            if issubclass(t, inner_type):
-                hint = inner_type
-                break
-        else:
-            raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
+        possible_types = typing_inspect.get_args(hint)
+        # If union has a None type in it, and this value is None, there is a match
+        if typing_inspect.is_optional_type(t) and t == type(None):
+            return {}
+        # If this is a union, iterate through and try each
+        for inner_type in possible_types:
+            try:
+                return match_types(inner_type, t)
+            except TypeError:
+                pass
+        raise TypeError(f"Cannot match concrete type {t} with any of the union types {possible_types}")
 
     logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
     if not issubclass(t, hint):
