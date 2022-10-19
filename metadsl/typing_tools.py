@@ -505,7 +505,9 @@ def match_types(hint: typing.Type, t: typing.Type) -> TypeVarMapping:
         )
 
     logger.debug("checking if type subclass hint hint=%s type=%s", hint, t)
-    if not issubclass(t, hint):
+    # Special case ellipsis to allow it to be used as a wildcard
+    # to support using ... as default argument
+    if not issubclass(t, hint) and not isinstance(..., t):
         logger.debug("not subclass")
         raise TypeError(f"Cannot match concrete type {t} with hint {hint}")
     return merge_typevars(

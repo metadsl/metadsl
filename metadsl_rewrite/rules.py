@@ -88,9 +88,7 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
 
     n_fields = len(fields)
 
-    # Set of fields which have setters
-    setter_fields = set()
-    # Then verify that for each field there is a getter property and a setter method
+    # Then verify that for each field there is a getter property
     for k, v in fields.items():
         getter = getattr(cls, k)
         if not isinstance(getter, BoundInfer):
@@ -100,22 +98,21 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
             raise ValueError(
                 f"Type of accessor {cls.__name__}.{k} -> {return_tp} does not match type of creator {cls.__name__}.create({k}: {v})"
             )
-
-        setter_name = f"set_{k}"
-        if not hasattr(cls, setter_name):
-            continue
-        setter_fields.add(k)
-        setter = getattr(cls, setter_name)
-        if not isinstance(setter, BoundInfer):
-            raise ValueError(f"{setter_name} method of {cls} must be an expression")
-
-        setter_annotations = setter.fn.__annotations__
-        if setter_annotations != {k: v, "return": cls} and setter_annotations != {
-            k: v,
-            "return": cls.__qualname__,
-        }:
+    # And verify if there is an update property, that it has the correct type
+    has_update = hasattr(cls, "update")
+    if has_update:
+        update = getattr(cls, "update")
+        if not isinstance(update, BoundInfer):
+            raise ValueError(f"update method of {cls} must be an expression")
+        if update.is_classmethod:
+            raise ValueError(f"update method of {cls} must be an instance method")
+        update_fn = update.fn
+        update_fields = dict(update_fn.__annotations__)
+        if update_fields.pop("return") not in {cls, cls.__qualname__}:
+            raise ValueError(f"update method of {cls} must return {cls}")
+        if update_fields != fields:
             raise ValueError(
-                f"{setter_name} of {cls} has incorrect signature {setter_annotations}"
+                f"Fields of {cls.__qualname__}.update ({update_fields}) do not match fields of {cls.__name__}.create ({fields})"
             )
 
     # Now create a custom match function that will replace each getter and setter
@@ -124,21 +121,22 @@ def datatype_rule(cls: type[Expression]) -> Strategy:
         # We will pass into the functions two sets of wildcards of each arg, one for the initial value
         # and one for the replaced value. We will call the second one {k}_prime
         initial_args = args[:n_fields]
-        setter_args = args[n_fields:]
+        update_args = args[n_fields:]
         obj = cls.create(*initial_args)  # type: ignore
         for i, k in enumerate(fields):
             # accessor
             yield getattr(obj, k), args[i]
 
-            # setter
-            if k not in setter_fields:
-                continue
-            replaced_value = setter_args[i]
-            with_replaced_value = [
-                setter_args[i_] if i_ == i else initial_args[i_]
-                for i_ in range(n_fields)
-            ]
-            yield getattr(obj, f"set_{k}")(replaced_value), cls.create(*with_replaced_value)  # type: ignore
+        if not has_update:
+            return
+        # Update all the args, replacing all those which are no the default value (...)
+        # with the updated value
+        yield obj.update(*update_args), lambda: cls.create(
+            *(
+                initial if updated is ... else updated
+                for updated, initial in zip(update_args, initial_args)
+            )
+        )
 
     # Now update the annotations, signature, and naming so that the rule can introspect it.
     match_fn.__annotations__ = {
