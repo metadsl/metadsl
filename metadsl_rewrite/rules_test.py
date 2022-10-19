@@ -546,15 +546,11 @@ class _Datatype(Expression):
     @expression  # type: ignore
     @property
     def b(self) -> str:
-        pass
+        ...
 
     @expression
-    def set_i(self, i: int) -> _Datatype:
-        pass
-
-    @expression
-    def set_b(self, b: str) -> _Datatype:
-        pass
+    def update(self, i: int = ..., b: str = ...) -> _Datatype:
+        ...
 
 
 datatypes_rule_ = datatype_rule(_Datatype)
@@ -566,7 +562,11 @@ class TestDatatypeRule:
         assert execute(expr.i, datatypes_rule_) == 1
         assert execute(expr.b, datatypes_rule_) == "a"
 
-    def test_setters(self):
+    def test_update(self):
         expr = _Datatype.create(1, "a")
-        assert execute(expr.set_i(2), datatypes_rule_) == _Datatype.create(2, "a")
-        assert execute(expr.set_b("b"), datatypes_rule_) == _Datatype.create(1, "b")
+        assert execute(expr.update(), datatypes_rule_) == _Datatype.create(1, "a")
+        assert execute(expr.update(i=2), datatypes_rule_) == _Datatype.create(2, "a")
+        assert execute(expr.update(b="b"), datatypes_rule_) == _Datatype.create(1, "b")
+        assert execute(expr.update(i=2, b="b"), datatypes_rule_) == _Datatype.create(
+            2, "b"
+        )
