@@ -75,6 +75,19 @@ class MCodeData(Expression, wrap_methods=True):
     ) -> MCodeData:
         ...
 
+    def update(
+        self,
+        blocks: MBlocks = ...,
+        filename: str = ...,
+        first_line_number: int = ...,
+        name: str = ...,
+        stacksize: int = ...,
+        type: MTypeOfCode = ...,
+        freevars: Vec[str] = ...,
+        future_annotations: bool = ...,
+    ) -> MCodeData:
+        ...
+
     @property
     def blocks(self) -> MBlocks:
         ...
@@ -105,30 +118,6 @@ class MCodeData(Expression, wrap_methods=True):
 
     @property
     def future_annotations(self) -> bool:
-        ...
-
-    def set_blocks(self, blocks: MBlocks) -> MCodeData:
-        ...
-
-    def set_filename(self, filename: str) -> MCodeData:
-        ...
-
-    def set_first_line_number(self, first_line_number: int) -> MCodeData:
-        ...
-
-    def set_name(self, name: str) -> MCodeData:
-        ...
-
-    def set_stacksize(self, stacksize: int) -> MCodeData:
-        ...
-
-    def set_type(self, type: MTypeOfCode) -> MCodeData:
-        ...
-
-    def set_freevars(self, freevars: Vec[str]) -> MCodeData:
-        ...
-
-    def set_future_annotations(self, future_annotations: bool) -> MCodeData:
         ...
 
     @classmethod
