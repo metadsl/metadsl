@@ -6,4 +6,5 @@ flit-install:
 	flit -f visualize.pyproject.toml install --symlink
 	flit -f llvm.pyproject.toml install --symlink
 	flit -f numpy.pyproject.toml install --symlink
+	flit -f python.pyproject.toml install --symlink
 	flit -f all.pyproject.toml install --symlink
