@@ -38,6 +38,20 @@ def unset(tp: Type[T]) -> T:
     return Unset[tp].create()  # type: ignore
 
 
+class Null(Expression, Generic[T]):
+    """
+    An null value.
+    """
+
+    @classmethod
+    def create(cls) -> T:
+        ...
+
+
+def null(tp: Type[T]) -> T:
+    return Null[tp].create()  # type: ignore
+
+
 class PyFrameObject(Expression, wrap_methods=True):
     pass
 
@@ -62,12 +76,12 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
     @classmethod
     def create(
         cls,
-        f_funcobj: PyObject,
+        f_funcobj: PyFunctionObject,
         f_globals: PyObject,
         f_builtins: PyObject,
         f_locals: PyObject,
         f_code: MCodeData,
-        frame_obk: PyFrameObject,
+        frame_obj: PyFrameObject,
         previous: _PyInterpreterFrame,
         prev_instr: Integer,
         stacktop: Integer,
@@ -77,8 +91,25 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
     ) -> _PyInterpreterFrame:
         ...
 
+    def update(
+        self,
+        f_funcobj: PyFunctionObject = ...,
+        f_globals: PyObject = ...,
+        f_builtins: PyObject = ...,
+        f_locals: PyObject = ...,
+        f_code: MCodeData = ...,
+        frame_obj: PyFrameObject = ...,
+        previous: _PyInterpreterFrame = ...,
+        prev_instr: Integer = ...,
+        stacktop: Integer = ...,
+        is_entry: Boolean = ...,
+        owner: Integer = ...,
+        localsplus: Vec[PyObject] = ...,
+    ) -> _PyInterpreterFrame:
+        ...
+
     @property
-    def f_funcobj(self) -> PyObject:
+    def f_funcobj(self) -> PyFunctionObject:
         ...
 
     @property
@@ -98,7 +129,7 @@ class _PyInterpreterFrame(Expression, wrap_methods=True):
         ...
 
     @property
-    def frame_obk(self) -> PyFrameObject:
+    def frame_obj(self) -> PyFrameObject:
         ...
 
     @property
@@ -131,7 +162,9 @@ class PyFunctionObject(Expression, wrap_methods=True):
         ...
 
 
-# TODO: Create update with varargs!
+class FrameOwner:
+    ...
+    # TODO: Enum!
 
 
 @expression
@@ -174,7 +207,7 @@ def _PyEvalFramePushAndInit(
     state: State,
     tstate: PyThreadState,
     func: PyFunctionObject,
-    locals: Vec[PyObject],
+    locals: PyObject,
     args: Vec[PyObject],
     argcount: Integer,
     kwnames: Vec[PyObject],
@@ -204,25 +237,23 @@ register_eval(default_rule(_PyEvalFramePushAndInit))
 def _PyFrame_InitializeSpecials(
     frame: _PyInterpreterFrame,
     func: PyFunctionObject,
-    locals: Vec[PyObject],
+    locals: PyObject,
     code: MCodeData,
 ) -> _PyInterpreterFrame:
     """
     Initialize the special variables in a frame.
     """
-
-
-#     frame->f_funcobj = (PyObject *)func;
-#     frame->f_code = (PyCodeObject *)Py_NewRef(code);
-#     frame->f_builtins = func->func_builtins;
-#     frame->f_globals = func->func_globals;
-#     frame->f_locals = locals;
-#     frame->stacktop = code->co_nlocalsplus;
-#     frame->frame_obj = NULL;
-#     frame->prev_instr = _PyCode_CODE(code) - 1;
-#     frame->is_entry = false;
-#     frame->owner = FRAME_OWNED_BY_THREAD;
-# }
+    return frame.update(
+        f_funcobj=func,
+        f_globals=func.func_globals,
+        f_builtins=func.func_builtins,
+        f_locals=locals,
+        stacktop=code.co_nlocalsplus,
+        frame_obj=null(PyFrameObject),
+        prev_instr=_PyCode_CODE(code) - 1,
+        is_entry=Boolean.create(False),
+        owner=FRAME_OWNED_BY_THREAD,
+    )
 
 
 register_eval(default_rule(_PyFrame_InitializeSpecials))
