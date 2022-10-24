@@ -29,8 +29,7 @@ from code_data import (
 from metadsl import Expression
 from metadsl_core import Integer, Maybe
 from metadsl_core.vec import Vec
-from metadsl_rewrite import datatype_rule, register, rule
-from metadsl_rewrite.rules import default_rule
+from metadsl_rewrite import datatype_rule, default_rule, enum_rule, register
 
 
 class MCodeData(Expression, wrap_methods=True):
@@ -317,6 +316,14 @@ class MArgs(Expression, wrap_methods=True):
 
 
 class MFunctionType(Expression, wrap_methods=True):
+    """
+    The type of a function.
+
+    >>> from metadsl_rewrite import execute
+    >>> execute(MFunctionType.generator().match(1, 2, 3, 4))
+    1
+    """
+
     @classmethod
     def generator(cls) -> MFunctionType:
         ...
@@ -333,8 +340,6 @@ class MFunctionType(Expression, wrap_methods=True):
     def normal(cls) -> MFunctionType:
         ...
 
-    # TODO: Maybe make enum creator class like the dataclass creator rules,
-    # to use for this and either
     def match(self, generator: T, coroutine: T, async_generator: T, normal: T) -> T:
         ...
 
@@ -372,18 +377,4 @@ register_code(datatype_rule(MArgs))
 register_code(default_rule(MArgs.from_args))
 
 
-@register_code
-@rule
-def _m_function_type_match(generator: T, coroutine: T, async_generator: T, normal: T):
-    yield MFunctionType.generator().match(
-        generator, coroutine, async_generator, normal
-    ), generator
-    yield MFunctionType.coroutine().match(
-        generator, coroutine, async_generator, normal
-    ), coroutine
-    yield MFunctionType.async_generator().match(
-        generator, coroutine, async_generator, normal
-    ), async_generator
-    yield MFunctionType.normal().match(
-        generator, coroutine, async_generator, normal
-    ), normal
+register_code(enum_rule(MFunctionType))
