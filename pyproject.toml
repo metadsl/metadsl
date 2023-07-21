@@ -10,7 +10,7 @@ home-page = "https://github.com/Quansight-Labs/metadsl"
 requires = [
     "typing_extensions",
     "typing_inspect",
-    "python-igraph>=0.8.0"
+    "igraph>=0.8.0"
 ]
 requires-python = ">=3.8,<=3.10"
 classifiers = [
