@@ -303,7 +303,6 @@ class Rule(Strategy):
             )
 
     def optimize(self, executor: Executor, strategy: Strategy) -> None:
-
         for i, result in enumerate(self.results):
             template, expression_thunk = result
             # apply execution to all results that are not thunks

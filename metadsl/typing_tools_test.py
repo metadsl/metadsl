@@ -99,7 +99,6 @@ def test_create():
 
 
 def test_create_type_from_arg():
-
     assert _GenericClassCreate.create_item(123) == (
         _GenericClassCreate.create_item,
         (123,),
@@ -122,7 +121,6 @@ class _NonGenericClass:
 
 
 def test_non_generic_method():
-
     c = _NonGenericClass()
     assert c.method() == (_NonGenericClass.method, (c,), {}, int)
     assert _NonGenericClass.method(c) == (_NonGenericClass.method, (c,), {}, int)
@@ -255,13 +253,10 @@ class C(typing.Generic[T]):
 
 class TestGetType:
     def test_bound_infer_method(self):
-
         assert get_type(C[int]().__add__) == typing.Callable[[int], int]
 
     def test_bound_infer_method_on_class(self):
-
         assert get_type(C[int].__add__) == typing.Callable[[C[int], int], int]
 
     def test_bound_infer_classmethod(self):
-
         assert get_type(C[int].create) == typing.Callable[[int], C[int]]

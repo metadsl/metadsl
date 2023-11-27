@@ -72,7 +72,6 @@ register_core(default_rule(converter_name))
 @register_convert
 @rule
 def function_one_box_rule(fn: FunctionOne[U, Maybe[V]]) -> R[FunctionOne[object, T]]:
-
     return (
         FunctionOneCompat[T].box(Maybe.just(fn)),
         lambda: FunctionOne[object, T].from_fn(
