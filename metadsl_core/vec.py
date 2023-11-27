@@ -450,7 +450,6 @@ def convert_slice(s: slice) -> R[Maybe[Selection]]:
 @register_core
 @rule
 def lift_maybe(v: Vec[Maybe[T]]) -> R[Maybe[Vec[T]]]:
-
     return (
         Vec.lift_maybe(v),
         v.fold(
