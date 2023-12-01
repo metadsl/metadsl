@@ -1,5 +1,7 @@
 # `metadsl`
 
+**This repo is deprecated and we recommend using [egglog-python](https://github.com/egraphs-good/egglog-python) instead.**
+
 [![Documentation Status](https://readthedocs.org/projects/metadsl/badge/?version=latest)](https://metadsl.readthedocs.io/en/latest/?badge=latest) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Quansight-Labs/metadsl/d5565b5?urlpath=lab/tree/Demo.ipynb) [![Test](https://github.com/metadsl/metadsl/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/metadsl/metadsl/actions/workflows/test.yml)
 
 `metadsl` is an exploration of how we can create deeply embedded domain specific languages in Python, in a way that is type safe (plays nicely with Mypy) and feels ergonomic to Python developers. It is meant to be a building block for other libraries to create their own domain specific languages and compile them to different forms.
